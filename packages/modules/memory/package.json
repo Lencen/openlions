@@ -1,0 +1,16 @@
+{
+  "name": "@lions/modules-memory",
+  "version": "0.0.1",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc && node scripts/copy-assets.cjs",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo skip"
+  },
+  "dependencies": {
+    "@lions/errors": "workspace:*",
+    "@lions/product-contract": "workspace:*"
+  }
+}

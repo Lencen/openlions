@@ -1,0 +1,41 @@
+{
+  "name": "@lions/selfimproving",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "ws:dev": "node ws-server.js",
+    "build": "next build",
+    "prebuild": "DATABASE_URL=file:./dev.db prisma generate --schema=prisma/schema.prisma && DATABASE_URL=file:./dev.db prisma generate --schema=prisma/schema.postgres.prisma",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@lions/events": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "pg": "^8.23.1",
+    "@tanstack/react-query": "^4.36.1",
+    "@trpc/client": "^10.45.2",
+    "@trpc/react-query": "^10.45.2",
+    "@trpc/server": "^10.45.2",
+    "crewai": "^1.0.1",
+    "dayjs": "^1.11.11",
+    "next": "^14.2.35",
+    "node-cron": "^3.0.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "superjson": "^2.2.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/node-cron": "^3.0.11",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^8.57.0",
+    "eslint-config-next": "14.2.5",
+    "prisma": "^5.22.0",
+    "typescript": "^5.4.5"
+  }
+}

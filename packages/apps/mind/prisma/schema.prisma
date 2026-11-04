@@ -1,0 +1,1418 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/mind-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  // 2026-10-15 产品化 S0-1: 改由 DATABASE_URL 决定库位置，
+  //   使"数据在安装根的 data/ 目录、升级只换 release 不动数据"成立。
+  //   现有 .env 的 DATABASE_URL=file:./dev.db 行为不变（相对库路径按 schema 所在目录解析）。
+  url      = env("DATABASE_URL")
+}
+
+// ===== Learning Module =====
+
+model LearningPath {
+  id             String      @id @default(cuid())
+  title          String
+  description    String?
+  category       String?
+  difficulty     String?
+  status         String      @default("ACTIVE")
+  totalHours     Float?
+  completedHours Float?
+  progress       Float       @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  milestones     Milestone[]
+
+  @@index([category])
+  @@index([status])
+}
+
+model Milestone {
+  id               String       @id @default(cuid())
+  learningPathId   String
+  title            String
+  description      String?
+  order            Int
+  status           String       @default("PENDING")
+  reflectionPrompt String?
+  resources        String?
+  autoReflect      Boolean      @default(true)
+  completedAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  learningPath     LearningPath @relation(fields: [learningPathId], references: [id], onDelete: Cascade)
+  learningLogs     MilestoneLog[]
+  learningSummary  LearningSummary?
+
+  @@index([learningPathId])
+  @@index([status])
+}
+
+model MilestoneLog {
+  id           String    @id @default(cuid())
+  milestoneId  String
+  type        String    @default("LEARNING") // LEARNING, PRACTICE, REVIEW
+  content     String
+  duration    Int?      // minutes
+  createdAt   DateTime  @default(now())
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+
+  @@index([milestoneId])
+}
+
+model LearningSummary {
+  id           String    @id @default(cuid())
+  milestoneId  String    @unique
+  learningLog  String?   // 学习日志总结
+  practiceSummary String? // 实践总结
+  skillsGained String?   // 提炼的技能 (JSON array string)
+  toolsMastered String?  // 掌握的工具 (JSON array string)
+  documents    String?   // 文档成果 (JSON array string)
+  demos        String?   // Demo 演示 (JSON array string)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  milestone   Milestone @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+}
+
+// ===== Memory Module =====
+
+model Memory {
+  id           String    @id @default(cuid())
+  content      String
+  title        String?
+  tier         String    @default("WARM")
+  type         String?
+  sourceType   String?
+  sourceId     String?
+  linkedTo     String?
+  domain       String?
+  tags         String?
+  valueScore   Float     @default(0.5)
+  accessCount  Int       @default(0)
+  lastAccessed DateTime?
+  filePath     String?
+  decayScore   Float     @default(0.0)   // 衰减系数，遗忘算法用
+  lastReinforce DateTime?                // 上次强化时间
+  importance   Float     @default(0.5)   // 重要性 0-1，影响晋升/降级
+  // ===== 2026-10-09 round 72 (人类裁决): Memory 不写长数据, 加结构化辅助字段 =====
+  scenario     String?                     // 适用场景(<=120 字): 在什么上下文成立
+  standard     String?                     // 由这次记忆提炼出的规则/标准(<=120 字, 可空)
+  // ===== 2026-06-06 SHARED-BRAIN-V2 新增字段 (P0-2) =====
+  agentSource  String?                   // 写入来源: HERMES_AGENT / CLAUDE_AGENT / PIPELINE_HERMES / PIPELINE_CLAUDE / TASK_RESOLVED_HERMES / TASK_RESOLVED_CLAUDE / MIGRATION_HISTORICAL / MIGRATION_DUPLICATE
+  contentHash  String?                   // sha256(content), 24h 去重 (SDK 业务层, 不依赖 DB UNIQUE — 业务规则: 同 agent + 24h 内 + 同 tier 才去重)
+  migrated     Boolean   @default(false) // 历史数据迁移标记
+  // ===== 2026-07-02 STRUCTURED-V3 新增 (P0) =====
+  theme        String?                   // 2-6 字中文主题词, 页面聚合视图用
+  supersededBy String?                   // 被哪条新记录取代, cuid, 冷库归档链
+  supersededAt DateTime?                 // 取代时间
+  reinforceCount Int     @default(0)     // 被 Resolver UPDATE 命中次数
+  // ===== 2026-07-22 V1.8 结构化数据 (flywheel-structured-data-v1.md) =====
+  topicId        String?                   // 指向 MemoryTopic.id, 以 topicId 为准; theme 保留作冗余索引
+  // ===== 2026-10-09 round 72-D: 关联回 Practice(Practice-first 一等产物的反向引用) =====
+  sourcePracticeId String?                 // 产出此条 Memory 的那个 Practice.id(session-extract 一次调用同写 Practice 与 K/M/S)
+  qualityScore   Float     @default(0.0)   // 结构化质量分 0-1 (程序计算, 非 LLM 自评)
+  summary        String?                   // 人类可读摘要 (结构化 content 的 summary 字段)
+  // ===== 2026-09-24 agent-x #7 记忆过期自动清理 (docs/platform-logic/memory-expires-at-2026-09-24.md) =====
+  //   显式到期时间契约: NULL = 永不过期(默认, 存量行为不变); 非空且 <= now 的行由
+  //   scripts/memory-expiry-sweep.cjs 归档(tier=COLD, decayScore=1.0, 不硬删除)。
+  expiresAt      DateTime?                 // 到期时间, NULL=永不过期
+  // ===== 2026-10-16 D4（维护窗口执行）: 记忆归属字段（只加列，不做权限界面）=====
+  ownerAgentId   String?                     // 归属 agent_id（NULL=未归属/共享）
+  memoryScope    String   @default("global") // private | shared | global  (2026-11-02 与 PG schema/线上库对齐；无主行必须 global)
+  // ============================================
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  usedInPractices PracticeUsedMemoryLink[]  // 2026-10-09 round 72-D: 被哪些实践用过(反向引用)
+
+  @@index([expiresAt])
+  @@index([tier])
+  @@index([domain])
+  @@index([sourceType])
+  @@index([type])
+  @@index([agentSource])
+  @@index([contentHash])
+  @@index([migrated])
+  @@index([theme])
+  @@index([supersededBy])
+  @@index([ownerAgentId])
+  @@index([memoryScope])
+}
+
+// ===== Knowledge Module =====
+
+model Knowledge {
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  qualityScore Float?   @default(0.0)  // 结构化质量分 0-1 (calcKnowledgeQuality, 2026-08-27 补齐覆盖)
+  sourceType  String?   // 知识来源类型: LEARNING, PRACTICE, QUERY, SELF_SUMMARY, USER_PROVIDED
+  sourceId    String?   // 关联来源ID (milestoneId, practiceId等)
+  sourceDetail String?  // 来源详情描述
+  agentSource String?   // 来源agent: HERMES_SESSION, CLAUDE_CONVERSATION, etc.
+  tags        String?
+  category    String?
+  confidence  Float     @default(0.5)
+  usageCount  Int       @default(0)
+  lastUsedAt  DateTime?
+  filePath    String?
+  // ===== 2026-10-09 round 72: 降权标记(tier, 写端由 scripts/downweight-cognitive-rows.cjs 填; 读端由 context-seed.ts 过滤) =====
+  tier         String    @default("WARM")
+  // ===== 2026-07-02 STRUCTURED-V3 新增 (P0) =====
+  theme        String?                  // 2-6 字中文主题词
+  contentHash  String?                  // sha256(title+content)
+  supersededBy String?
+  supersededAt DateTime?
+  reinforceCount Int    @default(0)
+  // ============================================
+  // ===== 2026-07-12 PHASE-B 版本联动 (sourceIds + stale) =====
+  sourceLayer   String?   // "L1" (from memory) / "L2" (from knowledge)
+  sourceIds     String?   // JSON array of source record ids
+  sourceHash    String?   // hash(sorted(sourceIds))
+  stale         Boolean   @default(false)
+  staleReason   String?
+  // ===== 2026-09-15 f-002 提案落地: Knowledge/SOP/RUNBOOK 产物类型分流 (proposal cmtwtf1cd05ti1j76genllwms + Reflection cmu2rrylk003722n2rxtz2jhf) =====
+  // 区分陈述性知识 vs 紧急恢复步骤, 避免 runbook 内容污染 Knowledge 语义检索
+  // 默认 KNOWLEDGE; SOP=标准化操作程序; RUNBOOK=紧急恢复手册 (应转入 runbook 文档/Skill, 不参与 Knowledge 主题内去重)
+  contentType   String?   @default("KNOWLEDGE")   // KNOWLEDGE | SOP | RUNBOOK
+  // ===== 2026-07-22 V1.8 结构化数据 =====
+  mapId          String?                   // 指向 KnowledgeMap.id
+  pointName      String?                   // 知识点名称 (同一 mapId 下可多个)  // ===== 2026-09-04 P2: 人机协同可信度 =====
+  // ===== 2026-10-09 round 72-D: 关联回 Practice =====
+  sourcePracticeId String?   // 产出此条 Knowledge 的那个 Practice.id
+  // ============================================================
+  humanConfirmed Boolean @default(false)   // 是否经真人确认/纠错
+  verification   String?                   // 验证方法/如何复述-推理-应用 (陈述性知识口径)
+  // ============================================================
+
+  // ============================================================
+  // ===== 2026-09-22 知识库结构化整理: 领域维度(与 Memory.domain 对齐) =====
+  // 受控枚举: platform(平台自身机制) / agent-ops(agent运维协作) / devops(环境部署网络) /
+  //   product(业务产品需求) / data(数据模型知识); 见 docs/platform-logic/knowledge-base-reorg-2026-09-22.md
+  domain       String?   // 领域(受控枚举, 回填启发式见 scripts/knowledge-domain-backfill.cjs)
+  // ============================================================
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  practiceKnowledgeLinks PracticeKnowledgeLink[]
+  outputKnowledgeLinks   OutputKnowledgeLink[]
+
+  @@index([domain])
+  @@index([sourceType])
+  @@index([category])
+  @@index([agentSource])
+  @@index([theme])
+  @@index([contentHash])
+  @@index([supersededBy])
+  @@index([stale])
+  // >>> asset-scoping-r5 (2026-10-23 方案 R5，窗口内加；--revert 可撤)
+  ownerAgentId String?  // 归属 agent_id；NULL = 未归属/存量（按 L1 规则仍可读）
+  visibility   String   @default("global")  // private | shared | global  (2026-11-02 与 PG schema/线上库对齐；无主行必须 global)
+
+  @@index([ownerAgentId])
+  @@index([visibility])
+  // <<< asset-scoping-r5
+}
+
+// ===== Reflection Module =====
+
+model Reflection {
+  id              String              @id @default(cuid())
+  title           String
+  description     String?
+  category        String?
+  status          String              @default("OPEN")
+  priority        String?
+  lesson          String?
+  improvements    String?
+  insight         String?
+  score           Float?
+  sourceType      String?             // 来源agent: HERMES_SESSION, CLAUDE_CONVERSATION, etc.
+  sourceId        String?             // 来源session/对话ID
+  agentSource     String?             // 2026-06-06 P1-3: 写入者 agent 枚举 (HERMES_AGENT / CLAUDE_AGENT / PIPELINE_HERMES / PIPELINE_CLAUDE / TASK_RESOLVED_HERMES / TASK_RESOLVED_CLAUDE / PROBLEM_RESOLVED_HERMES / PROBLEM_RESOLVED_CLAUDE / MIGRATION_HISTORICAL)
+  milestoneId     String?
+  learningPathId  String?
+  knowledgeId     String?
+  filePath        String?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  improvementActions ImprovementAction[]
+
+  // === V3 结构化字段(用于聚类 + 决策 + 上下文组装) ===
+  theme                  String?   // 主题词: "端口管理" / "异步操作" / ...
+  actionType             String?   // CREATE_TASK | UPDATE_SKILL | ADD_KNOWLEDGE | ALERT | NONE
+  actionConfidence       Float?    // 0-1
+  structuredImprovements String?   // JSON: [{text, severity, area}]
+  relatedMemoryIds       String?   // 逗号分隔
+  relatedKnowledgeIds    String?
+  relatedSessionIds      String?
+  relatedProblemIds      String?
+  rootCauseAnalysis      String?   // 50-200 字根本原因
+  proposedPlan           String?   // 3-7 步实施计划(纯文本,每行一步)
+  processingVersion      String?   // "v3" 标记,空/null 走 V2 老路径
+  // ===== 2026-07-02 STRUCTURED-V3 新增 (P0) =====
+  contentHash    String?
+  supersededBy   String?
+  supersededAt   DateTime?
+  reinforceCount Int      @default(0)
+  // ============================================
+
+  @@index([status])
+  @@index([category])
+  @@index([priority])
+  @@index([sourceType])
+  @@index([theme])
+  @@index([contentHash])
+  @@index([supersededBy])
+  @@index([actionType])
+  @@index([processingVersion])
+}
+
+model ImprovementAction {
+  id           String      @id @default(cuid())
+  reflectionId String
+  content      String
+  status       String      @default("pending")
+  effect       String?
+  createdAt    DateTime    @default(now())
+  completedAt  DateTime?
+  reflection   Reflection  @relation(fields: [reflectionId], references: [id], onDelete: Cascade)
+}
+
+// ===== Skills Module =====
+
+model Skill {
+  id                  String            @id @default(cuid())
+  name                String            @unique
+  // 2026-10-26: 双名称——businessName 给人看（原 name 的业务可读名），technicalName 给查询用（kebab/sk-<hash8>，唯一）
+  //   唯一性由部分唯一索引保证（Prisma 不支持声明）：public 桶 technicalName 唯一；有主桶 (ownerAgentId, technicalName) 唯一
+  businessName        String?
+  technicalName       String?
+  category            String
+  level               String            @default("AWARENESS")
+  qualityScore        Float?            @default(0.0)  // 结构化质量分 0-1 (calcSkillQuality, 2026-08-27 补齐覆盖)
+  description         String?
+  content             String?           // 技能完整内容 (markdown)
+  source              String?           @default("LEARNED")  // LEARNED vs IMPORTED
+  usageMethod         String?           // 如何使用该技能
+  autoMatchRules      String?           // 自动化匹配规则 (JSON array string)
+  parentSkillId       String?
+  totalUsageCount     Int               @default(0)
+  selfAssessment      Float?
+  // ===== 2026-10-09 round 72: 降权标记(写端由 scripts/downweight-cognitive-rows.cjs; 读端由 context-seed.ts 过滤) =====
+  tier                String            @default("WARM")
+  validatedByPracticeId String?
+  // ===== 2026-07-12 PHASE-B 版本联动 + STRUCTURED-V3 =====
+  theme          String?
+  contentHash    String?
+  supersededBy   String?
+  supersededAt   DateTime?
+  reinforceCount Int               @default(0)
+  sourceLayer    String?   // "L2" (from knowledge)
+  sourceIds      String?   // JSON array of source record ids
+  sourceHash     String?
+  stale          Boolean   @default(false)
+  staleReason    String?
+  // ===== 2026-10-09 round 72-D: 关联回 Practice + 引用 Knowledge =====
+  sourcePracticeId      String?   // 产出此 Skill 的那个 Practice.id
+  referencedKnowledgeIds String?   // 引用了哪些 Knowledge(JSON array), 从 LLM 生成时填
+  // ============================================================
+  // ===== 2026-08-28 通用技能库规范 (docs/SKILL-SPEC.md) =====
+  // 无 steps 不成 skill: content 字段承载 steps (markdown 编号步骤+命令)
+  trigger        String?   // 适用场景: 什么时候用 (必填, API 校验)
+  verification   String?   // 验证方法: 怎么确认成功 (必填, API 校验)
+  pitfalls       String?   // 已知坑 (可选)
+  platforms      String?   // 已验证环境 e.g. "ubuntu24.04/node14"
+  // ===== 2026-10-09 round 70: 名称/摘要/标签 三件套 (人类裁决) =====
+  // 用途(人类原话): "通过名称, 摘要, 标签快速确认技能的匹配, 匹配到的再看技能详情确认是否与当前工作匹配"。
+  //   即: 列表/检索层只需 name + summary + tags 就能判断"要不要展开"; steps/content 属详情层。
+  // 约束: name <= 20 且**不含省略号**(@lions/product-contract.normalizeSkillName);
+  //   summary <= 80 字; tags 是规范化后的 JSON 数组字符串(<=8 个, 每个 <=12 字)。
+  summary        String?   // 摘要/简要说明 (<=80 字, 列表页初筛用)
+  tags           String?   // 标签 JSON 数组字符串 e.g. ["MCP","stdio"] (匹配用)
+  version        Int       @default(1)  // 版本号, supersededBy 版本链
+  legacy         Boolean   @default(false) // true=2026-08-28 前的无步骤存量, 只挡新增不迁移
+  // ============================================================
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  parentSkill         Skill?            @relation("SkillHierarchy", fields: [parentSkillId], references: [id])
+  childSkills         Skill[]            @relation("SkillHierarchy")
+  toolProficiency     ToolProficiency[]
+  practiceSkillLinks  PracticeSkillLink[]
+
+  @@index([category])
+  @@index([level])
+  @@index([theme])
+  @@index([stale])
+  // >>> asset-scoping-r5 (2026-10-23 方案 R5，窗口内加；--revert 可撤)
+  ownerAgentId String?  // 归属 agent_id；NULL = 未归属/存量（按 L1 规则仍可读）
+  visibility   String   @default("global")  // private | shared | global  (2026-11-02 与 PG schema/线上库对齐；无主行必须 global)
+
+  @@index([ownerAgentId])
+  @@index([visibility])
+  // <<< asset-scoping-r5
+}
+
+model ToolProficiency {
+  id          String   @id @default(cuid())
+  skillId     String
+  toolName    String
+  proficiency String   @default("AWARENESS")
+  notes       String?
+  lastUsedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  skill       Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([skillId, toolName])
+  @@index([toolName])
+}
+
+// ===== Practice Module =====
+
+model Practice {
+  id           String   @id @default(cuid())
+  title        String
+  description  String?
+  type         String
+  outcome      String
+  qualityScore Float?
+  difficulty   Float?
+  duration     Float?
+  startedAt    DateTime
+  completedAt  DateTime?
+  // ===== 2026-10-09 round 72: 降权标记(写端由 scripts/downweight-cognitive-rows.cjs; 读端由 context-seed.ts 过滤) =====
+  tier         String    @default("WARM")
+  // ===== 2026-10-09 round 72-D: Practice 升级为一等产物(人类裁决: 先整理实践, 再派生认知) =====
+  taskRef      String?   // 关联任务(ImprovingTask.id 或其他)
+  lesson       String?   // 经验与教训(写路径: session-extract.ts insPractice; 注: 原注释引用的 scripts/check-practice-has-lesson.cjs 从未存在, 必填硬闸未实现)
+  outputs      String?   // 实践产出 JSON [{type:'PR'|'KNOWLEDGE'|'MEMORY'|'SKILL'|'OUTPUT', refId, summary}]
+  leftovers    String?   // 遗留改进 JSON [{description, suggestedTaskType}] -> 自动转改进任务
+  // ============================================================
+  // ===== 2026-07-02 STRUCTURED-V3 新增 (P0) =====
+  agentSource  String?
+  sourceType   String?
+  sourceId     String?
+  theme        String?
+  contentHash  String?
+  supersededBy String?
+  supersededAt DateTime?
+  reinforceCount Int    @default(0)
+  // ============================================
+  // ===== 2026-07-12 PHASE-B 版本联动 (sourceIds + stale) =====
+  sourceLayer   String?   // "L1" (from memory) / "L2" (from knowledge)
+  sourceIds     String?   // JSON array of source record ids
+  sourceHash    String?   // hash(sorted(sourceIds))
+  stale         Boolean   @default(false)
+  staleReason   String?
+  // ============================================================
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  skillLinks   PracticeSkillLink[]
+  knowledgeLinks PracticeKnowledgeLink[]
+  usedMemories   PracticeUsedMemoryLink[]
+  outputLinks  PracticeOutputLink[]
+  evaluations  PracticeEvaluation[]
+
+  @@index([type])
+  @@index([outcome])
+  @@index([startedAt])
+  @@index([agentSource])
+  @@index([theme])
+  @@index([contentHash])
+  @@index([supersededBy])
+  @@index([stale])
+}
+
+// ===== 2026-10-09 round 72-D: Practice 用到了哪些 Memory(链路闭环的最后一环) =====
+model PracticeUsedMemoryLink {
+  practiceId String
+  memoryId   String
+  role       String?    // "used_to_resolve"|"derived_from"|"context_of"... LLM 自填
+  createdAt  DateTime  @default(now())
+  practice   Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  memory     Memory    @relation(fields: [memoryId], references: [id], onDelete: Cascade)
+  @@id([practiceId, memoryId])
+  @@index([memoryId])
+}
+
+model PracticeSkillLink {
+  practiceId String
+  skillId    String
+  role       String?
+  skillAfter String?
+  notes      String?
+  practice   Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  skill      Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([practiceId, skillId])
+  @@index([skillId])
+}
+
+model PracticeKnowledgeLink {
+  practiceId      String
+  knowledgeId     String
+  applicationNote String?
+  effectiveness   Float?
+  practice        Practice  @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  knowledge       Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  @@unique([practiceId, knowledgeId])
+  @@index([knowledgeId])
+}
+
+model PracticeOutputLink {
+  practiceId String
+  outputId   String
+  practice   Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  output     Output   @relation(fields: [outputId], references: [id], onDelete: Cascade)
+
+  @@unique([practiceId, outputId])
+}
+
+// ===== Portfolio Module =====
+
+model Output {
+  id            String    @id @default(cuid())
+  title         String
+  type          String
+  quality       String
+  qualityScore  Float?
+  projectId     String?
+  gitCommitHash String?
+  filePaths     String?
+  linesAdded    Int?
+  linesRemoved  Int?
+  sourceId      String?
+  sourceType    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  knowledgeLinks OutputKnowledgeLink[]
+  practiceLinks  PracticeOutputLink[]
+  evaluations   PracticeEvaluation[]
+
+  @@index([type])
+  @@index([quality])
+  @@index([projectId])
+  @@index([createdAt])
+  @@index([sourceType])
+}
+
+model OutputKnowledgeLink {
+  outputId    String
+  knowledgeId String
+  output      Output   @relation(fields: [outputId], references: [id], onDelete: Cascade)
+  knowledge   Knowledge @relation(fields: [knowledgeId], references: [id], onDelete: Cascade)
+
+  @@unique([outputId, knowledgeId])
+  @@index([knowledgeId])
+}
+
+model PracticeEvaluation {
+  id              String   @id @default(cuid())
+  practiceId     String
+  outputId       String?
+  score          Float?
+  strengths      String?
+  weaknesses     String?
+  lessonsLearned String?
+  feedbackNotes  String?
+  createdAt      DateTime @default(now())
+  practice       Practice @relation(fields: [practiceId], references: [id], onDelete: Cascade)
+  output         Output?  @relation(fields: [outputId], references: [id])
+
+  @@index([practiceId])
+}
+
+// ===== Flywheel Tracking =====
+
+model FlywheelEvent {
+  id          String   @id @default(cuid())
+  stage       String
+  sourceType  String
+  sourceId    String
+  sourceTitle String
+  targetStage String
+  targetType  String?
+  targetId    String?
+  taskId      String?
+  createdAt   DateTime @default(now())
+  task        Task?    @relation(fields: [taskId], references: [id])
+
+  @@index([stage])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+
+model Evidence {
+  id             String   @id @default(cuid())
+  sourceType     String
+  sourceService  String?
+  agentId        String?
+  sourceId       String?
+  title          String?
+  summary        String?
+  payload        String?
+  idempotencyKey String   @unique
+  status         String   @default("RECEIVED")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([sourceType])
+  @@index([sourceService])
+  @@index([agentId])
+  @@index([status])
+}
+
+model CognitiveCandidate {
+  id               String   @id @default(cuid())
+  evidenceId       String?
+  type             String
+  content          String
+  structuredPayload String?
+  confidence       Float    @default(0.5)
+  importance       Float    @default(0.5)
+  suggestedAction  String   @default("CREATE")
+  targetId         String?
+  reason           String?
+  status           String   @default("PENDING")
+  // ===== 2026-07-02 STRUCTURED-V3 新增 (P0) =====
+  agentSource      String?  // pipeline 写入者
+  sourceType       String?  // HERMES_SESSION / CLAUDE_SESSION / FEISHU_MSG ...
+  sourceId         String?  // lions-session Session.sessionUid
+  theme            String?  // 2-6 字主题
+  title            String?  // Knowledge/Skill/Reflection/Practice 的 title
+  contentHash      String?  // sha256(content) 或 sha256(title+content)
+  resolvedAt       DateTime?
+  resolvedTargetId String?  // Resolver 命中的正式表 id (UPDATE/MERGE 时)
+  resolverAction   String?  // 最终 Resolver 决策 CREATE/UPDATE/MERGE/DISCARD
+  // ============================================
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([evidenceId])
+  @@index([type])
+  @@index([status])
+  @@index([agentSource])
+  @@index([sourceType, sourceId])
+  @@index([contentHash])
+  @@index([theme])
+  @@index([resolverAction])
+}
+
+model FlywheelJob {
+  id             String   @id @default(cuid())
+  jobType        String
+  status         String   @default("PENDING")
+  evidenceId     String?
+  sessionUid     String?
+  agentId        String?
+  priority       String   @default("P2")
+  attempts       Int      @default(0)
+  maxAttempts    Int      @default(3)
+  error          String?
+  idempotencyKey String   @unique
+  scheduledAt    DateTime @default(now())
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([jobType])
+  @@index([status])
+  @@index([evidenceId])
+  @@index([sessionUid])
+  @@index([agentId])
+}
+
+// ===== 2026-07-12 PHASE-B 版本联动: 重合成队列 =====
+
+model SynthesisJob {
+  id            String   @id @default(cuid())
+  targetLayer   String   // "L2" (knowledge) / "L3" (skill)
+  targetTheme   String?  // 要重合成的 theme
+  reason        String   // "memory X updated" / "knowledge Y stale"
+  priority      Int      @default(5)
+  status        String   @default("PENDING") // PENDING / PROCESSING / DONE / FAILED
+  sourceId      String?  // 触发源 record id
+  sourceType    String?  // memory / knowledge / practice
+  error         String?
+  attempts      Int      @default(0)
+  maxAttempts   Int      @default(3)
+  createdAt     DateTime @default(now())
+  processedAt   DateTime?
+
+  @@index([status])
+  @@index([targetLayer])
+  @@index([targetTheme])
+  @@index([priority])
+}
+
+model ResolverDecision {
+  id          String   @id @default(cuid())
+  candidateId String
+  resolverType String
+  action      String
+  targetId    String?
+  reason      String?
+  beforeJson  String?
+  afterJson   String?
+  status      String   @default("APPLIED")
+  createdAt   DateTime @default(now())
+
+  @@index([candidateId])
+  @@index([resolverType])
+  @@index([action])
+  @@index([status])
+}
+
+model DailySummary {
+  id              String   @id @default(cuid())
+  date            String   @unique  // YYYY-MM-DD
+  reflectionCount Int      @default(0)
+  p1Count         Int      @default(0)
+  p2Count         Int      @default(0)
+  avgScore        Float?
+  totalActions    Int      @default(0)
+  completedActions Int     @default(0)
+  pendingActions  Int      @default(0)
+  overviewText    String?
+  lessonsText     String?
+  insightsText    String?
+  improvementsText String?
+  actionsText     String?
+  pendingText     String?
+  sourceReflectionIds String?  // JSON array of reflection ids
+  createdAt       DateTime @default(now())
+}
+
+// ===== Knowledge Graph =====
+
+model KnowledgeEntity {
+  id          String    @id @default(cuid())
+  name        String                   // 实体名称
+  type        String                   // CONCEPT, CODE, PERSON, PROJECT, TOOL, DOMAIN
+  description String?
+  aliases     String?                  // 别名，多个用逗号分隔
+  memoryCount Int      @default(0)     // 关联的记忆数量
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  relationsFrom KnowledgeRelation[] @relation("RelationSource")
+  relationsTo   KnowledgeRelation[] @relation("RelationTarget")
+
+  @@index([name])
+  @@index([type])
+}
+
+model KnowledgeRelation {
+  id           String   @id @default(cuid())
+  sourceId     String
+  targetId     String
+  relationType String                   // IS_A, PART_OF, USES, DEPENDS_ON, SIMILAR_TO, RELATED_TO
+  weight       Float   @default(0.5)  // 关系权重 0-1
+  source       KnowledgeEntity @relation("RelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  target       KnowledgeEntity @relation("RelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([sourceId, targetId, relationType])
+  @@index([sourceId])
+  @@index([targetId])
+  @@index([relationType])
+}
+
+// ===== Sync Tracking =====
+
+model AutoRotationConfig {
+  id             String    @id @default(cuid())
+  enabled        Boolean   @default(false)
+  cronExpression String    @default("*/30 * * * *")
+  maxPerRun      Int       @default(3)
+  projectFilter  String?
+  status         String    @default("STOPPED")
+  lastRunAt      DateTime?
+  lastError      String?
+  totalRuns      Int       @default(0)
+  totalRecords   Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model SyncLog {
+  id             String   @id @default(cuid())
+  sourceType     String
+  sourcePath     String   @unique
+  status         String
+  recordsSynced  Int      @default(0)
+  recordsSkipped Int      @default(0)
+  errorMessage   String?
+  messageCount   Int      @default(0)  // Track message count at time of processing
+  runMode        String   @default("MANUAL") // MANUAL | AUTO
+  startedAt      DateTime @default(now())
+  completedAt    DateTime?
+  lastSyncAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([sourceType])
+  @@index([status])
+}
+
+// ============================================================================
+// 2026-08-21 agent-x: 飞轮错误日志 (P2 错误分类落库)
+//   之前: 错误只在 console / .log 打印, 无法历史分析
+//   现在: 按 errorType 分类落库, 可按类型/时间/SQL 分析
+//   用途: 飞轮 dashboard 错误趋势图, 自动触发重跑 (4 类错误可重试)
+// ============================================================================
+model FlywheelErrorLog {
+  id           String   @id @default(cuid())
+  errorType    String   // RATE_LIMIT | SERVER_ERROR | AUTH_ERROR | SCHEMA_INVALID | NETWORK | TIMEOUT | UNKNOWN
+  stage        String   // scan | extract | write | reflect | structure | pipeline
+  sourceType   String?  // SyncLog.sourceType 同源 (CLAUDE_CONVERSATION / HERMES_SESSION / PIPELINE_xxx)
+  sourcePath   String?  // SyncLog.sourcePath 同源, 方便 join
+  sessionId    String?  // 关联 session, 便于按 session 查错
+  traceId      String?  // 关联一次完整 tick 的 traceId
+  message      String   // 错误摘要 (≤ 500 字)
+  rawError     String?  // 完整错误 stack (≤ 5000 字)
+  httpStatus   Int?     // 原始 HTTP 状态码
+  retried      Int      @default(0)  // 已重试次数
+  resolved     Boolean  @default(false)  // 是否已恢复 (下次同 sourcePath 成功自动标 true)
+  occurredAt   DateTime @default(now())
+
+  @@index([errorType])
+  @@index([stage])
+  @@index([occurredAt])
+  @@index([sourcePath])
+  @@index([traceId])
+}
+
+// ============================================================================
+// P3 阶段 4-6: Agent 服务注册 (SHARED-BRAIN-AGENT-REGISTRATION-DESIGN-v1.md)
+// 2026-06-17 ut 设计, 14:00 agent-x 端 7 人评审
+// ============================================================================
+
+// 服务元数据表 (动态可扩, 加服务 INSERT 一行, 不改代码)
+model AgentService {
+  id              String   @id @default(cuid())
+  name            String   @unique       // "lions_mind" | "mcp_agent_chat" | 未来服务
+  display_name    String
+  description     String
+  endpoint        String                  // 默认端点 URL
+  health_url      String?                 // /health 路径
+  version         String
+  status          String   @default("ACTIVE")  // ACTIVE | DEPRECATED | DISABLED
+  enabled         Boolean  @default(true)
+  default_config  String?                // JSON 字符串 (SQLite 不支持 Json 类型)
+  available_perms String?                // JSON 字符串数组
+  // V6-7: 幂等标识 (2026-06-18 09:48)
+  //   true  = 调用天然幂等 (GET / query / idempotent POST) — 重试安全
+  //   false = 副作用操作 (POST / send_message) — 重试可能重复
+  //   客户端 retry 逻辑: true 自动重试, false 需 token+1 保证一次
+  idempotent      Boolean  @default(false)
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  permissions     AgentServicePermission[]
+
+  @@index([status])
+  @@index([enabled])
+  @@index([idempotent])
+}
+
+// Agent 主数据表 (跟 mcp 端 agent_id 主键对齐, kebab-case 全局唯一)
+model AgentRegistry {
+  id            String   @id @default(cuid())
+  agent_id      String   @unique        // "agent-h" (kebab)
+  display_name  String
+  channel       String                   // hermes / claude / mcp / custom
+  host          String                   // 主机名
+  avatar        String?
+  profile       String?                  // JSON 字符串
+  status        String   @default("ACTIVE")  // ACTIVE | REVOKED | DEPRECATED
+  token_hash    String?                  // Portal API token 的 sha256 (2026-08-27: 修复 token 生成后即丢的假认证)
+  // P2-A 2026-09-01 架构预留 (RBAC-ARCHITECTURE-RESERVED.md §3.2):
+  //   非商业版不强制 RBAC, 字段默认 NULL = 行为不变; 商业版启用时按 role 层级过滤
+  role          String?                  // OWNER / ADMIN / EDITOR / VIEWER (NULL = 未分级, 视同 EDITOR)
+  tenant_id     String?                  // 多租户预留 (NULL = 单租户/全局)
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  last_seen_at  DateTime?
+
+  permissions   AgentServicePermission[]
+
+  @@index([status])
+  @@index([channel])
+}
+
+// Agent × Service 权限表 (apiKey hash + 权限 + 过期)
+model AgentServicePermission {
+  id            String   @id @default(cuid())
+  agent_id      String                   // 关联 AgentRegistry.agent_id
+  service_name  String                   // 关联 AgentService.name
+  api_key_hash  String   @unique         // sha256(apiKey) —— **鉴权只查此列**; 注意: 明文并非"不存", 见下方 api_key_plain(845-851) 与其安全门
+  token_id      String                   // tk_001
+  expires_at    DateTime
+  permissions   String                   // JSON 字符串
+  config        String?                  // JSON 字符串
+  status        String   @default("ACTIVE")  // ACTIVE | REVOKED | EXPIRED
+  // 2026-10-27 K: 作用域 agent|admin；NULL = agent（存量兼容，不能一刀切成"已分类"）。
+  //   管理操作（开线 / 发凭证 / 改归属）要求 admin；日常收发(daily_messaging) agent 即可。
+  //   生命周期（scope / expires_at）由 MACS 写：审批与心跳续期；平台只建行。
+  scope         String?
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  last_used_at  DateTime?
+  // P0 幂等 (2026-06-18): 1h 幂等保护窗口
+  //   > now → register 沿用旧 perm, 不换 key
+  //   <= now → register 正常换新 key
+  //   续期: 每次 register 命中或写入都刷新
+  idempotent_until DateTime?
+  // P0-B23 修复 (2026-06-18 18:00): 明文 key 缓存 (只用于 idempotent_reused 重发)
+  //   业务目的: 13/agent-x 等首次 onboard 拿占位符后, 24h 内再 register 走幂等分支,
+  //     旧逻辑不返明文 (DB 只存 hash), 13 端 .env 拿不到真 key → 401
+  //   安全门: 这字段权限等于 DB 明文, 必须 mode 0600, 仅 admin/grantApiKey 可读
+  //   清理: force=true 重 register 会刷新, 老 key 自动失效
+  //   跟 hash 字段区分: hash 用于业务鉴权 (查 hash), plain 用于紧急重发
+  api_key_plain String?  // 明文, 仅 grantApiKey 端点用
+
+  agent         AgentRegistry @relation(fields: [agent_id],     references: [agent_id],   onDelete: Cascade)
+  service       AgentService  @relation(fields: [service_name], references: [name],       onDelete: Cascade)
+
+  @@unique([agent_id, service_name])
+  @@index([api_key_hash])
+  @@index([status])
+  @@index([expires_at])
+  @@index([idempotent_until])
+}
+
+// ===== 2026-06-17 P4 NEW: Session 管理服务 (SHARED-BRAIN V3) =====
+// SessionRegistry: 所有 agent 上报的 session 元信息中枢
+// Pipeline 改从这表拉 PENDING session -> 提取认知 -> 更新 status
+// 替代之前本地扫文件/SQLite 的方式
+model SessionRegistry {
+  id               String   @id @default(cuid())
+  // 跨 agent + 跨 source 的全局 session_uid
+  //   - claude: agent-{agent_id}:{conversation_id}
+  //   - hermes: agent-{agent_id}:{session_uuid}
+  //   - 未来 openai/ollama: agent-{agent_id}:{openai_thread_id}
+  session_uid      String   @unique
+  agent_id         String                // 关联 AgentRegistry.agent_id (logical)
+  source           String                // CLAUDE_CONVERSATION / HERMES_SESSION / OPENAI_THREAD / CUSTOM
+  source_id        String                // 原始 source 的 session id (claude conversation id / hermes session uuid)
+  title            String?
+  started_at       DateTime?
+  ended_at         DateTime?
+  last_message_at  DateTime?
+  message_count    Int      @default(0)
+  // Pipeline 处理状态
+  status           String   @default("PENDING")  // PENDING / PROCESSING / PROCESSED / FAILED / SKIPPED
+  processed_at     DateTime?
+  processing_error String?
+  // 重复检测: agent 上报时若 fingerprint 已存在则更新非关键字段, 不重复插入
+  fingerprint      String   @unique     // sha256(agent_id|source|source_id)
+  // 原始 payload (压缩存储, 关键消息 + 元信息, 限 1MB)
+  raw_payload      String?              // JSON: { messages: [...], metadata: {...} }
+  payload_size     Int      @default(0) // 字节数
+  // 上报时间
+  uploaded_at      DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  @@index([agent_id])
+  @@index([source])
+  @@index([status])
+  @@index([status, uploaded_at])  // pipeline claim PENDING + oldest first
+  @@index([source_id])
+}
+
+// ── DLQ (V1.1 §16.10/§21.4 + §18.7 SLO) ────────────────────
+// dead_letter_queue: 投递失败 / 重试耗尽的消息或事件落库, 给 ops 排障 + SLO "DLQ 堆积 <100"
+model DeadLetterQueue {
+  id            String   @id @default(cuid())
+  // 来源类型 — 区分是哪条链路投递失败
+  //   HOOK_DELIVERY   : OpenClaw/Hermes hook → main session 投递失败 (§21.4 risk 1)
+  //   REPLY_META      : REPLY_META 死循环兜底 (§21.5 risk 3)
+  //   PIPELINE_SCAN   : pipeline scanner 失败 (reflection→task / task→4 scanner)
+  //   SESSION_SYNC    : SessionRegistry bulkUpload 失败
+  //   MCP_SEND        : send_message MCP 投递失败
+  //   CUSTOM          : 其他
+  source        String
+  // 业务 id (message_id / session_uid / task_id / reflection_id 等)
+  ref_id        String?
+  // 来源 agent (谁触发的)
+  agent_id      String?
+  // 失败原因分级
+  reason        String                    // TIMEOUT / 5XX / VALIDATION / DEAD_LETTER / CIRCUIT_BREAKER
+  error_message String?                   // 具体错误文本 (限 4KB)
+  // 完整 payload, JSON 字符串 (限 64KB)
+  payload       String?
+  // 重试统计
+  retry_count   Int      @default(0)
+  max_retries   Int      @default(3)
+  // 状态机
+  status        String   @default("OPEN") // OPEN / RETRYING / RESOLVED / EXPIRED / IGNORED
+  // ops 处理记录
+  resolved_at   DateTime?
+  resolved_by   String?                   // ops user 或 "auto"
+  resolution    String?                   // 处理结论文本
+  // 时间戳
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@index([status])
+  @@index([source])
+  @@index([source, status])               // SLO 监控: 按来源统计 OPEN 数量
+  @@index([agent_id])
+  @@index([created_at])                   // 老化清理
+}
+
+// ── Task 模块 (原 selfimproving-task 并入) ────────────────────
+
+model Task {
+  id                  String                @id @default(cuid())
+  title               String
+  description         String
+  background          String
+  requirements        String
+  materials           String
+  acceptanceCriteria  String
+  qualityStandards    String
+  status              String                @default("PENDING")
+  priority            String                @default("P2")
+  sourceSummaryId     String?
+  sourceReflectionIds String?
+  sourceProblemId     String?
+  sourceTaskId        String?
+  assignedAgent       String?
+  estimatedEffort     String?
+  actualEffortMs      Int?
+  projectPath         String?
+  techStack           String?
+  targetFiles         String?
+  prerequisiteTaskIds String?
+  retryCount          Int                   @default(0)
+  maxRetries          Int                   @default(3)
+  completedAt         DateTime?
+  completedBy         String?
+  manualReview        Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  theme               String?
+  structuredContext   String?
+  contextVersion      String?
+  // ===== 2026-09-14 认领并发控制落地 (知识条目 cmtwa1b1900j0yn162 / 提案 cmtwb7z1o00l11j76e6tx65um) =====
+  // 背景: 复核 cmu0stufv00nuki4ag8rzt5ur 判定原落地为"无实现无证据", 并给出限定命题:
+  //   "新增 version/lease/expireAt/expectedOwner 字段 + 释放侧对称记 transition"。
+  // 语义:
+  //   version        = 乐观锁版本号; 认领/续约/释放/接管/提交都必须带 version CAS, 影响行=0 即"归属已变"。
+  //   leaseExpiresAt = 租约到期(lease TTL); 认领时写入, 心跳续约; 到期且未续约才可被回收/接管。
+  //   expectedOwner  = 显式归属断言(expectedOwner/takeover 要素); 与 assignedAgent 一起参与 CAS,
+  //                    使"我以为自己还持锁"与"库里实际归属"的偏差可被检测, 而非静默双写。
+  version             Int                   @default(0)
+  leaseExpiresAt      DateTime?
+  expectedOwner       String?
+  // ===== 2026-07-17 V1.6 自动改进闭环 (lions-flywheel-v16-implementation-design.md §3.1) =====
+  // 复用 Task 表 (V1.6 §3.3 不新增表决策), 4 type ImprovingTask: FIX_THEME/FIX_CONFLICT/MIGRATE_DATA/RE_RUN
+  improvementType     String?                // FIX_THEME / FIX_CONFLICT / MIGRATE_DATA / RE_RUN
+  improvementPayload  String?                // JSON: type 特定参数 (conflicts/mergeTargets/sql/theme)
+  rerunResult         String?                // JSON: { before, after, delta, theme, reranAt } - V1.6 §3.1 ⑧ 验证再跑产出
+  // ===== V1.8 结构化反思 (REFLECTION-STRUCTURED-DESIGN.md) =====
+  isDayLevel          Boolean               @default(false)     // false=主题级 task, true=天级 task
+  executions          TaskExecution[]
+  reviews             TaskReview[]
+  flywheelEvents      FlywheelEvent[]
+  stateTransitions    TaskStateTransition[]
+  problems            Problem[]
+
+  @@index([status])
+  @@index([priority])
+  @@index([sourceSummaryId])
+  @@index([sourceProblemId])
+  @@index([sourceTaskId])
+  @@index([retryCount])
+  @@index([theme])
+  @@index([contextVersion])
+  @@index([leaseExpiresAt])
+}
+
+model TaskCluster {
+  id            String   @id @default(cuid())
+  clusterKey    String   @unique
+  theme         String
+  taskId        String?
+  reflectionIds String
+  status        String   @default("ACTIVE")
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([clusterKey])
+  @@index([taskId])
+  @@index([status])
+}
+
+model TaskExecution {
+  id                  String    @id @default(cuid())
+  taskId              String
+  agentId             String
+  agentRole           String
+  status              String    @default("PENDING")
+  startedAt           DateTime?
+  completedAt         DateTime?
+  input               String
+  output              String    @default("")
+  thoughtProcess      String?
+  problemsEncountered String?
+  solutionsApplied    String?
+  blocks              String?
+  nextSteps           String?
+  retryCount          Int       @default(0)
+  qualityPassed       Boolean?
+  // ===== 2026-09-23 agent-x #5 机制修复: cronjob 执行期上下文注入 =====
+  // 承载 JSON 字符串, 与 TaskStateTransition.metadata 同款口径(nullable, 旧数据不受影响)。
+  // 约定写入键: agentMemorySnapshot(主 agent 核心 memory 冻结快照, schemaVersion=1,
+  //   见 src/server/pipeline/agent-memory-snapshot.ts)。后续执行期上下文键按需追加, 不破坏既有读取方。
+  metadata            String?
+  createdAt           DateTime  @default(now())
+  task                Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  problems            Problem[]
+
+  @@index([taskId])
+  @@index([agentId])
+  @@index([status])
+  @@index([qualityPassed])
+}
+
+model TaskReview {
+  id             String   @id @default(cuid())
+  taskId         String
+  reviewerId     String
+  reviewerRole   String
+  status         String   @default("PENDING")
+  score          Float?
+  strengths      String?
+  weaknesses     String?
+  lessonsLearned String?
+  feedbackNotes  String?
+  createdAt      DateTime @default(now())
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([reviewerId])
+}
+
+model TaskStateTransition {
+  id         String   @id @default(cuid())
+  taskId     String
+  fromStatus String?
+  toStatus   String
+  actor      String?
+  reason     String?
+  metadata   String?
+  createdAt  DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+model Problem {
+  id                 String        @id @default(cuid())
+  taskExecutionId    String
+  taskId             String
+  description        String
+  severity           String        @default("P2")
+  status             String        @default("OPEN")
+  sourceType         String?
+  originTaskId       String?
+  solutionsAttempted String?
+  rootCause          String?
+  resolvedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  taskExecution      TaskExecution @relation(fields: [taskExecutionId], references: [id], onDelete: Cascade)
+  task               Task?         @relation(fields: [taskId], references: [id])
+  taskTitle               String?
+  taskDescription         String?
+  taskRequirements        String?
+  taskBackground          String?
+  taskAcceptanceCriteria  String?
+  taskQualityStandards    String?
+  taskMaterials           String?
+  sourceReflectionId      String?
+  sourceReflectionContent String?
+  autoResolveAttempts Int       @default(0)
+  lastAttemptAt       DateTime?
+  resolutionAgentId   String?
+  resolutionNotes     String?
+  resolutionTaskId    String?
+  impactDescription   String?
+
+  @@index([taskId])
+  @@index([status])
+  @@index([severity])
+  @@index([resolutionTaskId])
+  @@index([sourceType])
+  @@index([originTaskId])
+}
+
+model TaskCompletionTrigger {
+  id               String    @id @default(cuid())
+  taskId           String
+  triggerType      String
+  reflectionPrompt String
+  status           String    @default("PENDING")
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+  reflectionTaskId String?
+
+  @@index([taskId])
+  @@index([status])
+}
+
+model ProblemCompletionTrigger {
+  id               String    @id @default(cuid())
+  problemId        String
+  triggerType      String
+  reflectionPrompt String
+  status           String    @default("PENDING")
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+  reflectionTaskId String?
+
+  @@index([problemId])
+  @@index([status])
+}
+
+model ReviewRecord {
+  id                    String   @id @default(cuid())
+  taskId                String
+  taskExecutionId       String
+  reviewType            String
+  reviewerId            String?
+  reviewResult          String
+  qualityScore          Int
+  keyFindings           String?
+  issuesFound           String?
+  improvementsSuggested String?
+  createdAt             DateTime @default(now())
+  taskSnapshot          String?
+  executionSnapshot     String?
+
+  @@index([taskId])
+  @@index([reviewResult])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  action     String
+  actor      String?
+  actorType  String?
+  before     String?
+  after      String?
+  metadata   String?
+  createdAt  DateTime  @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actor])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ===== 2026-07-16 V1.5 反思引擎 (lions-flywheel-engine-v2-design.md §2.3.1) =====
+// FlywheelReflection: 1 主题 1 条最新反思 (theme @unique)
+// 输入: 主题全文 + 该主题所有 4 类产物
+// 状态: PENDING → PROCESSING → OK / FAILED
+model FlywheelReflection {
+  id             String    @id @default(cuid())
+  theme          String    @unique            // 1 主题 1 条最新 (D12)
+  missedTopics   String                        // JSON.stringify(["主题1", ...])
+  improvements   String                        // JSON.stringify(["lesson1", ...])
+  coverageScore  Float                         // 0-1 (多批平均, D11)
+  conflicts      String?                       // JSON.stringify([{memoryIds, ...}], 供 V1.6 FIX_CONFLICT 用)
+  productCounts  String                        // JSON: {memory, knowledge, practice, reflection} 当前主题产物数
+  lastErrors     String?                       // 上次失败的错误堆栈 (debug 用)
+  status         String    @default("OK")      // OK / FAILED
+  attempts       Int       @default(1)         // 尝试次数 (重试用)
+  // ===== 反思产物同步写到 Memory 表 (D13, type=REFLECTION) 的反向追溯 =====
+  reportedMemoryIds  String?                   // JSON.stringify([memoryId1, ...]) 本次反思同步写到 Memory 表的 id 列表 (含报告+产物)
+  // ===== V1.8 结构化反思 (REFLECTION-STRUCTURED-DESIGN.md) =====
+  structuredFindings     String?               // JSON: StructuredFinding[] (含 what/why/background/requirement/acceptance/priority/impact/actionType/evidenceSnippet/dedupHash/status/measuredDelta)
+  reflectionGranularity  String?  @default("theme") // "theme" | "day"
+  dayStats               String?               // JSON: 日反思时的飞轮统计快照 (jobsDone/failed, sessionsProcessed, coverageDelta)
+  // ===== 2026-09-09 P2 合并版: 触发原因 / 输入审计 / 正文总结 / 覆盖增量 =====
+  triggerReason          String?               // JSON: {kind, sinceLastHours, newProductSinceLast, manual} 为什么触发本轮反思
+  sourceStats            String?               // JSON: {candidateSessions, fetchedSessions, messages, chunks, truncatedSessions, truncatedMessages, windowStart, windowEnd} 输入面审计
+  summary                String?               // 反思正文总结 ≤300字 (人读; 任务背景引用)
+  coverageDelta          Float?                // 本次 coverage - 上次 coverage (进度感)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([status])
+  @@index([coverageScore])
+  @@index([updatedAt])
+}
+
+// ===== 2026-07-22 V1.8 结构化数据聚合层 (flywheel-structured-data-v1.md §4) =====
+
+// MemoryTopic: 记忆主题聚合, 同 theme 的 Memory 归入一个 topic
+// agent 拉 1 个 topic 拿全局视图 (summary + bestMemory + subTopics)
+model MemoryTopic {
+  id            String    @id @default(cuid())
+  name          String    @unique             // 主题名称 (= Memory.theme)
+  summary       String?                       // LLM 合并生成的主题摘要
+  subTopics     String?                       // JSON: ["子主题1", "子主题2"]
+  relatedTopics String?                       // JSON: ["关联主题1"]
+  memoryCount   Int       @default(0)         // 总条数
+  activeCount   Int       @default(0)         // 活跃条数 (supersededBy IS NULL)
+  coverageScore Float     @default(0.0)       // 子主题覆盖率 0-1
+  freshnessScore Float    @default(0.0)       // 新鲜度 0-1
+  bestMemoryId  String?                       // 最高质量 Memory 的 id
+  lastMigratedAt DateTime?                    // 旧数据迁移时间 (失败重试用)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([name])
+}
+
+// KnowledgeMap: 知识地图, 同 theme 的 Knowledge 归入一个 map
+// 含知识点关系 (dependsOn / leadsTo / contradicts)
+model KnowledgeMap {
+  id             String    @id @default(cuid())
+  name           String    @unique            // 知识方向名称 (= Knowledge.theme)
+  domain         String?                       // 所属领域 (如 "Database")
+  summary        String?                       // LLM 合并生成的方向摘要
+  knowledgePoints String?                      // JSON: [{point, statement, difficulty, dependsOn, leadsTo, contradicts, knowledgeIds}]
+  completeness   Float     @default(0.0)       // 完整度 0-1
+  consistency    Float     @default(0.0)       // 一致性 0-1
+  practicality   Float     @default(0.0)       // 实用性 0-1
+  relatedMaps    String?                       // JSON: ["关联地图1"]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([name])
+  @@index([domain])
+}
+
+// ===== 组织架构 (2026-09-21, 设计见 docs/platform-logic/org-model-2026-09-21.md) =====
+// 3 层: 角色 Role -> 岗位 Position -> agent 实例; 汇报关系; 小组(临时组队, 组内负责人)。
+model OrgRole {
+  id        String        @id @default(cuid())
+  name      String        @unique   // 开发/测试/运维/设计/产品/数据
+  desc      String?
+  level     Int           @default(0) // 级别(0=基础), 预留
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  positions OrgPosition[]
+}
+
+model OrgPosition {
+  id          String          @id @default(cuid())
+  name        String          @unique // 岗位名
+  roleId      String                  // -> OrgRole.id
+  parentId    String?                 // 岗位层级: 上级岗位
+  desc        String?
+  status      String          @default("ACTIVE") // ACTIVE | ARCHIVED
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  role        OrgRole         @relation(fields: [roleId], references: [id])
+  assignments OrgAssignment[]
+  @@index([roleId])
+}
+
+model OrgAssignment {
+  id         String        @id @default(cuid())
+  agentId    String                  // AgentRegistry.agent_id
+  positionId String                  // -> OrgPosition.id
+  isPrimary  Boolean       @default(true) // 主岗唯一(应用层保证)
+  status     String        @default("ACTIVE") // ACTIVE | INACTIVE
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  position   OrgPosition   @relation(fields: [positionId], references: [id])
+  @@unique([agentId, positionId])
+  @@index([positionId])
+}
+
+model OrgReport {
+  id             String   @id @default(cuid())
+  managerAgentId String             // 上级 agent
+  reportAgentId  String             // 下级 agent
+  kind           String   @default("REPORTING")
+  createdAt      DateTime @default(now())
+  @@unique([managerAgentId, reportAgentId])
+  @@index([reportAgentId])
+}
+
+model AgentGroup {
+  id           String             @id @default(cuid())
+  name         String             @unique
+  purpose      String?                    // 任务/目的
+  ownerAgentId String?                    // 组负责人(agent_id)
+  status       String             @default("ACTIVE") // ACTIVE | CLOSED
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  members      AgentGroupMember[]
+}
+
+model AgentGroupMember {
+  id          String      @id @default(cuid())
+  groupId     String
+  agentId     String
+  roleInGroup String      @default("member") // leader | member
+  addedAt     DateTime    @default(now())
+  group       AgentGroup  @relation(fields: [groupId], references: [id])
+  @@unique([groupId, agentId])
+  @@index([agentId])
+}
+
+// ===== 组织部门树 + 平台设置 (2026-09-21 重做, 用户规格: 部门树 + 小组 tab) =====
+model OrgDepartment {
+  id         String   @id @default(cuid())
+  parentId   String?              // null = 根(平台名)
+  name       String
+  desc       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  members    AgentDeptMember[]
+  @@index([parentId])
+}
+
+model AgentDeptMember {
+  id           String   @id @default(cuid())
+  agentId      String            // AgentRegistry.agent_id
+  departmentId String
+  isPrimary    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  department   OrgDepartment @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  @@unique([agentId, departmentId])
+  @@index([departmentId])
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+// ===== 资源级 RBAC (2026-09-21, Q6#5; 设计见 docs/platform-logic/rbac-resource-2026-09-21.md) =====
+// 授权主体 = agent 或 org 角色; 资源 = (resourceType, resourceKey) 范围; 权限 = read/write/exec/admin。
+// 表由脚本手动建(与 Todo 等运行期表一致, 不用 db push —— 避免误删运行期表)。
+model ResourcePermission {
+  id           String   @id @default(cuid())
+  subjectType  String            // agent | role
+  subjectId    String            // agent_id 或 OrgRole.id
+  resourceType String            // business-system | project | data-scope | api
+  resourceKey  String            // 业务系统名/项目名/数据范围键
+  permission   String            // read | write | exec | admin
+  effect       String   @default("allow") // allow | deny
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  @@unique([subjectType, subjectId, resourceType, resourceKey, permission])
+  @@index([subjectType, subjectId])
+}
+

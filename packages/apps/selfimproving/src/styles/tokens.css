@@ -1,0 +1,245 @@
+/*
+ * Lions-Mind + Lions-Task 跨项目共享设计 token
+ * Cognitive OS 主题 — 业务语义命名 (mind/axon/synapse/flow) 而非 generic
+ * 4 主题: dark (默认) / light / glass / mono
+ * 用法: 在 globals.css 顶部 @import, 各组件用 var(--xxx) 引用
+ *
+ * 设计目标:
+ * - 区分 AI 默认紫 (#a78bfa 等) — 用青绿 #5eead4 作 mind 主色
+ * - 业务 4 色: mind(青绿) / axon(紫, 反思) / synapse(琥珀, 实践) / flow(天蓝, 飞轮)
+ * - 5 状态: ok / warn / err / frozen / info
+ * - 3 层字体: display / body / mono
+ */
+
+/* ============ Dark (默认) ============ */
+:root,
+:root[data-theme="cognitive-os-dark"] {
+  /* 背景层 (从最底到最上) */
+  --bg-base: #0a0f1c;
+  --bg-elevated: #111827;
+  --bg-overlay: #1e293b;
+  --surface: #0f172a;
+  --surface-hi: #1e293b;
+  --surface-glass: rgba(15, 23, 42, 0.6);
+
+  /* 文字 (5 档透明度) */
+  --ink-primary: #e2e8f0;
+  --ink-secondary: #cbd5e1;
+  --ink-tertiary: #94a3b8;
+  --ink-dim: #64748b;
+  --ink-disabled: #475569;
+  --ink-inverse: #0f172a;
+
+  /* 业务 4 色 (主色 + 渐变辅) */
+  --brand-mind: #5eead4;        /* 青绿 - 认知/Lions Mind 主色 */
+  --brand-mind-soft: #14b8a6;
+  --brand-axon: #a78bfa;        /* 紫 - 反思/Reflections */
+  --brand-axon-soft: #7c3aed;
+  --brand-synapse: #fbbf24;     /* 琥珀 - 实践/Practice */
+  --brand-synapse-soft: #d97706;
+  --brand-flow: #60a5fa;        /* 天蓝 - 飞轮事件/Flywheel */
+  --brand-flow-soft: #2563eb;
+
+  /* 状态 5 色 */
+  --status-ok: #10b981;         /* COMPLETED / 成功 */
+  --status-ok-soft: #059669;
+  --status-warn: #f59e0b;       /* PENDING / 警告 */
+  --status-warn-soft: #d97706;
+  --status-err: #ef4444;        /* FAILED / BLOCKED */
+  --status-err-soft: #dc2626;
+  --status-frozen: #6b7280;     /* DEPRECATED / CANCELLED */
+  --status-frozen-soft: #4b5563;
+  --status-info: #38bdf8;
+  --status-info-soft: #0284c7;
+
+  /* 边框 4 档 */
+  --border: rgba(148, 163, 184, 0.12);
+  --border-hi: rgba(148, 163, 184, 0.24);
+  --border-soft: rgba(148, 163, 184, 0.06);
+  --border-strong: rgba(94, 234, 212, 0.4);
+
+  /* 4 渐变 (CTA / 强调) */
+  --gradient-mind: linear-gradient(135deg, #5eead4 0%, #14b8a6 100%);
+  --gradient-axon: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  --gradient-flow: linear-gradient(135deg, #60a5fa 0%, #a78bfa 50%, #f472b6 100%);
+  --gradient-rainbow: linear-gradient(90deg, #5eead4, #60a5fa, #a78bfa, #f472b6);
+
+  /* 阴影 + 光晕 */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.6);
+  --glow-mind: 0 0 24px rgba(94, 234, 212, 0.3);
+  --glow-axon: 0 0 24px rgba(167, 139, 250, 0.3);
+  --glow-flow: 0 0 24px rgba(96, 165, 250, 0.3);
+
+  /* 圆角 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* 间距 (4 倍数) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* 3 层字体 */
+  --font-display: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Menlo, monospace;
+
+  /* 字号 */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+  --text-4xl: 40px;
+  --text-5xl: 56px;
+  --text-hero: clamp(36px, 5vw, 80px);
+
+  /* 行高 */
+  --leading-tight: 1.2;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* 缓动 */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Antd CSS variable 桥接 (v5/v6 通用) */
+  --antd-color-primary: var(--brand-mind);
+  --antd-color-primary-hover: var(--brand-mind-soft);
+  --antd-color-bg-container: var(--bg-elevated);
+  --antd-color-bg-elevated: var(--surface-hi);
+  --antd-color-bg-layout: var(--bg-base);
+  --antd-color-text: var(--ink-primary);
+  --antd-color-text-secondary: var(--ink-tertiary);
+  --antd-color-border: var(--border-hi);
+}
+
+/* ============ Light ============ */
+:root[data-theme="cognitive-os-light"] {
+  --bg-base: #fafafa;
+  --bg-elevated: #ffffff;
+  --bg-overlay: #f3f4f6;
+  --surface: #ffffff;
+  --surface-hi: #f8fafc;
+  --surface-glass: rgba(255, 255, 255, 0.7);
+
+  --ink-primary: #0f172a;
+  --ink-secondary: #334155;
+  --ink-tertiary: #64748b;
+  --ink-dim: #94a3b8;
+  --ink-disabled: #cbd5e1;
+  --ink-inverse: #f8fafc;
+
+  --brand-mind: #0d9488;        /* 深青绿 (亮色版主色) */
+  --brand-mind-soft: #14b8a6;
+  --brand-axon: #7c3aed;
+  --brand-axon-soft: #a78bfa;
+  --brand-synapse: #d97706;
+  --brand-synapse-soft: #f59e0b;
+  --brand-flow: #2563eb;
+  --brand-flow-soft: #60a5fa;
+
+  --status-ok: #059669;
+  --status-ok-soft: #10b981;
+  --status-warn: #d97706;
+  --status-warn-soft: #f59e0b;
+  --status-err: #dc2626;
+  --status-err-soft: #ef4444;
+  --status-frozen: #9ca3af;
+  --status-frozen-soft: #6b7280;
+  --status-info: #0284c7;
+  --status-info-soft: #38bdf8;
+
+  --border: rgba(15, 23, 42, 0.08);
+  --border-hi: rgba(15, 23, 42, 0.16);
+  --border-soft: rgba(15, 23, 42, 0.04);
+  --border-strong: rgba(13, 148, 136, 0.4);
+
+  --gradient-mind: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+  --gradient-axon: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  --gradient-flow: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #db2777 100%);
+  --gradient-rainbow: linear-gradient(90deg, #0d9488, #2563eb, #7c3aed, #db2777);
+
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 4px 12px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-xl: 0 16px 48px rgba(15, 23, 42, 0.16);
+  --glow-mind: 0 0 24px rgba(13, 148, 136, 0.2);
+  --glow-axon: 0 0 24px rgba(124, 58, 237, 0.2);
+  --glow-flow: 0 0 24px rgba(37, 99, 235, 0.2);
+
+  --antd-color-primary: var(--brand-mind);
+  --antd-color-bg-container: var(--bg-elevated);
+  --antd-color-bg-elevated: var(--surface-hi);
+  --antd-color-bg-layout: var(--bg-base);
+  --antd-color-text: var(--ink-primary);
+  --antd-color-text-secondary: var(--ink-tertiary);
+  --antd-color-border: var(--border-hi);
+}
+
+/* ============ Glass (毛玻璃, 占位) ============ */
+:root[data-theme="cognitive-os-glass"] {
+  --bg-base: #0a0f1c;
+  --bg-elevated: rgba(30, 41, 59, 0.5);
+  --bg-overlay: rgba(15, 23, 42, 0.6);
+  --surface: rgba(15, 23, 42, 0.4);
+  --surface-hi: rgba(30, 41, 59, 0.6);
+  --surface-glass: rgba(15, 23, 42, 0.3);
+
+  --ink-primary: #e2e8f0;
+  --ink-secondary: #cbd5e1;
+  --ink-tertiary: #94a3b8;
+  --ink-dim: #64748b;
+  --ink-disabled: #475569;
+  --ink-inverse: #0f172a;
+
+  --border: rgba(148, 163, 184, 0.16);
+  --border-hi: rgba(148, 163, 184, 0.32);
+  --border-soft: rgba(148, 163, 184, 0.08);
+  --border-strong: rgba(167, 139, 250, 0.4);
+}
+
+/* ============ Mono (极简, 占位) ============ */
+:root[data-theme="cognitive-os-mono"] {
+  --bg-base: #000000;
+  --bg-elevated: #0a0a0a;
+  --bg-overlay: #141414;
+  --surface: #0a0a0a;
+  --surface-hi: #1a1a1a;
+
+  --ink-primary: #fafafa;
+  --ink-secondary: #d4d4d4;
+  --ink-tertiary: #a3a3a3;
+  --ink-dim: #737373;
+  --ink-disabled: #525252;
+  --ink-inverse: #0a0a0a;
+
+  --brand-mind: #fafafa;
+  --brand-mind-soft: #d4d4d4;
+  --brand-axon: #fafafa;
+  --brand-axon-soft: #d4d4d4;
+  --brand-synapse: #fafafa;
+  --brand-synapse-soft: #d4d4d4;
+  --brand-flow: #fafafa;
+  --brand-flow-soft: #d4d4d4;
+
+  --border: rgba(250, 250, 250, 0.12);
+  --border-hi: rgba(250, 250, 250, 0.24);
+  --border-soft: rgba(250, 250, 250, 0.06);
+  --border-strong: rgba(250, 250, 250, 0.5);
+}

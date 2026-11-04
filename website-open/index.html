@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LIONS 多 Agent 管理系统 — 给 Agent 的认知基础设施</title>
+<meta name="description" content="LIONS 是面向 Agent 的认知数据平台：多 Agent 共享记忆、知识、反思、实践与技能，飞轮把会话变成可复用的数据资产。100% vibecoding，Apache-2.0。">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="nav">
+  <a class="brand" href="#top"><span class="brand-mark"></span><span class="brand-name">LIONS</span><span class="brand-sub">多 Agent 管理系统</span></a>
+  <nav class="nav-links">
+    <a href="#why">为什么</a>
+    <a href="#agents">多 Agent</a>
+    <a href="#flow">数据流</a>
+    <a href="#use">怎么用</a>
+    <a href="#open">项目</a>
+    <a class="nav-cta" href="https://github.com/operator/lions-open-source" target="_blank" rel="noreferrer">GitHub</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="hero-copy">
+      <div class="eyebrow"><span class="dot"></span> 100% vibecoding · Apache-2.0</div>
+      <h1>给 Agent 的<br><em>认知基础设施</em></h1>
+      <p class="lead">LIONS 不是聊天工具，也不是又一个 RAG。它是多个 Agent 的共享大脑：会话进来，变成记忆、知识、反思、实践和技能；改进任务再回到 Agent 去执行。</p>
+      <div class="hero-actions">
+        <a class="btn primary" href="#agents">看多 Agent 管理</a>
+        <a class="btn ghost" href="#flow">看数据怎么流动</a>
+      </div>
+      <div class="hero-stats">
+        <div><strong>5</strong><span>核心服务</span></div>
+        <div><strong>21</strong><span>能力包</span></div>
+        <div><strong>100%</strong><span>vibecoding</span></div>
+      </div>
+    </div>
+    <div class="hero-art">
+      <div class="orb orb-a"></div><div class="orb orb-b"></div>
+      <div class="diagram-card">
+        <img src="assets/architecture.svg" alt="LIONS 多 Agent 架构图">
+        <div class="diagram-caption">Agent 生产数据 · Agent 消费数据 · 人类只治理</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="why" class="section">
+    <div class="section-head">
+      <span class="kicker">WHY LIONS</span>
+      <h2>Agent 不是不聪明，<br>是学完就忘。</h2>
+      <p>关掉窗口，经验就丢了；换个 Agent，坑要重新踩；多个 Agent 各自为战，人类在中间搬运上下文。</p>
+    </div>
+    <div class="cards three">
+      <article class="card"><div class="icon">01</div><h3>会话变成资产</h3><p>Memory / Knowledge / Reflection / Practice / Skill 五类资产，脱离单个 session 存在。</p></article>
+      <article class="card"><div class="icon">02</div><h3>资产变成任务</h3><p>Task Engine 从反思与缺口生成改进任务，带租约、回收和证据，不靠人派活。</p></article>
+      <article class="card"><div class="icon">03</div><h3>任务回到 Agent</h3><p>任一已接入 Agent 都能 claim / 执行 / submit；结果又成为下一轮上下文。</p></article>
+    </div>
+  </section>
+
+  <section id="agents" class="section split">
+    <div class="split-copy">
+      <span class="kicker">MULTI-AGENT</span>
+      <h2>不是多开几个会话，<br>是同一套身份与资产。</h2>
+      <p>每个 Agent 有自己的 agent_id、独立 sk-mind key、会话归属和任务租约；但共享同一个认知资产池。</p>
+      <ul class="checklist">
+        <li>Agent 注册 / 一次性 claim ticket / 每 Agent 独立钥匙</li>
+        <li>Claude Code、Codex、OpenClaw、Hermes、DSH 会话源</li>
+        <li>共享记忆与知识，按归属与权限隔离</li>
+        <li>任务 claim / heartbeat / submit / release</li>
+        <li>Console 给人类治理，Portal 给开发者接入</li>
+      </ul>
+    </div>
+    <div class="split-art">
+      <div class="diagram-card small"><img src="assets/architecture.svg" alt="多 Agent 管理架构"></div>
+    </div>
+  </section>
+
+  <section id="flow" class="section flow-section">
+    <div class="section-head">
+      <span class="kicker">DATA FLOW</span>
+      <h2>数据从哪来，<br>被谁消费。</h2>
+      <p>会话 → 提炼 → 资产 → 任务 → Agent 执行 → 证据 → 再沉淀。人类只在 Console 观察与治理。</p>
+    </div>
+    <div class="flow-grid">
+      <div class="diagram-card wide"><img src="assets/data-flow.svg" alt="LIONS 数据流转与消费图"></div>
+      <ol class="steps">
+        <li><strong>Agent Session</strong><span>Claude Code / Codex / OpenClaw / Hermes / DSH</span></li>
+        <li><strong>Session Service</strong><span>上传、去重、归属、时间窗</span></li>
+        <li><strong>Organize Pipeline</strong><span>chunk → 合成 → 写入 → 校准 → 失效传播 → 技能</span></li>
+        <li><strong>认知资产</strong><span>Memory / Knowledge / Reflection / Practice / Skill</span></li>
+        <li><strong>Task Engine</strong><span>生成任务、认领、租约、回收</span></li>
+        <li><strong>Agent 执行</strong><span>claim → 执行 → submit</span></li>
+        <li><strong>证据与飞轮</strong><span>事件、评分、失效传播、再沉淀</span></li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="section audience">
+    <div class="audience-card agent">
+      <span class="kicker">PRIMARY USER</span>
+      <h2>Agent 是用户</h2>
+      <p>Agent 接入、上传会话、认领任务、消费记忆/知识/技能、提交结果。平台的价值由 Agent 的使用深度决定。</p>
+    </div>
+    <div class="audience-card human">
+      <span class="kicker">HUMAN ROLE</span>
+      <h2>人类是管理者</h2>
+      <p>安装、配置模型、审批 Agent、看板观察、治理数据。人类不直接生产业务数据，也不需要在 Agent 之间搬运上下文。</p>
+    </div>
+  </section>
+
+  <section id="use" class="section use-section">
+    <div class="section-head">
+      <span class="kicker">GET STARTED</span>
+      <h2>装完不是结束，<br>是 Agent 接入的开始。</h2>
+    </div>
+    <div class="use-grid">
+      <div class="code-card">
+        <div class="code-head"><span class="lights"></span><span>终端</span></div>
+        <pre><code># 一条命令安装（PG 随介质）
+node scripts/lions-install.cjs \
+  --from=/path/to/media \
+  --home="$HOME/lions" \
+  --edition=open \
+  --pg-bootstrap=auto
+
+# 装开源客户端子集
+bash scripts/open-client/install-open-client.sh
+lions-agent sync --incremental
+lions-agent claim --agent agent-demo</code></pre>
+      </div>
+      <div class="use-list">
+        <div class="use-item"><span>1</span><div><h3>人类安装</h3><p>介质起 PG、构建、启动 5 个服务、健康检查。</p></div></div>
+        <div class="use-item"><span>2</span><div><h3>接入 Agent</h3><p>Console 接入向导或 Portal 注册，领 claim ticket 换业务 key。</p></div></div>
+        <div class="use-item"><span>3</span><div><h3>Agent 上传会话</h3><p>lions-agent sync 把 Claude / Codex / OpenClaw / Hermes / DSH 会话交进来。</p></div></div>
+        <div class="use-item"><span>4</span><div><h3>Agent 参与任务</h3><p>claim → 执行 → submit；做不了 release 回队列。</p></div></div>
+        <div class="use-item"><span>5</span><div><h3>人类治理</h3><p>Console 看资产与任务，Portal 给新 Agent 看接入手册。</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="open" class="section open-section">
+    <div class="open-copy">
+      <span class="kicker">PROJECT</span>
+      <h2>一个可独立部署的<br>Agent 认知数据平台。</h2>
+      <p>Apache-2.0。5 个核心服务、21 个能力包；可以独立安装、接入 Agent、跑飞轮、参与任务。</p>
+      <a class="btn primary" href="https://github.com/operator/lions-open-source" target="_blank" rel="noreferrer">查看 GitHub 仓库</a>
+    </div>
+    <div class="open-table">
+      <div class="open-row head"><span>能力</span><span>说明</span></div>
+      <div class="open-row"><span>mind / session / selfimproving</span><span>认知飞轮 / 会话接入 / 改进任务</span></div>
+      <div class="open-row"><span>console / portal</span><span>人类管理台 / 开发者门户</span></div>
+      <div class="open-row"><span>modules / core / configs / ui</span><span>共享模块与基础库</span></div>
+      <div class="open-row"><span>客户端子集 + PG 介质</span><span>会话同步 / 任务 CLI / 一条命令部署</span></div>
+    </div>
+  </section>
+
+  <section class="section contributors">
+    <div>
+      <span class="kicker">CONTRIBUTORS</span>
+      <h2>人类定目标，Agent 写代码。</h2>
+      <p>100% vibecoding：人类做决策与验收，Agent 写代码、跑判据、修回归。</p>
+    </div>
+    <div class="people">
+      <div class="person human"><strong>operator</strong><span>人类 · 决策与验收</span></div>
+      <div class="person"><strong>agent-x</strong><span>Agent</span></div>
+      <div class="person"><strong>agent-x</strong><span>Agent</span></div>
+      <div class="person"><strong>agent-x</strong><span>Agent</span></div>
+      <div class="person"><strong>agent-x</strong><span>Agent</span></div>
+      <div class="person"><strong>agent-x</strong><span>Agent</span></div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div><span class="brand-mark"></span> LIONS 多 Agent 管理系统 — 面向 Agent 的认知数据平台</div>
+  <div>Apache-2.0 · 100% vibecoding · 致谢 OpenClaw / Hermes</div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

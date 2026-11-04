@@ -1,0 +1,134 @@
+/* ============================================================================
+ * @lions/ui — 平台统一设计变量 (Design Tokens) · 唯一事实来源 (single source of truth)
+ *
+ * 待办: todo_3b86378390724690b8c9 【界面】统一外观(间距、字号、颜色、圆角)
+ * 背景: 三套界面曾各写一套变量(管理台/门户为一套, 会话为另一套), 导致
+ *       间距尺度、圆角、字号、状态色、字体栈在三端不一致, 且会话端有 20+ 个
+ *       var(--x) 引用了从未定义的 token。
+ *
+ * Phase1 S3 (2026-09-18, todo_043bc321c207451089cd): 新增 v2 语义层
+ *   - 6 个拍板生效色: --text-3 / --ok / --warn / --danger / --info / --brand
+ *     (决策点 #5 实算对比度 Light 全部 ≥4.5: 详见 docs/frontend-redesign-v2/decisions-final.md)
+ *   - 三主题(light/dark/hc) 全部走 `换值不换名` —— 组件零改动
+ *   - prefers-color-scheme 跟随由 layout.tsx 的 THEME_PREPAINT_SCRIPT 处理
+ *
+ * 机制:
+ *   - 本文件下方 `@lions-design-tokens:begin/end` 之间的 `:root` 块为 canonical。
+ *   - `node scripts/check-design-tokens.cjs --write` 会把该块注入三端 globals.css;
+ *     `node scripts/check-design-tokens.cjs` 会校验三端与本源逐字一致, 漂移即失败。
+ *   - v2 语义层主题块必须紧跟 scale/color 块, **同段 `:root` 内主题块之间顺序敏感**:
+ *     light(默认) -> dark -> hc, 后写者覆盖前写者, 与 <html data-theme="..."> 选择器等价。
+ *   - 各端历史语义名(如 --ink-primary / --text / --space-3)在各端 globals.css 中
+ *     以 `var(--canonical)` 别名方式桥接, 主题色/明暗差异仍由各端覆盖, 但
+ *     尺度(间距/圆角/字号/行高)与核心色 role 以本文件为准。
+ *
+ * 命名约定:
+ *   --sp-N      间距尺度 (4px 基准)
+ *   --radius-*  圆角尺度
+ *   --fs-*      字号尺度
+ *   --lh-*      行高尺度
+ *   --c-*       跨端统一色/字体/动效 role (c = canonical)
+ *   v2 语义层:
+ *     --text-3   三级文字 / 占位 / 描述
+ *     --ok / --warn / --danger / --info   状态色
+ *     --brand    品牌主色(也是按钮填充, 单 Token 拍板 #6)
+ * 变更本文件后必须运行 `--write` 并复审三端渲染。
+ * ========================================================================== */
+
+/* @lions-design-tokens:begin — 由 packages/ui/ui/src/tokens.css 生成, 勿在副本中直接改 */
+:root {
+  /* ── 间距 scale (4px 基准, 唯一一套) ── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  /* 2026-10-26：语义间距（纵向节奏）—— 之前各页混用 sp-3/sp-4/sp-5，同一层级间距不一致。
+     --gap-sect  页面级区块之间   (20)
+     --gap-block 卡片/网格之间     (16)
+     --gap-tight 卡片内部行之间    (12)
+     --gap-label 标签与数值之间    (8) */
+  --gap-sect: 20px; --gap-block: 16px; --gap-tight: 12px; --gap-label: 8px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 48px; --sp-9: 64px;
+  /* 2026-10-22 半档: console 有 var(--sp-0-5/1-5/2-5/3-5) 的用法但从未定义（守门 undefined）。
+     这里补成 4px 基准的中间档，避免各端再各自硬编码。 */
+  --sp-0-5: 2px; --sp-1-5: 6px; --sp-2-5: 10px; --sp-3-5: 14px;
+
+  /* ── 圆角 scale ── */
+  /* 2026-10-25 整改(老板拍板): 圆角收成 3 档 + 微档, 与 demo 一致。
+     原 4/6/8/12/16 的五档在页面上显出 11 种实际圆角(含 2/3/999px 手写), 视觉不成体系。 */
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px;
+
+  /* ── 字号 scale ── */
+  /* 2026-10-25 整改(老板拍板): 字号整体上调一档。实测改前首页最常用字号是 11px(177 处),
+     9/10px 合计 48 处 —— 11px 的世界里调配色永远不会好看。新 scale 正文 14 / 标签 13 / 微标 12。 */
+  --fs-xs: 12px; --fs-sm: 13px; --fs-base: 14px; --fs-md: 15px;
+  --fs-lg: 16px; --fs-xl: 20px; --fs-2xl: 24px; --fs-3xl: 30px;
+
+  /* ── 行高 scale ── */
+  --lh-tight: 1.4; --lh-base: 1.6; --lh-relaxed: 1.75;
+
+  /* ── 统一色 role (三端同值; 语义主题色可各自覆盖) ── */
+  /* 2026-10-22 统一：主色跟随品牌色（calm tech 青绿），不再让各端各写一个蓝/黄。
+     console 之前把 --c-primary 写成 var(--brand)、portal/session 写死 #2563eb，
+     这是三端主色不一致的根因。 */
+  --c-primary: var(--brand);
+  --c-primary-dim: color-mix(in srgb, var(--brand) 10%, transparent);
+  --c-status-ok: #16a34a;
+  --c-status-warn: #d97706;
+  --c-status-crit: #dc2626;
+
+  /* ── 统一字体栈 / 动效 ── */
+  --c-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --c-font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --c-transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * v2 语义层 — Phase1 S3 拍板生效值 (todo_043bc321c207451089cd)
+ *
+ * 6 个核心色三主题换值不换名 (Light 对比度全部 ≥4.5, 见 decisions-final.md #5):
+ *   --text-3  Light=#6E6E78(5.04)  Dark=#8A8A93(5.78)  HC=#D8D8D8
+ *   --ok      Light=#237A34(5.38)  Dark=#34D399(8.4)   HC=#00FF88
+ *   --warn    Light=#8A6300(5.43)  Dark=#FBBF24(11.0)  HC=#FFB300
+ *   --danger  Light=#C02626(5.92)  Dark=#F87171(6.2)   HC=#FF4D4D
+ *   --info    Light=#0F6FA8(5.44)  Dark=#60A5FA(7.5)   HC=#5AC8FF
+ *   --brand   Light=#0B6E82(5.89)  Dark=#22D3EE(10.8)  HC=#FFD400
+ *
+ * **Light 默认** —— 同 `--c-*` 系语义保持一致, 旧组件通过 aliases.css 桥接零改动。
+ * ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Light 主题默认(拍板生效值; 老用户首屏跟随系统, 见 layout.tsx THEME_PREPAINT_SCRIPT) */
+  --text-3: #6E6E78;
+  --ok: #237A34;
+  --warn: #8A6300;
+  --danger: #C02626;
+  --info: #0F6FA8;
+  --brand: #0B6E82;
+
+  /* 2026-10-22 新增：主色上的文字色（console 用 --on-accent 别名、portal 写死 #0a0e14、
+     session 干脆没有）。三主题统一在此定义，各端只引用。 */
+  --on-primary: #ffffff;
+}
+
+/* dark-first 默认(用户未选则取 dark; prefers-color-scheme 由 layout 脚本写 data-theme,
+   本选择器只兜底: 即便脚本未跑, dark 也能用) */
+[data-theme="dark"] {
+  --text-3: #8A8A93;
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --info: #60A5FA;
+  --brand: #22D3EE;
+  --on-primary: #0a0e14;
+
+}
+
+/* 高对比(可达性): 强黄/强绿/强红, 对比度 ≥7, 满足 WCAG AAA(7:1) */
+[data-theme="hc"] {
+  --text-3: #D8D8D8;
+  --ok: #00FF88;
+  --warn: #FFB300;
+  --danger: #FF4D4D;
+  --info: #5AC8FF;
+  --brand: #FFD400;
+  --on-primary: #0a0e14;
+
+}
+/* @lions-design-tokens:end */

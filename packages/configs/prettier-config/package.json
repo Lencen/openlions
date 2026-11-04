@@ -1,0 +1,8 @@
+{
+  "name": "@lions/prettier-config",
+  "version": "0.1.0",
+  "description": "Shared Prettier configurations for LIONS monorepo",
+  "main": "index.cjs",
+  "private": true,
+  "files": ["index.cjs"]
+}

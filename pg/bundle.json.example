@@ -1,0 +1,9 @@
+{
+  "mode": "compose",
+  "port": 5432,
+  "user": "lions",
+  "dbs": { "mind": "lions_mind", "session": "lions_session", "selfimproving": "lions_selfimproving" },
+  "image": "postgres:16",
+  "containerName": "lions-pg",
+  "volume": "lions-pgdata"
+}

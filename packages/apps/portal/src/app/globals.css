@@ -1,0 +1,606 @@
+/* @lions-design-tokens:begin — 由 packages/ui/ui/src/tokens.css 生成, 勿在副本中直接改 */
+:root {
+  /* ── 间距 scale (4px 基准, 唯一一套) ── */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  /* 2026-10-26：语义间距（纵向节奏）—— 之前各页混用 sp-3/sp-4/sp-5，同一层级间距不一致。
+     --gap-sect  页面级区块之间   (20)
+     --gap-block 卡片/网格之间     (16)
+     --gap-tight 卡片内部行之间    (12)
+     --gap-label 标签与数值之间    (8) */
+  --gap-sect: 20px; --gap-block: 16px; --gap-tight: 12px; --gap-label: 8px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 48px; --sp-9: 64px;
+  /* 2026-10-22 半档: console 有 var(--sp-0-5/1-5/2-5/3-5) 的用法但从未定义（守门 undefined）。
+     这里补成 4px 基准的中间档，避免各端再各自硬编码。 */
+  --sp-0-5: 2px; --sp-1-5: 6px; --sp-2-5: 10px; --sp-3-5: 14px;
+
+  /* ── 圆角 scale ── */
+  /* 2026-10-25 整改(老板拍板): 圆角收成 3 档 + 微档, 与 demo 一致。
+     原 4/6/8/12/16 的五档在页面上显出 11 种实际圆角(含 2/3/999px 手写), 视觉不成体系。 */
+  --radius-xs: 4px; --radius-sm: 6px; --radius-md: 10px; --radius-lg: 14px; --radius-xl: 18px;
+
+  /* ── 字号 scale ── */
+  /* 2026-10-25 整改(老板拍板): 字号整体上调一档。实测改前首页最常用字号是 11px(177 处),
+     9/10px 合计 48 处 —— 11px 的世界里调配色永远不会好看。新 scale 正文 14 / 标签 13 / 微标 12。 */
+  --fs-xs: 12px; --fs-sm: 13px; --fs-base: 14px; --fs-md: 15px;
+  --fs-lg: 16px; --fs-xl: 20px; --fs-2xl: 24px; --fs-3xl: 30px;
+
+  /* ── 行高 scale ── */
+  --lh-tight: 1.4; --lh-base: 1.6; --lh-relaxed: 1.75;
+
+  /* ── 统一色 role (三端同值; 语义主题色可各自覆盖) ── */
+  /* 2026-10-22 统一：主色跟随品牌色（calm tech 青绿），不再让各端各写一个蓝/黄。
+     console 之前把 --c-primary 写成 var(--brand)、portal/session 写死 #2563eb，
+     这是三端主色不一致的根因。 */
+  --c-primary: var(--brand);
+  --c-primary-dim: color-mix(in srgb, var(--brand) 10%, transparent);
+  --c-status-ok: #16a34a;
+  --c-status-warn: #d97706;
+  --c-status-crit: #dc2626;
+
+  /* ── 统一字体栈 / 动效 ── */
+  --c-font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --c-font-mono: 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --c-transition: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * v2 语义层 — Phase1 S3 拍板生效值 (todo_043bc321c207451089cd)
+ *
+ * 6 个核心色三主题换值不换名 (Light 对比度全部 ≥4.5, 见 decisions-final.md #5):
+ *   --text-3  Light=#6E6E78(5.04)  Dark=#8A8A93(5.78)  HC=#D8D8D8
+ *   --ok      Light=#237A34(5.38)  Dark=#34D399(8.4)   HC=#00FF88
+ *   --warn    Light=#8A6300(5.43)  Dark=#FBBF24(11.0)  HC=#FFB300
+ *   --danger  Light=#C02626(5.92)  Dark=#F87171(6.2)   HC=#FF4D4D
+ *   --info    Light=#0F6FA8(5.44)  Dark=#60A5FA(7.5)   HC=#5AC8FF
+ *   --brand   Light=#0B6E82(5.89)  Dark=#22D3EE(10.8)  HC=#FFD400
+ *
+ * **Light 默认** —— 同 `--c-*` 系语义保持一致, 旧组件通过 aliases.css 桥接零改动。
+ * ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Light 主题默认(拍板生效值; 老用户首屏跟随系统, 见 layout.tsx THEME_PREPAINT_SCRIPT) */
+  --text-3: #6E6E78;
+  --ok: #237A34;
+  --warn: #8A6300;
+  --danger: #C02626;
+  --info: #0F6FA8;
+  --brand: #0B6E82;
+
+  /* 2026-10-22 新增：主色上的文字色（console 用 --on-accent 别名、portal 写死 #0a0e14、
+     session 干脆没有）。三主题统一在此定义，各端只引用。 */
+  --on-primary: #ffffff;
+}
+
+/* dark-first 默认(用户未选则取 dark; prefers-color-scheme 由 layout 脚本写 data-theme,
+   本选择器只兜底: 即便脚本未跑, dark 也能用) */
+[data-theme="dark"] {
+  --text-3: #8A8A93;
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --info: #60A5FA;
+  --brand: #22D3EE;
+  --on-primary: #0a0e14;
+
+}
+
+/* 高对比(可达性): 强黄/强绿/强红, 对比度 ≥7, 满足 WCAG AAA(7:1) */
+[data-theme="hc"] {
+  --text-3: #D8D8D8;
+  --ok: #00FF88;
+  --warn: #FFB300;
+  --danger: #FF4D4D;
+  --info: #5AC8FF;
+  --brand: #FFD400;
+  --on-primary: #0a0e14;
+
+}
+/* @lions-design-tokens:end */
+
+/* @lions-design-aliases:begin — 由 packages/ui/ui/src/aliases.css 生成, 勿在副本中直接改 */
+:root {
+  /* ── 文字 ── */
+  --text: #1e293b;                /* v1 主文字色; 三主题跟随由数据层覆盖 */
+  --text-dim: #475569;
+  --text-muted: var(--text-3);     /* v2: --text-3 是三级文字 */
+  --text-hi: var(--text);
+
+  /* ── 品牌/主色 ── */
+  --primary: var(--brand);        /* v1 别名 → v2 品牌色 */
+  --primary-dim: rgba(11, 110, 130, 0.10);  /* v2 --brand 10% 透明, Light 与 console 同语义 */
+  --accent-primary: var(--brand);
+  --accent-quiet: var(--primary-dim);
+
+  /* ── 状态色 (v1 → v2) ── */
+  --status-ok: var(--ok);
+  --status-warn: var(--warn);
+  --status-crit: var(--danger);
+  --status-fail: var(--danger);
+  --status-pending: var(--warn);
+  --status-none: var(--text-muted);
+
+  /* ── 字号/行高/动效(已有 canonical 别名, 这里保留 v1 同义别名) ── */
+  --font-sans: var(--c-font-sans);
+  --font-mono: var(--c-font-mono);
+  --transition: var(--c-transition);
+
+  /* ── 阴影(由各端覆盖; 此处不强制桥) ── */
+}
+/* @lions-design-aliases:end */
+
+:root {
+  /* 2026-09-01 平台化重构: 默认 = P2 专业亮色 (demo-P2) */
+  --bg: #f6f7f9;
+  --bg-surface: #ffffff;
+  --bg-surface2: #f1f5f9;
+  --bg-hover: #eef2f7;
+  --border: rgba(0,0,0,0.08);
+  --border-hi: rgba(0,0,0,0.15);
+  --text: #1e293b;
+  --text-dim: #475569;
+  --text-muted: var(--text-3);   /* 2026-10-13 round 76-BX: 对齐别名层(--text-muted = var(--text-3)); #94a3b8 压浅底只有 2.6 */
+
+  --module-core: #0d9488;
+  --module-builtin: #7c3aed;
+  --module-extension: #d97706;
+  --module-audit: #dc2626;
+  --module-settings: #64748b;
+  /* 2026-10-13 round 76-BX: 对齐别名层 --primary: var(--brand) —— portal 的**暗色主题本来就用青**(#5eead4),
+     亮色却用 #2563eb 蓝, 自相矛盾; 对齐后与 console(① 品牌青)也一致。 */
+  --primary: var(--brand);
+  --primary-dim: rgba(11, 110, 130, 0.10);
+  /* 2026-10-22 统一：删掉 :root 级的 --on-primary: #ffffff —— 它声明在 canonical 的
+     [data-theme=dark] 之后，会把暗色下的"亮青底用深字"覆盖成白字（对比度 1.5）。由 canonical 给值。 */
+
+  --table-memory: #0d9488;
+  --table-knowledge: #7c3aed;
+  --table-reflection: #db2777;
+  --table-practice: #d97706;
+  --table-skill: #2563eb;
+
+  /* 2026-10-13 round 76-BX: 对齐设计系统**已验证**的状态色(--ok #237A34 / --warn #8A6300 / --danger #C02626);
+     原来用更亮的 --c-status-*(#16a34a/#d97706/#dc2626) -> 压 15% 同色底只有 3.3。 */
+  --status-ok: var(--ok);
+  --status-warn: var(--warn);
+  --status-crit: var(--danger);
+
+  --font-sans: var(--c-font-sans);
+  --font-mono: var(--c-font-mono);
+
+  --topnav-h: 52px;
+  --sidebar-w: 216px;   /* 2026-09-14 统一外观: 对齐管理台 216px (原 200px) */
+  /* 间距/圆角/字号尺度统一由 packages/ui/ui/src/tokens.css 提供 (见文件顶部 canonical 块) */
+
+  --shadow-card: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08);
+  --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.08);
+  --transition: var(--c-transition);
+}
+
+[data-theme="console-dark"], [data-theme="dark"] {
+  /* 保留暗色: 飞轮驾驶舱等深色模块用 */
+  --bg: #0a0e1a;
+  --bg-surface: #111827;
+  --bg-surface2: #1a2332;
+  --bg-hover: #1a2332;
+  --border: rgba(255,255,255,0.08);
+  --border-hi: rgba(255,255,255,0.15);
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-3: #8A8A93;            /* 对齐设计系统 dark 的 --text-3(#64748b 在深底只有 3.9) */
+  --text-muted: var(--text-3);
+  /* 2026-10-13 round 76-BX: 暗色下必须用设计系统的**暗色**状态色 —— 否则 --status-*: var(--ok)
+     会拿到亮色值 #237A34, 在深底只有 ~3.6(比原来的 #16a34a 还差)。 */
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --primary: #5eead4;
+  --on-primary: #0a0e14;        /* 亮青底上用深字(白字只有 1.5) */
+  --primary-dim: rgba(94,234,212,0.12);
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+}
+
+[data-theme="flywheel-dark"] {
+  /* 2026-09-01: 飞轮模块深色玻璃 (demo-A) */
+  --bg: #0a0f1e;
+  --bg-surface: rgba(255,255,255,0.05);
+  --bg-surface2: rgba(255,255,255,0.03);
+  --bg-hover: rgba(255,255,255,0.07);
+  --border: rgba(255,255,255,0.08);
+  --border-hi: rgba(255,255,255,0.15);
+  --text: #e2e8f0;
+  --text-dim: #94a3b8;
+  --text-3: #8A8A93;            /* 对齐设计系统 dark 的 --text-3(#64748b 在深底只有 3.9) */
+  --text-muted: var(--text-3);
+  /* 2026-10-13 round 76-BX: 暗色下必须用设计系统的**暗色**状态色 —— 否则 --status-*: var(--ok)
+     会拿到亮色值 #237A34, 在深底只有 ~3.6(比原来的 #16a34a 还差)。 */
+  --ok: #34D399;
+  --warn: #FBBF24;
+  --danger: #F87171;
+  --primary: #5eead4;
+  --on-primary: #0a0e14;        /* 亮青底上用深字(白字只有 1.5) */
+  --primary-dim: rgba(94,234,212,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-sans); font-size: var(--fs-md); line-height: 1.5;
+}
+
+/* TopNav */
+.topnav {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--topnav-h);
+  background: var(--bg-surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; z-index: 100;
+}
+.topnav-logo { display: flex; align-items: center; gap: 8px; padding: 0 20px; min-width: 200px; }
+.logo-icon { width: 24px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, var(--module-core), var(--module-builtin)); }
+.logo-text { font-size: 14px; font-weight: 600; }
+.topnav-tabs { display: flex; gap: 0; flex: 1; height: 100%; }
+.topnav-tab {
+  display: flex; align-items: center; gap: 6px; padding: 0 16px;
+  font-size: 13px; color: var(--text-muted); text-decoration: none;
+  border-bottom: 2px solid transparent; transition: all 0.15s; height: 100%;
+}
+.topnav-tab:hover { color: var(--text-dim); background: var(--bg-surface2); }
+.topnav-tab.active { color: var(--text); border-bottom-color: var(--tab-color, var(--module-core)); }
+.tab-dot { width: 6px; height: 6px; border-radius: 50%; }
+.topnav-right { display: flex; align-items: center; gap: 8px; padding: 0 20px; }
+.pulse-dot { width: 8px; height: 8px; border-radius: 50%; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* Layout */
+.layout { display: flex; padding-top: var(--topnav-h); min-height: 100vh; }
+.layout-with-sidebar { display: flex; padding-top: var(--topnav-h); min-height: 100vh; }
+.sidebar {
+  width: var(--sidebar-w); border-right: 1px solid var(--border);
+  background: var(--bg-surface); padding: var(--sp-4) 0;
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+.sidebar-group { margin-bottom: var(--sp-4); }
+.sidebar-group-label {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+  padding: 0 var(--sp-4); margin-bottom: var(--sp-2);
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: 8px; padding: 7px var(--sp-4);
+  font-size: 13px; color: var(--text-dim); text-decoration: none;
+  border-left: 3px solid transparent; transition: all 0.15s;
+}
+.sidebar-item:hover { color: var(--text); background: var(--bg-surface2); }
+.sidebar-item.active {
+  color: var(--text); background: var(--bg-surface2);
+  border-left-color: var(--tab-color, var(--module-core));
+}
+.sidebar-item .icon { font-size: 14px; width: 18px; text-align: center; }
+.sidebar-footer {
+  margin-top: auto; padding: var(--sp-3) var(--sp-4);
+  border-top: 1px solid var(--border); font-size: 11px;
+}
+.sidebar-footer .row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.sidebar-footer .dot { width: 6px; height: 6px; border-radius: 50%; }
+.sidebar-footer .num { margin-left: auto; color: var(--text-muted); font-family: var(--font-mono); }
+
+.main { flex: 1; padding: var(--sp-5); min-width: 0; margin-left: var(--sidebar-w); /* 2026-09-01: 全局 fixed 侧边栏留白 */ }
+
+/* Breadcrumb */
+.breadcrumb {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-size: 12px; color: var(--text-muted); margin-bottom: var(--sp-4);
+}
+.breadcrumb a { color: var(--text-dim); text-decoration: none; }
+.breadcrumb a:hover { color: var(--text); }
+.breadcrumb .sep { color: var(--text-muted); }
+.breadcrumb .current { color: var(--text); }
+
+/* Page Header */
+.page-header { margin-bottom: var(--sp-5); }
+.page-title { font-size: 20px; font-weight: 600; }
+.page-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+/* KPI Grid */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 180px)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.kpi-card {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: var(--sp-4); min-height: 125px;
+  display: flex; flex-direction: column; justify-content: space-between;
+  box-shadow: var(--shadow-card); transition: var(--transition);
+}
+.kpi-card:hover { border-color: var(--border-hi); box-shadow: var(--shadow-card-hover); transform: translateY(-1px); }
+.kpi-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
+.kpi-value {
+  font-size: 24px; font-weight: 600; font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums; font-feature-settings: "tnum";
+  letter-spacing: -0.02em;
+}
+.kpi-delta { font-size: 11px; margin-top: 4px; }
+.kpi-delta.up { color: var(--status-ok); }
+.kpi-delta.down { color: var(--status-crit); }
+
+/* Panel (2026-09-01 P2: 白卡片 + 阴影 + 清晰边框) */
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-5);
+  margin-bottom: var(--sp-5);
+  box-shadow: var(--shadow-card);
+}
+
+/* flywheel-dark 玻璃面板 (demo-A) */
+[data-theme="flywheel-dark"] .panel {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+[data-theme="flywheel-dark"] .panel:hover {
+  border-color: rgba(94,234,212,0.25);
+}
+[data-theme="flywheel-dark"] .kpi-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: none;
+}
+[data-theme="flywheel-dark"] .panel-header {
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* 弃用的旧 panel 定义保留注释 */
+.panel-old {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin-bottom: var(--sp-4); overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--border);
+  background: var(--bg-surface2);
+}
+.panel-title {
+  font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: var(--sp-2);
+}
+.panel-title::before {
+  content: ''; width: 3px; height: 14px;
+  background: var(--tab-color, var(--module-core)); border-radius: 2px;
+}
+
+/* Grid 2 */
+.grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-4); }
+
+/* Table */
+/* Table (2026-09-01 P2 亮色: 表头浅底 + 行悬停) */
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th {
+  text-align: left; padding: 8px 12px;
+  color: var(--text-muted); font-weight: 500;
+  background: var(--bg-surface2);
+  border-bottom: 1px solid var(--border); white-space: nowrap;
+}
+.tbl td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  word-break: keep-all; max-width: 320px; overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tbl td.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.tbl td.nowrap { white-space: nowrap; }
+.tbl tr:hover td { background: var(--bg-surface2); }
+
+/* Badge */
+.badge { display: inline-block; padding: 2px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 500; line-height: 1.4; }
+.badge.new { background: rgba(167,139,250,0.15); color: var(--module-builtin); }
+.badge.resolved { background: color-mix(in srgb, var(--status-ok) 15%, transparent); color: var(--status-ok); }
+.badge-blue { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.badge-green { background: color-mix(in srgb, var(--status-ok) 15%, transparent); color: var(--status-ok); }
+.badge-red { background: color-mix(in srgb, var(--status-crit) 15%, transparent); color: var(--status-crit); }
+
+/* Button */
+.btn { padding: 6px 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font-size: 12px; cursor: pointer; transition: var(--transition); }
+.btn:hover { border-color: var(--border-hi); background: var(--bg-surface2); box-shadow: var(--shadow-card); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Skeleton (loading 骨架屏) */
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-surface2) 25%, var(--bg-hover) 50%, var(--bg-surface2) 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Service Grid */
+.service-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 220px)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.service-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-card); transition: var(--transition); }
+.service-card:hover { border-color: var(--border-hi); box-shadow: var(--shadow-card-hover); }
+.service-card .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.service-card .name { font-size: 13px; font-weight: 600; }
+.status-badge { display: flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 8px; border-radius: var(--radius-sm); }
+.status-badge.ok { background: color-mix(in srgb, var(--status-ok) 10%, transparent); color: var(--status-ok); }
+.status-badge.crit { background: color-mix(in srgb, var(--status-crit) 10%, transparent); color: var(--status-crit); }
+.status-badge.warn { background: color-mix(in srgb, var(--status-warn) 10%, transparent); color: var(--status-warn); }
+
+/* Entry Grid */
+.entry-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 260px)); gap: var(--sp-4); }
+.entry-card {
+  background: var(--bg-surface); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: var(--sp-5); text-decoration: none;
+  color: var(--text); transition: var(--transition); display: flex; flex-direction: column;
+  gap: var(--sp-3); position: relative; box-shadow: var(--shadow-card);
+}
+.entry-card:hover { border-color: var(--border-hi); background: var(--bg-surface2); transform: translateY(-2px); box-shadow: var(--shadow-card-hover); }
+.entry-card .card-icon { width: 40px; height: 40px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 20px; background: var(--primary-dim); }
+.entry-card .card-title { font-size: 15px; font-weight: 600; }
+.entry-card .card-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+.entry-card .card-stats { display: flex; gap: var(--sp-4); margin-top: var(--sp-2); }
+.entry-card .card-stat { display: flex; flex-direction: column; gap: 2px; }
+.entry-card .card-stat-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+.entry-card .card-stat-value { font-size: 18px; font-weight: 600; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.entry-card .perm-hint {
+  position: absolute; top: var(--sp-3); right: var(--sp-3);
+  font-size: 10px; padding: 2px 6px; border-radius: var(--radius-sm);
+  background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px dashed var(--border);
+}
+.entry-card.locked { opacity: 0.5; pointer-events: none; }
+.entry-card.locked .perm-hint { background: rgba(248,113,113,0.1); color: var(--status-warn); border-color: var(--status-warn); }
+
+/* Dashboard Section */
+.dashboard-section { margin-bottom: var(--sp-5); }
+.dashboard-section-title {
+  font-size: 13px; font-weight: 600; color: var(--text-dim);
+  margin-bottom: var(--sp-3); display: flex; align-items: center; gap: var(--sp-2);
+}
+.dashboard-section-title::before {
+  content: ''; width: 3px; height: 14px;
+  background: var(--tab-color, var(--module-core)); border-radius: 2px;
+}
+
+/* Bar Chart */
+.bar-chart { padding: var(--sp-3) var(--sp-4); }
+.bar-row { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); font-size: 12px; }
+.bar-label { width: 100px; text-align: right; color: var(--text-dim); flex-shrink: 0; word-break: keep-all; }
+.bar-track { flex: 1; height: 18px; background: var(--bg-surface2); border-radius: 4px; overflow: hidden; min-width: 0; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.bar-value { width: 80px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+
+/* Funnel */
+.funnel { padding: var(--sp-4); }
+.funnel-step { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.step-label { width: 130px; font-size: 12px; color: var(--text-dim); text-align: right; flex-shrink: 0; }
+.step-bar { height: 28px; border-radius: 6px; display: flex; align-items: center; padding: 0 var(--sp-3); font-size: 12px; font-weight: 500; min-width: 0; }
+.step-count { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 12px; color: var(--text); flex-shrink: 0; }
+
+/* Responsive */
+@media (max-width: 1440px) {
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(0, 160px)); }
+  .entry-grid { grid-template-columns: repeat(auto-fit, minmax(0, 220px)); }
+}
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(auto-fit, minmax(0, 140px)); gap: var(--sp-2); }
+  .service-grid { grid-template-columns: repeat(auto-fit, minmax(0, 180px)); }
+  .entry-grid { grid-template-columns: repeat(auto-fit, minmax(0, 200px)); gap: var(--sp-3); }
+  .grid-2 { grid-template-columns: 1fr; }
+  .main { padding: var(--sp-4); }
+}
+@media (max-width: 768px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .service-grid { grid-template-columns: 1fr; }
+  .entry-grid { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .topnav-logo { min-width: auto; padding: 0 12px; }
+  .topnav-tab { padding: 0 10px; font-size: 12px; }
+  .layout-with-sidebar { flex-direction: column; }
+  .main { padding: var(--sp-3); }
+}
+@media (max-width: 480px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .topnav-tab span:not(.tab-dot) { display: none; }
+}
+
+/* === 飞轮总览 === */
+.flywheel-flow { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding: 8px 0; }
+.flywheel-stage-wrap { display: flex; align-items: center; }
+.flywheel-stage {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  padding: 12px 16px; border-radius: 10px; min-width: 90px;
+  background: var(--bg-hover); border: 1px solid var(--border);
+  transition: all 0.3s;
+}
+.flywheel-stage.active {
+  background: color-mix(in srgb, var(--primary) 15%, var(--bg-hover));
+  border-color: var(--primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+.flywheel-icon { font-size: 22px; margin-bottom: 4px; }
+.flywheel-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.flywheel-desc { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+.flywheel-pulse {
+  position: absolute; inset: 0; border-radius: 10px;
+  border: 2px solid var(--primary); opacity: 0;
+  animation: flywheel-pulse 2s ease-out infinite;
+}
+@keyframes flywheel-pulse {
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.15); }
+}
+.flywheel-arrow { font-size: 18px; color: var(--text-dim); margin: 0 2px; }
+.flywheel-loop { color: var(--primary); font-size: 20px; }
+/* 飞轮迷你进度条 (独立 class, 避免覆盖通用 BarChart 的 .bar-chart) */
+.mini-bar { width: 80px; height: 6px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; }
+.mini-bar-fill { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s; }
+.theme-list { display: flex; flex-direction: column; gap: 4px; }
+.theme-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.theme-name { min-width: 80px; text-align: right; color: var(--text); white-space: nowrap; }
+.theme-bar-wrap { flex: 1; height: 14px; background: var(--bg-hover); border-radius: 3px; overflow: hidden; }
+.theme-bar { height: 100%; background: var(--primary); border-radius: 3px; transition: width 0.5s; }
+.theme-cnt { min-width: 50px; font-size: 11px; color: var(--text-dim); font-family: monospace; }
+.log-list { max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 11px; }
+.log-entry { display: flex; gap: 6px; padding: 2px 0; border-bottom: 1px solid var(--border); }
+.log-ts { color: var(--text-muted); min-width: 60px; }
+.log-level { min-width: 50px; font-weight: 600; }
+.log-mod { color: var(--primary); min-width: 60px; }
+.log-stage { color: var(--text-dim); min-width: 55px; }
+.log-msg { color: var(--text); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 24h 趋势 sparkline 卡片 */
+.trend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 220px)); gap: var(--sp-3); margin-bottom: var(--sp-5); }
+.trend-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; box-shadow: var(--shadow-card); transition: var(--transition); }
+.trend-card:hover { border-color: var(--border-hi); box-shadow: var(--shadow-card-hover); }
+.trend-label { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; display: flex; justify-content: space-between; }
+.trend-val { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+
+/* 5 表分布大条形行 */
+.dist-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.dist-row:last-child { border-bottom: none; }
+.dist-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.dist-name { width: 88px; font-size: 13px; font-weight: 600; }
+.dist-track { flex: 1; height: 14px; border-radius: 7px; background: var(--bg-surface2); overflow: hidden; }
+.dist-fill { height: 100%; border-radius: 7px; transition: width .5s ease; }
+.dist-num { min-width: 64px; text-align: right; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.dist-h24 { display: inline-block; padding: 1px 8px; border-radius: var(--radius-sm); font-size: 10px; font-weight: 600; background: rgba(94,234,212,0.12); color: var(--primary); font-variant-numeric: tabular-nums; }
+
+/* 质量堆叠条 */
+.stack-bar { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--bg-surface2); margin: 3px 0 10px; }
+.stack-seg { height: 100%; transition: width .4s ease; }
+.stack-legend { display: flex; gap: 12px; font-size: 10px; color: var(--text-dim); margin-bottom: 12px; flex-wrap: wrap; }
+.stack-legend .dot { width: 7px; height: 7px; }
+
+/* 折叠参考区 */
+.ref-collapse summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-dim); padding: 10px 0; user-select: none; list-style: none; }
+.ref-collapse summary::before { content: "▸ "; color: var(--primary); }
+.ref-collapse[open] summary::before { content: "▾ "; }
+.ref-collapse summary:hover { color: var(--text); }
+
+/* 2026-10-22 平台统一主题切换器 */
+.theme-toggle { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface, var(--bg-elevated, var(--surface, transparent))); }
+.theme-toggle-btn { padding: 2px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-dim); font-size: var(--fs-xs); cursor: pointer; }
+.theme-toggle-btn.active { background: var(--primary-dim, var(--c-primary-dim)); color: var(--primary, var(--c-primary)); }
+.theme-toggle-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* 2026-10-22 a11y：徽标颜色此前用深色主题的亮色（#60a5fa）压在浅色底上只有 2.24。
+   改为跟随 --info/--status-ok 的语义色，并按主题分档（浅色加深、深色用亮色）。 */
+.badge-blue { background: color-mix(in srgb, var(--info) 15%, transparent); color: color-mix(in srgb, var(--info) 70%, #000); }
+.badge-green { background: color-mix(in srgb, var(--status-ok) 15%, transparent); color: color-mix(in srgb, var(--status-ok) 70%, #000); }
+[data-theme="dark"] .badge-blue, [data-theme="hc"] .badge-blue { color: var(--info); }
+[data-theme="dark"] .badge-green, [data-theme="hc"] .badge-green { color: var(--status-ok); }
+
+/* 2026-10-22：顶部 logo 是 <a>，没设颜色 → 浏览器默认链接蓝 #0000ee，深色底上对比度 1.88。 */
+.topnav-logo, .topnav-logo:visited { color: var(--text); text-decoration: none; }
+
+/* 2026-10-22 CLS（portal 首页实测 0.0935）：四张表在接口返回前 tbody 为空，
+   数据到达时整页高度突增，位移源是 .panel 与表头。这里给表格预留 6 行高度（表头 + 6×34px），
+   数据到达后行数落在预留范围内就不再有位移；真实行数更多时仍会自然增高（那时已有内容，位移更小）。 */
+/* 2026-10-22 已改为按真实行数渲染骨架行，不再需要整体 min-height（会留白）。 */
+
+/* 2026-10-22 CLS：表格加载骨架行（高度与真实行一致，数据到达后原位替换） */
+.tbl-skel td { padding: var(--sp-2) var(--sp-3); }
+.skel-line { display: block; height: 12px; width: 72%; border-radius: var(--radius-xs);
+  background: linear-gradient(90deg, var(--bg-surface2) 25%, var(--bg-hover) 37%, var(--bg-surface2) 63%);
+  background-size: 400% 100%; animation: skel 1.4s ease infinite; }
+@keyframes skel { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+@media (prefers-reduced-motion: reduce) { .skel-line { animation: none; } }
