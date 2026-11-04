@@ -1,0 +1,34 @@
+{
+  "_schema": "lions-open-source-boundary/1",
+  "_decidedAt": "2026-10-16",
+  "_decidedBy": "human:operator",
+  "_note": "方案 B（人类 2026-10-16 定；2026-10-20 追加；2026-11-04 人类确认 portal 公共页开放）：开源=会学最小闭环 + 用户可见界面 + portal 公共页；闭源收费=macs 执行体 + 对外接口 mcp-server + 文档门户 doc-portal。闭源包在开源发布中整目录移除。website/services 不进开源仓（非包，导出时排除）。",
+  "open": [
+    "packages/apps/mind",
+    "packages/apps/session",
+    "packages/apps/selfimproving",
+    "packages/apps/console",
+    "packages/apps/portal",
+    "packages/modules/flywheel",
+    "packages/modules/knowledge",
+    "packages/modules/memory",
+    "packages/modules/pipeline",
+    "packages/modules/practice",
+    "packages/modules/product-contract",
+    "packages/modules/reflection",
+    "packages/modules/skill",
+    "packages/modules/task",
+    "packages/core/config",
+    "packages/core/errors",
+    "packages/core/events",
+    "packages/core/id-gen",
+    "packages/core/logger",
+    "packages/configs",
+    "packages/ui"
+  ],
+  "closed": [
+    "packages/apps/mcp-agent-chat-server",
+    "packages/apps/mcp-server",
+    "packages/apps/doc-portal"
+  ]
+}

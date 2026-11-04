@@ -1,0 +1,180 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/session-client-pg"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("SESSION_DATABASE_URL")
+}
+
+model Session {
+  id              String    @id // 本地内部 id (沿用 hermes session uuid; 远端 agent 用 cuid)
+  platform        String    // feishu | dingtalk | telegram | discord | cli | web | mcp
+  platformChatId  String?
+  title           String?
+  startedAt       DateTime
+  lastMessageAt   DateTime?
+  endedAt         DateTime?
+  messageCount    Int       @default(0)
+  toolCallCount   Int       @default(0)
+  model           String?
+  isActive        Boolean   @default(true)
+  // 2026-09-21 冷热分层 (Q6#3): HOT = 活跃/近期(全量); COLD = 老旧(可先按 tier 过滤, 容量硬上限时截断重型字段)。
+  tier            String    @default("HOT") // HOT | COLD
+
+  // Hermes billing
+  estimatedCostUsd Float?
+  actualCostUsd    Float?
+
+  // === Mind-aware fields (Part2 §3) ===
+  sessionUid      String?  @unique // agent_id:source_lower:source_id 全局唯一
+  agentId         String?         // agent-h / agent-g / agent-b / agent-c
+  agentName       String?         // display_name (UT/claude/[host]/...)
+  source          String?         // HERMES_SESSION | CLAUDE_CONVERSATION | mcp
+  sourceId        String?         // 原 agent 端 session id
+  channel         String?         // feishu / cli / mcp ...
+  summary         String?         // mind 提取摘要 (~200字)
+  extractStatus   String?         // PENDING | PROCESSING | DONE | FAILED
+  extractedAt     DateTime?
+  extractError    String?
+  mindSyncedAt    DateTime?       // 上次拉 mind 镜像时间
+  fullSyncedAt    DateTime?       // 上次同步原文时间
+  fullSyncSource  String?         // hermes-local | remote-push
+
+  messages       Message[]
+  syncLog        SyncLog?
+  groupMembers   SessionGroupMember[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([platform])
+  @@index([startedAt])
+  @@index([lastMessageAt])
+  @@index([agentId])
+  @@index([source])
+  @@index([extractStatus])
+}
+
+model Message {
+  id          String   @id // 复合 ID: `${agentId}:${source}:${originalId}` 确保跨 agent 唯一
+  sessionId   String
+  role        String   // user | assistant | tool | system
+  content     String?
+  model       String?
+  timestamp   DateTime
+  
+  // Tool call info
+  toolCallId  String?
+  toolName    String?
+  toolCalls   String?  // JSON array
+  toolInput   String?  // Raw input
+  toolOutput  String?  // Truncated output
+  
+  // Token usage
+  tokenCount  Int?
+  
+  // Reasoning (for advanced models)
+  reasoning   String?
+  
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  createdAt    DateTime @default(now())
+  
+  @@index([sessionId])
+  @@index([timestamp])
+}
+
+model SyncLog {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  lastSyncAt  DateTime
+  lastMsgId   String?
+  count       Int      @default(0)
+
+  session     Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+}
+
+// === SyncActivityLog (2026-09-02): 同步活动审计 ====
+// 每次远端 upload (新建/更新 session) 落一条结构化记录:
+//   什么时间 / 哪个 agent / 什么平台 / 哪个 session / 新建还是更新 / 本次消息数 / 新增消息数
+model SyncActivityLog {
+  id          String   @id @default(cuid())
+  ts          DateTime @default(now())      // 发生时间
+  agentId     String?                        // agent-e / agent-operator / agent-d ...
+  platform    String?                        // hermes_session / openclaw_session / dsh_session / claude_conversation
+  sessionUid  String?                        // 全局唯一 sessionUid
+  sourceId    String?                        // 原端 session id
+  title       String?                        // session 标题
+  action      String                         // NEW | UPDATE | SKIP
+  msgCount    Int      @default(0)           // 本次 upload 带的消息条数
+  addedCount  Int      @default(0)           // 其中真正新增的消息条数 (UPDATE 时 > 0)
+  source      String?                        // upload 来源标识 (remote-push / dry-run ...)
+
+  @@index([ts])
+  @@index([agentId])
+  @@index([action])
+  @@index([sessionUid])
+}
+
+model SyncWatermark {
+  // sync 进度水印: 按 (agentId:sourceType) 记录
+  source      String   @id  // e.g. "agent-h:hermes" or "agent-g:claude"
+  lastTs      DateTime         // 上次成功的最后 session 时间 (epoch seconds)
+  lastRunAt   DateTime         // 上次 sync 触发时间
+  lastCount   Int      @default(0)
+  lastError   String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// === SessionGroup 聚合层 (SESSION-AGGREGATION-LAYER §3) ===
+// 把碎片 session 按主题归组, 供 mind pipeline 从 Group 抽认知
+model SessionGroup {
+  id              String   @id @default(cuid())
+  groupKey        String   @unique  // 归组键: titleBase | cronJobId | workdir | agentId:fallback
+  titleBase       String?           // 从 title 提取的基础主题 (去掉 #N 后缀)
+  agentType       String?           // hermes | claude | codex | opencode | openclaw
+  cronJobId       String?           // cron job 标识 (如有)
+  workdir         String?           // 工作目录 (如有)
+
+  // 聚合统计
+  sessionCount    Int      @default(0)
+  messageCount    Int      @default(0)  // 全部 member session 的 msg 总数
+  firstMessageAt  DateTime?
+  lastMessageAt   DateTime?
+
+  // mind pipeline 处理状态 (与 Session.extractStatus 解耦)
+  extractStatus   String?           // PENDING | PROCESSING | DONE | FAILED
+  extractedAt     DateTime?
+  extractError    String?
+
+  members         SessionGroupMember[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([extractStatus])
+  @@index([agentType])
+  @@index([titleBase])
+}
+
+model SessionGroupMember {
+  id          String   @id @default(cuid())
+  groupId     String
+  sessionId   String
+  seq         Int                // 组内序号 (按 startedAt 排序)
+
+  group       SessionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  session     Session      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([groupId, sessionId])
+  @@index([groupId, seq])
+  @@index([sessionId])
+}

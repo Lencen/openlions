@@ -1,0 +1,313 @@
+/* Cognitive OS 主题 — task 端共用 (跨 mind + task 同步) */
+/* 主题 token (4 主题 dark/light/glass/mono) + 业务语义命名 */
+@import "../styles/tokens.css";
+/* 工具类 (kpi-value/status-pill/card/clock/pagination/empty/pulse) */
+@import "../styles/utilities.css";
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg-base) !important;
+  color: var(--ink-primary) !important;
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Inter 字体 + JetBrains Mono 数字 (Google Fonts) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* Antd v6 dark theme overrides — 走 CSS variable 桥接 */
+:root {
+  --antd-color-primary: var(--brand-mind);
+  --antd-color-primary-hover: var(--brand-mind-soft);
+  --antd-color-bg-container: var(--bg-elevated);
+  --antd-color-bg-elevated: var(--surface-hi);
+  --antd-color-bg-layout: var(--bg-base);
+  --antd-color-bg-spotlight: var(--surface-hi);
+  --antd-color-text: var(--ink-primary);
+  --antd-color-text-secondary: var(--ink-secondary);
+  --antd-color-text-tertiary: var(--ink-tertiary);
+  --antd-color-text-quaternary: var(--ink-tertiary);
+  --antd-color-border: var(--border);
+  --antd-color-border-secondary: var(--border-soft);
+  --antd-color-split: var(--border-soft);
+  --antd-color-success: var(--status-ok);
+  --antd-color-warning: var(--status-warn);
+  --antd-color-error: var(--status-err);
+  --antd-color-info: var(--status-info);
+}
+
+/* Antd Card 边框 + 背景 token 化 */
+.ant-card {
+  background: var(--bg-elevated) !important;
+  border-color: var(--border) !important;
+}
+.ant-card-head {
+  border-bottom-color: var(--border) !important;
+  color: var(--ink-primary) !important;
+}
+.ant-card-head-title {
+  color: var(--ink-primary) !important;
+}
+.ant-card-bordered {
+  border-color: var(--border) !important;
+}
+
+/* Antd Table 行 hover 走 token */
+.ant-table-tbody > tr > td {
+  border-bottom-color: var(--border-soft) !important;
+}
+.ant-table-tbody > tr:hover > td {
+  background: var(--surface-hi) !important;
+}
+
+/* Antd Tabs token */
+.ant-tabs-tab {
+  color: var(--ink-secondary) !important;
+}
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: var(--brand-mind) !important;
+}
+.ant-tabs-ink-bar {
+  background: var(--brand-mind) !important;
+}
+
+/* Antd Menu token (Sidebar 风格统一) */
+.ant-menu {
+  background: transparent !important;
+  color: var(--ink-secondary) !important;
+  border-inline-end: none !important;
+}
+.ant-menu-item {
+  color: var(--ink-secondary) !important;
+}
+.ant-menu-item-selected {
+  background: var(--surface-hi) !important;
+  color: var(--brand-mind) !important;
+}
+.ant-menu-item:hover {
+  color: var(--brand-mind) !important;
+}
+.ant-menu-submenu-title {
+  color: var(--ink-tertiary) !important;
+}
+
+/* Antd Statistic 数字色 (历史兜底) */
+.ant-statistic-content {
+  color: var(--ink-primary) !important;
+}
+.ant-statistic-title {
+  color: var(--ink-tertiary) !important;
+}
+
+/* 链接 */
+a { color: var(--brand-mind); text-decoration: none; }
+a:hover { color: var(--brand-mind-soft); text-decoration: underline; }
+
+/* 按钮 (兜底, 多数用 KPICard 不再需要) */
+button { cursor: pointer; font-family: inherit; }
+
+/* ── Dashboard 区域布局 (从原 page.tsx 抽出) ───────────────── */
+.db {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+.hdr {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--brand-mind-soft) 0%, var(--brand-flow-soft) 100%);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.hdr h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--brand-mind);
+  letter-spacing: 2px;
+  font-family: var(--font-display);
+}
+.hdr-time {
+  font-size: 13px;
+  color: var(--ink-tertiary);
+  font-family: var(--font-mono);
+}
+.sec {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--brand-mind);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 12px;
+  padding-left: 8px;
+  border-left: 3px solid var(--brand-mind);
+}
+
+/* 滚动条 (深色模式协调) */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--surface-hi); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ink-tertiary); }
+
+/* ─────────────────────────────────────────────────────────────
+ * Dashboard 区域样式 (从 a4653f5 / 7b38bb9 commit 之前恢复)
+ * a4653f5 主题化 commit 删了 <style>{css}</style> 块, 声称 "已迁移到 globals.css",
+ * 但 globals.css 只加了 .db .hdr .hdr-time .sec 4 个, 其余 60 个 dashboard
+ * className 全部丢失 — 导致页面 fallback 到 block 流式布局成单列堆叠
+ *
+ * 修法: 把旧 hex CSS 保留, 用 var() 桥接 — dark 主题下保留旧色,
+ * 后续阶段再迭代主题适配 (本阶段优先恢复布局)
+ * ───────────────────────────────────────────────────────────── */
+
+/* Dashboard 头部 + 区域标题 */
+.db { max-width: 1400px; margin: 0 auto; padding: 20px; }
+.hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(168,85,247,0.05) 100%);
+  border: 1px solid var(--border); border-radius: 12px; }
+.hdr h1 { font-size: 22px; font-weight: 700; color: var(--brand-mind); letter-spacing: 2px; font-family: var(--font-display); }
+.hdr-time { font-size: 13px; color: var(--ink-tertiary); font-family: var(--font-mono); }
+.sec { font-size: 13px; font-weight: 600; color: var(--brand-mind); text-transform: uppercase;
+  letter-spacing: 1.5px; margin-bottom: 12px; padding-left: 8px; border-left: 3px solid var(--brand-mind); }
+
+/* Dashboard KPI 卡片行 (auto-fit 自适应) */
+.kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 21px; }
+.kpi { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 16px 14px; text-align: center;
+  position: relative; overflow: hidden; font-size: 14px; }
+.kpi::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--brand-mind) 0%, var(--brand-axon) 100%); }
+.kpi-l { font-size: 12px; color: var(--ink-tertiary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+.kpi-v { font-size: 28px; font-weight: 700; color: var(--ink-primary); }
+.kpi-bar { height: 3px; background: rgba(255,255,255,0.08); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+.kpi-bar-fi { height: 100%; border-radius: 2px; transition: width 0.5s; background: var(--brand-mind); }
+
+/* Dashboard 通用面板 */
+.panel { background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-radius: 10px; padding: 18px; font-size: 14px; }
+.panel-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.panel-ttl { font-size: 13px; font-weight: 600; color: var(--ink-primary); text-transform: uppercase; letter-spacing: 1px; }
+.panel-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(0,212,255,0.2); color: var(--brand-mind); }
+
+/* Dashboard 状态条 (WS 重连中) */
+.status-msg { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3); border-radius: 8px; margin-bottom: 16px; }
+.status-msg .txt { font-size: 12px; color: var(--status-ok); }
+
+/* Dashboard 网格布局 */
+.grid-2 { display: grid; grid-template-columns: 1fr 2fr; gap: 21px; margin-bottom: 21px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px; margin-bottom: 21px; }
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 16px; }
+
+/* Dashboard 每10分钟吞吐量小卡片 */
+.tp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+.tp-cell { text-align: center; padding: 12px 8px; background: rgba(0,0,0,0.25); border-radius: 8px; }
+.tp-cell .n { font-size: 24px; font-weight: 700; color: var(--ink-primary); }
+.tp-cell .l { font-size: 10px; color: var(--ink-tertiary); margin-top: 2px; }
+.tp-timeline { display: flex; gap: 3px; align-items: flex-end; height: 60px; padding: 4px 0; }
+.tp-timeline-bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 3px; transition: height 0.3s; background: var(--brand-mind); }
+
+/* Dashboard 柱状图 */
+.bar-chart { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding: 8px 0; }
+.bar-g { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.bar-wrap { width: 100%; display: flex; gap: 2px; align-items: flex-end; height: 90px; }
+.bar { flex: 1; border-radius: 2px 2px 0 0; min-height: 2px; transition: height 0.3s; cursor: pointer; }
+.bar.tasks { background: linear-gradient(to top, var(--brand-mind) 0%, var(--brand-flow) 100%); }
+.bar.problems { background: linear-gradient(to top, var(--brand-axon) 0%, var(--brand-synapse) 100%); }
+.bar-lbl { font-size: 9px; color: var(--ink-tertiary); }
+
+/* Dashboard 饼图 */
+.pie-wrap { display: flex; align-items: center; gap: 12px; height: 110px; }
+.pie-svg { width: 90px; height: 90px; flex-shrink: 0; }
+.pie-legend { display: flex; flex-direction: column; gap: 3px; font-size: 11px; overflow: hidden; }
+.pie-item { display: flex; align-items: center; gap: 5px; }
+.pie-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+/* Dashboard 飞轮事件 */
+.fw-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 16px; }
+.fw-card { text-align: center; padding: 10px 5px; background: rgba(0,0,0,0.2); border-radius: 6px; border: 1px solid rgba(255,255,255,0.05); }
+.fw-card .nm { font-size: 12px; color: var(--ink-tertiary); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fw-card .ct { font-size: 20px; font-weight: 700; color: var(--brand-mind); }
+.fw-evt { display: flex; gap: 6px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03); font-size: 14px; align-items: center; min-width: 0; overflow: hidden; }
+.fw-evt:last-child { border-bottom: none; }
+.fw-time { color: var(--ink-tertiary); flex-shrink: 0; width: 58px; font-size: 12px; text-align: right; padding-right: 6px; overflow: hidden; }
+.fw-stage { color: var(--brand-mind); flex-shrink: 0; width: 110px; font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 6px; }
+.fw-desc { color: var(--ink-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; min-width: 0; }
+.fw-scroll { max-height: 195px; overflow-y: auto; }
+.fw-scroll::-webkit-scrollbar { width: 5px; }
+.fw-scroll::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.fw-scroll::-webkit-scrollbar-thumb { background: var(--brand-mind); border-radius: 3px; }
+
+/* Dashboard 资源面板 */
+.res-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+.res-eq { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 21px; }
+.res-card { text-align: center; padding: 14px 10px; background: rgba(0,0,0,0.25); border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); }
+.res-card .l { font-size: 11px; color: var(--ink-tertiary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.res-card .v { font-size: 26px; font-weight: 700; line-height: 1.2; color: var(--ink-primary); }
+.res-card .s { font-size: 10px; color: var(--ink-tertiary); margin-top: 3px; }
+.res-card.warn { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.05); }
+.res-card.err { border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.05); animation: res-pulse 2s infinite; }
+@keyframes res-pulse { 0%,100% { box-shadow: 0 0 0 rgba(239,68,68,0); } 50% { box-shadow: 0 0 12px rgba(239,68,68,0.4); } }
+.res-util { height: 6px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; margin: 6px 0 2px; }
+.res-util-fi { height: 100%; border-radius: 3px; transition: width 0.5s; background: linear-gradient(90deg, var(--brand-mind) 0%, var(--brand-flow) 100%); }
+.res-util-fi.over { background: linear-gradient(90deg, var(--status-warn) 0%, var(--status-err) 100%); }
+.res-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.res-col-title { font-size: 11px; color: var(--ink-tertiary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+.res-row { display: flex; gap: 6px; padding: 6px 8px; background: rgba(0,0,0,0.2); border-radius: 5px; margin-bottom: 4px; align-items: center; font-size: 13px; border: 1px solid rgba(255,255,255,0.03); }
+.res-row.stuck { border-color: rgba(239,68,68,0.3); background: rgba(239,68,68,0.05); }
+.res-pri { flex-shrink: 0; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; min-width: 24px; text-align: center; }
+.res-pri.P1 { background: rgba(239,68,68,0.3); color: var(--status-err); }
+.res-pri.P2 { background: rgba(245,158,11,0.3); color: var(--status-warn); }
+.res-pri.P3 { background: rgba(100,116,139,0.3); color: var(--ink-tertiary); }
+.res-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-primary); }
+.res-meta { flex-shrink: 0; font-size: 11px; color: var(--ink-tertiary); font-family: monospace; }
+.res-meta.stuck { color: var(--status-err); font-weight: 600; }
+.res-scroll { max-height: 180px; overflow-y: auto; }
+.res-scroll::-webkit-scrollbar { width: 4px; }
+.res-scroll::-webkit-scrollbar-thumb { background: var(--brand-mind); border-radius: 2px; }
+.res-empty { text-align: center; padding: 14px; color: var(--ink-tertiary); font-size: 12px; }
+.res-tip { font-size: 11px; color: var(--ink-tertiary); margin-top: 6px; padding: 8px 10px; background: rgba(0,212,255,0.05); border-left: 2px solid var(--brand-mind); border-radius: 4px; }
+.res-btn { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(168,85,247,0.2); color: var(--brand-axon); cursor: pointer; border: 1px solid transparent; font-family: inherit; letter-spacing: 0.5px; transition: all 0.15s; }
+.res-btn:hover { background: rgba(168,85,247,0.3); border-color: rgba(168,85,247,0.5); }
+.res-btn:active { transform: scale(0.97); }
+.res-btn[disabled] { opacity: 0.5; cursor: wait; }
+.res-hdr { display: flex; gap: 6px; align-items: center; }
+@media (max-width: 1024px) {
+  .res-grid { grid-template-columns: repeat(2, 1fr); }
+  .res-list { grid-template-columns: 1fr; }
+  .res-eq { grid-template-columns: 1fr; }
+}
+
+/* Dashboard 调度器 */
+.sched-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 21px; margin-bottom: 21px; }
+.sched-item { background: rgba(0,0,0,0.2); border-radius: 10px; padding: 16px; border: 1px solid rgba(255,255,255,0.06); }
+.sched-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.sched-name { font-size: 14px; font-weight: 600; color: var(--ink-primary); }
+.sched-dot { width: 10px; height: 10px; border-radius: 50%; }
+.sched-dot.running { background: var(--status-ok); animation: pulse 1.5s infinite; box-shadow: 0 0 8px var(--status-ok); }
+.sched-dot.idle { background: var(--ink-tertiary); }
+.sched-time { font-size: 12px; color: var(--ink-tertiary); margin-bottom: 12px; }
+.sched-log { font-size: 14px; color: var(--ink-tertiary); max-height: 416px; overflow-y: auto; }
+.sched-log::-webkit-scrollbar { width: 6px; }
+.sched-log::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 3px; }
+.sched-log::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.5); border-radius: 3px; }
+.sched-log::-webkit-scrollbar-thumb:hover { background: rgba(0,212,255,0.9); }
+.sched-line { padding: 5px 0; display: flex; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-time { flex-shrink: 0; color: var(--ink-tertiary); font-size: 12px; }
+.log-tag { flex-shrink: 0; padding: 2px 7px; border-radius: 3px; font-size: 11px; font-weight: 600; }
+.log-tag.TASK { background: rgba(0,212,255,0.3); color: var(--brand-mind); }
+.log-tag.PROBLEM { background: rgba(168,85,247,0.3); color: var(--brand-axon); }
+.log-tag.SUCCESS { background: rgba(16,185,129,0.3); color: var(--status-ok); }
+.log-tag.ERROR { background: rgba(239,68,68,0.3); color: var(--status-err); }
+.log-ct { color: var(--ink-primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+@media (max-width: 1024px) {
+  .grid-2, .grid-3, .sched-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+}

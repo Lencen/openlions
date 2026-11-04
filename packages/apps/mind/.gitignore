@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environment
+.env*.local
+.env
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+# 例外: platform/logs 是 A 类只读日志接口路由 (uos20 P1#4), 不是日志文件目录, 需入版本库
+!src/app/api/v1/platform/logs/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma 数据库
+prisma/*.db
+prisma/*.db-journal
+prisma/*.bak-*
+prisma/staging.db
+prisma/staging.db-journal
+
+# Coverage
+coverage/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Claude/agent 临时工作树 (子模块)
+.claude/worktrees/
+*.local
+packages/mind-sdk/package-lock.json

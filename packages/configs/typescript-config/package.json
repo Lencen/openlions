@@ -1,0 +1,12 @@
+{
+  "name": "@lions/typescript-config",
+  "version": "0.1.0",
+  "description": "Shared TypeScript configurations for LIONS monorepo",
+  "main": "index.js",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.next.json",
+    "tsconfig.node.json"
+  ],
+  "private": true
+}

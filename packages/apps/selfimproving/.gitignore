@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Environment
+.env*.local
+.env
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime
+*.tsbuildinfo
+next-env.d.ts
+
+# Prisma 数据库 (dev.db 在 .gitignore, .bak 也忽略)
+prisma/*.db
+prisma/*.db-journal
+prisma/*.bak-*
+prisma/staging.db
+prisma/staging.db-journal
+
+# Prisma migration 缓存
+prisma/migrations/dev/
+
+# Coverage
+coverage/
+
+# Test artifacts
+playwright-report/
+test-results/
+
+# Runtime state (event bus log, scheduler log)
+data/event-bus.jsonl
+data/scheduler-log.jsonl
+*.jsonl

@@ -1,0 +1,270 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/selfimproving-client-pg"
+}
+
+datasource db {
+  provider = "postgresql"
+  // 2026-10-15 产品化 S0-1: 改由 DATABASE_URL 决定库位置（见 mind schema 同款说明）。
+  url      = env("SELFIMPROVING_DATABASE_URL")
+}
+
+model Task {
+  id                  String                @id @default(cuid())
+  title               String
+  description         String
+  background          String
+  requirements        String
+  materials           String
+  acceptanceCriteria  String
+  qualityStandards    String
+  status              String                @default("PENDING")
+  priority            String                @default("P2")
+  sourceSummaryId     String?
+  sourceReflectionIds String?
+  sourceProblemId     String?
+  sourceTaskId        String?
+  assignedAgent       String?
+  estimatedEffort     String?
+  actualEffortMs      Int?
+  projectPath         String?
+  techStack           String?
+  targetFiles         String?
+  prerequisiteTaskIds String?
+  retryCount          Int                   @default(0)
+  maxRetries          Int                   @default(3)
+  completedAt         DateTime?
+  completedBy         String?
+  manualReview        Boolean               @default(false)
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  executions          TaskExecution[]
+  reviews             TaskReview[]
+  flywheelEvents      FlywheelEvent[]
+  stateTransitions    TaskStateTransition[]
+  // 问题列表：关联到本任务的所有问题（通过 executions 关联）
+  problems            Problem[]
+
+  // === V3 结构化上下文 ===
+  theme              String?   // 主题词(用于聚类展示)
+  structuredContext  String?   // JSON: {rootCause, plan, acceptanceSignals, relatedReflections, relatedMemories, relatedKnowledge, relatedSessions, relatedProblems, clusterKey, actionType, confidence}
+  contextVersion     String?   // "v3" 标记
+
+  @@index([status])
+  @@index([priority])
+  @@index([sourceSummaryId])
+  @@index([sourceProblemId])
+  @@index([sourceTaskId])
+  @@index([retryCount])
+  @@index([theme])
+  @@index([contextVersion])
+}
+
+model TaskCluster {
+  id            String   @id @default(cuid())
+  clusterKey    String   @unique  // theme|actionType 组合 key
+  theme         String
+  taskId        String?
+  reflectionIds String   // 逗号分隔
+  status        String   @default("ACTIVE")  // ACTIVE / SUPERSEDED
+  lastSeenAt    DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([clusterKey])
+  @@index([taskId])
+  @@index([status])
+}
+
+model TaskExecution {
+  id                  String    @id @default(cuid())
+  taskId              String
+  agentId             String
+  agentRole           String
+  status              String    @default("PENDING")
+  startedAt           DateTime?
+  completedAt         DateTime?
+  input               String
+  output              String    @default("")
+  thoughtProcess      String?
+  problemsEncountered String?
+  solutionsApplied    String?
+  blocks              String?
+  nextSteps           String?
+  retryCount          Int       @default(0)
+  qualityPassed       Boolean?
+  createdAt           DateTime  @default(now())
+  task                Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  problems            Problem[]
+
+  @@index([taskId])
+  @@index([agentId])
+  @@index([status])
+  @@index([qualityPassed])
+}
+
+model TaskReview {
+  id             String   @id @default(cuid())
+  taskId         String
+  reviewerId     String
+  reviewerRole   String
+  status         String   @default("PENDING")
+  score          Float?
+  strengths      String?
+  weaknesses     String?
+  lessonsLearned String?
+  feedbackNotes  String?
+  createdAt      DateTime @default(now())
+  task           Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([reviewerId])
+}
+
+// 任务状态转换记录 — 用于任务详情页的时间线展示
+model TaskStateTransition {
+  id         String   @id @default(cuid())
+  taskId     String
+  fromStatus String?
+  toStatus   String
+  actor      String? // agentId or "SYSTEM" or "MANUAL"
+  reason     String?
+  metadata   String? // JSON for extra context
+  createdAt  DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
+// 问题记录 — 执行过程中发现的问题
+// 解决后可在 lions-mind 中生成反思
+model Problem {
+  id                 String        @id @default(cuid())
+  taskExecutionId    String
+  taskId             String
+  description        String
+  severity           String        @default("P2") // P1/P2/P3
+  status             String        @default("OPEN") // OPEN/SOLVING/SOLVED/ABANDONED
+  // 来源追踪：问题来自任务还是反思
+  sourceType         String? // "TASK" | "REFLECTION" | null
+  // 如果问题来自另一个任务（比如改进任务），记录原始任务ID
+  originTaskId       String?
+  solutionsAttempted String? // JSON array
+  rootCause          String?
+  resolvedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  taskExecution      TaskExecution @relation(fields: [taskExecutionId], references: [id], onDelete: Cascade)
+  // 反向关联：这个问题关联的任务
+  task               Task?         @relation(fields: [taskId], references: [id])
+
+  // Context from original task (for better problem analysis)
+  taskTitle               String?
+  taskDescription         String?
+  taskRequirements        String?
+  taskBackground          String?
+  taskAcceptanceCriteria  String?
+  taskQualityStandards    String?
+  taskMaterials           String?
+  sourceReflectionId      String?
+  sourceReflectionContent String?
+
+  // Auto-resolution tracking
+  autoResolveAttempts Int       @default(0)
+  lastAttemptAt       DateTime?
+  resolutionAgentId   String?
+  resolutionNotes     String?
+  resolutionTaskId    String?
+  impactDescription   String?
+
+  @@index([taskId])
+  @@index([status])
+  @@index([severity])
+  @@index([resolutionTaskId])
+  @@index([sourceType])
+  @@index([originTaskId])
+}
+
+model FlywheelEvent {
+  id          String   @id @default(cuid())
+  stage       String
+  sourceType  String
+  sourceId    String
+  sourceTitle String
+  targetStage String
+  targetType  String?
+  targetId    String?
+  taskId      String?
+  createdAt   DateTime @default(now())
+  task        Task?    @relation(fields: [taskId], references: [id])
+
+  @@index([stage])
+  @@index([sourceType])
+  @@index([createdAt])
+}
+
+model ReviewRecord {
+  id                    String   @id @default(cuid())
+  taskId                String
+  taskExecutionId       String
+  reviewType            String // AUTO | MANUAL
+  reviewerId            String?
+  reviewResult          String // PASSED | FAILED
+  qualityScore          Int // 0-100
+  keyFindings           String? // JSON array
+  issuesFound           String? // JSON array
+  improvementsSuggested String? // JSON array
+  createdAt             DateTime @default(now())
+  taskSnapshot          String? // JSON snapshot of task at review time
+  executionSnapshot     String? // JSON snapshot of execution at review time
+
+  @@index([taskId])
+  @@index([reviewResult])
+  @@index([createdAt])
+}
+
+model TaskCompletionTrigger {
+  id               String    @id @default(cuid())
+  taskId           String
+  triggerType      String // AUTO | MANUAL
+  reflectionPrompt String
+  status           String    @default("PENDING") // PENDING | PROCESSED | FAILED
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+  reflectionTaskId String? // The task created for reflection
+
+  @@index([taskId])
+  @@index([status])
+}
+
+model ProblemCompletionTrigger {
+  id               String    @id @default(cuid())
+  problemId        String
+  triggerType      String // AUTO | MANUAL
+  reflectionPrompt String
+  status           String    @default("PENDING") // PENDING | PROCESSED | FAILED
+  createdAt        DateTime  @default(now())
+  processedAt      DateTime?
+  reflectionTaskId String? // The task created for reflection
+
+  @@index([problemId])
+  @@index([status])
+}
+
+// ── 审计日志 ─────────────────────────────────────────────────
+model AuditLog {
+  id         String   @id @default(cuid())
+  entityType String // Task | Problem | TaskExecution | TaskReview | etc.
+  entityId   String
+  action     String // CREATED | UPDATED | DELETED | STATUS_CHANGED | COMPLETED | etc.
+  actor      String? // agentId | "SYSTEM" | user identifier
+  actorType  String? // "AGENT" | "SYSTEM" | "MANUAL" | "CRON"
+  before     String? // JSON snapshot before change
+  after      String? // JSON snapshot after change
+  metadata   String? // JSON for extra context (e.g., change reason)
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actor])
+  @@index([action])
+  @@index([createdAt])
+}
