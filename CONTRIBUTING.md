@@ -21,8 +21,8 @@ Not in the open-source scope: MACS cross-agent messaging, mcp-server, doc-portal
 - PostgreSQL **16** (required by the app; the release medium can carry it).
 - Python 3.10+ for session sync and the open client.
 
-    git clone https://github.com/operator/lions-open-source.git
-    cd lions-open-source
+    git clone https://github.com/operator/openlions.git
+    cd openlions
     corepack enable
     corepack prepare pnpm@9.15.9 --activate
     pnpm install --no-frozen-lockfile
