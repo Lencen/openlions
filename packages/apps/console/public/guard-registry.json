@@ -1,18 +1,18 @@
 {
   "schema": 1,
   "generator": "scripts/guard-registry.cjs",
-  "generatedAt": "2026-11-03T07:27:19.319Z",
+  "generatedAt": "2026-11-03T07:31:01.243Z",
   "description": "平台守门机制总表 — 从源码自动抽取, 单一事实来源。任何守门增删都会改变 fingerprint。",
-  "fingerprint": "e1c569b0816fe86b1cef1edbae8d799e89514daa78690bb877a771cc66081b4a",
+  "fingerprint": "f83122d188ee2b0e2870bf77f499043924906c1a30eb8faae2a8c07f2c5e46d2",
   "totals": {
-    "all": 478,
+    "all": 476,
     "byLayer": {
       "L1": 24,
       "L2": 120,
       "L3": 85,
       "L4": 17,
       "L5": 131,
-      "L6": 101
+      "L6": 99
     }
   },
   "layers": [
@@ -56,7 +56,7 @@
       "name": "手动/CI 门禁 (npm check:*)",
       "desc": "package.json 的 check:* 入口, 可手动或 CI 复算",
       "trigger": "手动/CI",
-      "count": 101
+      "count": 99
     }
   ],
   "guards": [
@@ -5720,14 +5720,14 @@
       "layer": "L6",
       "name": "check:agent-health",
       "file": "package.json",
-      "line": 92,
+      "line": 91,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-agent-health.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:agent-health",
       "ref": {
         "file": "package.json",
-        "line": 92
+        "line": 91
       }
     },
     {
@@ -5735,14 +5735,14 @@
       "layer": "L6",
       "name": "check:agent-rules",
       "file": "package.json",
-      "line": 27,
+      "line": 26,
       "trigger": "手动 / CI",
       "action": "node scripts/check-agent-rules.cjs --selftest && node scripts/check-agent-rules.cjs && node scripts/check-memory-inject-budget.cjs --selftest && node scripts/check-memory-inject-budget.cjs && python3 scripts/macs-responder/test-agent-rules-injection.py",
       "note": "npm 守门入口",
       "recompute": "npm run check:agent-rules",
       "ref": {
         "file": "package.json",
-        "line": 27
+        "line": 26
       }
     },
     {
@@ -5750,14 +5750,14 @@
       "layer": "L6",
       "name": "check:ai-cost",
       "file": "package.json",
-      "line": 84,
+      "line": 83,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-ai-cost.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:ai-cost",
       "ref": {
         "file": "package.json",
-        "line": 84
+        "line": 83
       }
     },
     {
@@ -5765,14 +5765,14 @@
       "layer": "L6",
       "name": "check:apps-profile-parity",
       "file": "package.json",
-      "line": 60,
+      "line": 59,
       "trigger": "手动 / CI",
       "action": "node scripts/check-apps-profile-parity.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:apps-profile-parity",
       "ref": {
         "file": "package.json",
-        "line": 60
+        "line": 59
       }
     },
     {
@@ -5780,14 +5780,14 @@
       "layer": "L6",
       "name": "check:asset-scope",
       "file": "package.json",
-      "line": 73,
+      "line": 72,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-asset-scope.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:asset-scope",
       "ref": {
         "file": "package.json",
-        "line": 73
+        "line": 72
       }
     },
     {
@@ -5795,14 +5795,14 @@
       "layer": "L6",
       "name": "check:asset-scope-guard",
       "file": "package.json",
-      "line": 74,
+      "line": 73,
       "trigger": "手动 / CI",
       "action": "node scripts/check-asset-scope.cjs --selftest && node scripts/check-asset-scope.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:asset-scope-guard",
       "ref": {
         "file": "package.json",
-        "line": 74
+        "line": 73
       }
     },
     {
@@ -5810,14 +5810,14 @@
       "layer": "L6",
       "name": "check:asset-scope-pg",
       "file": "package.json",
-      "line": 76,
+      "line": 75,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && MIND_DB_DRIVER=pg tsx --tsconfig tsconfig.json scripts/test-asset-scope-pg.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:asset-scope-pg",
       "ref": {
         "file": "package.json",
-        "line": 76
+        "line": 75
       }
     },
     {
@@ -5825,14 +5825,14 @@
       "layer": "L6",
       "name": "check:asset-scope-sql",
       "file": "package.json",
-      "line": 75,
+      "line": 74,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-asset-scope-sql.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:asset-scope-sql",
       "ref": {
         "file": "package.json",
-        "line": 75
+        "line": 74
       }
     },
     {
@@ -5840,14 +5840,14 @@
       "layer": "L6",
       "name": "check:capacity",
       "file": "package.json",
-      "line": 83,
+      "line": 82,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-capacity.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:capacity",
       "ref": {
         "file": "package.json",
-        "line": 83
+        "line": 82
       }
     },
     {
@@ -5855,14 +5855,14 @@
       "layer": "L6",
       "name": "check:carrier-zero",
       "file": "package.json",
-      "line": 111,
+      "line": 109,
       "trigger": "手动 / CI",
       "action": "node scripts/finding-premise-check.cjs carrier-zero-verify \"1060对接\" f-004 --action CREATE_PRACTICE",
       "note": "npm 守门入口",
       "recompute": "npm run check:carrier-zero",
       "ref": {
         "file": "package.json",
-        "line": 111
+        "line": 109
       }
     },
     {
@@ -5870,14 +5870,14 @@
       "layer": "L6",
       "name": "check:claim-lease",
       "file": "package.json",
-      "line": 30,
+      "line": 29,
       "trigger": "手动 / CI",
       "action": "node scripts/claim-lease-guard.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:claim-lease",
       "ref": {
         "file": "package.json",
-        "line": 30
+        "line": 29
       }
     },
     {
@@ -5885,14 +5885,14 @@
       "layer": "L6",
       "name": "check:claim-lease-probe",
       "file": "package.json",
-      "line": 37,
+      "line": 36,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/probe-cmtwb7z1-claim-lease-claims.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:claim-lease-probe",
       "ref": {
         "file": "package.json",
-        "line": 37
+        "line": 36
       }
     },
     {
@@ -5900,14 +5900,14 @@
       "layer": "L6",
       "name": "check:client-fleet",
       "file": "package.json",
-      "line": 56,
+      "line": 55,
       "trigger": "手动 / CI",
       "action": "node scripts/client-fleet-check.cjs --check",
       "note": "npm 守门入口",
       "recompute": "npm run check:client-fleet",
       "ref": {
         "file": "package.json",
-        "line": 56
+        "line": 55
       }
     },
     {
@@ -5915,14 +5915,14 @@
       "layer": "L6",
       "name": "check:client-integrity",
       "file": "package.json",
-      "line": 55,
+      "line": 54,
       "trigger": "手动 / CI",
       "action": "node scripts/client-integrity-guard.cjs --check && python3 scripts/macs-responder/test-client-integrity.py",
       "note": "npm 守门入口",
       "recompute": "npm run check:client-integrity",
       "ref": {
         "file": "package.json",
-        "line": 55
+        "line": 54
       }
     },
     {
@@ -5930,14 +5930,14 @@
       "layer": "L6",
       "name": "check:client-keys",
       "file": "package.json",
-      "line": 47,
+      "line": 46,
       "trigger": "手动 / CI",
       "action": "node scripts/check-client-key-consistency.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:client-keys",
       "ref": {
         "file": "package.json",
-        "line": 47
+        "line": 46
       }
     },
     {
@@ -5945,14 +5945,14 @@
       "layer": "L6",
       "name": "check:close-task",
       "file": "package.json",
-      "line": 31,
+      "line": 30,
       "trigger": "手动 / CI",
       "action": "node scripts/test-close-task.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:close-task",
       "ref": {
         "file": "package.json",
-        "line": 31
+        "line": 30
       }
     },
     {
@@ -5960,14 +5960,14 @@
       "layer": "L6",
       "name": "check:close-task-probe",
       "file": "package.json",
-      "line": 32,
+      "line": 31,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/probe-close-task-claims.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:close-task-probe",
       "ref": {
         "file": "package.json",
-        "line": 32
+        "line": 31
       }
     },
     {
@@ -5975,14 +5975,14 @@
       "layer": "L6",
       "name": "check:console-tokens",
       "file": "package.json",
-      "line": 117,
+      "line": 115,
       "trigger": "手动 / CI",
       "action": "node scripts/console-token-ratchet.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:console-tokens",
       "ref": {
         "file": "package.json",
-        "line": 117
+        "line": 115
       }
     },
     {
@@ -5990,14 +5990,14 @@
       "layer": "L6",
       "name": "check:contrast",
       "file": "package.json",
-      "line": 102,
+      "line": 100,
       "trigger": "手动 / CI",
       "action": "node scripts/check-contrast.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:contrast",
       "ref": {
         "file": "package.json",
-        "line": 102
+        "line": 100
       }
     },
     {
@@ -6005,14 +6005,14 @@
       "layer": "L6",
       "name": "check:corrupt-rows",
       "file": "package.json",
-      "line": 50,
+      "line": 49,
       "trigger": "手动 / CI",
       "action": "node scripts/repair-corrupt-product-rows.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:corrupt-rows",
       "ref": {
         "file": "package.json",
-        "line": 50
+        "line": 49
       }
     },
     {
@@ -6020,14 +6020,14 @@
       "layer": "L6",
       "name": "check:create-shape",
       "file": "package.json",
-      "line": 46,
+      "line": 45,
       "trigger": "手动 / CI",
       "action": "node scripts/check-prisma-create-shape.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:create-shape",
       "ref": {
         "file": "package.json",
-        "line": 46
+        "line": 45
       }
     },
     {
@@ -6035,14 +6035,14 @@
       "layer": "L6",
       "name": "check:cron-cas-claim",
       "file": "package.json",
-      "line": 23,
+      "line": 22,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-cron-cas-claim.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:cron-cas-claim",
       "ref": {
         "file": "package.json",
-        "line": 23
+        "line": 22
       }
     },
     {
@@ -6050,14 +6050,14 @@
       "layer": "L6",
       "name": "check:cron-cas-claim-live",
       "file": "package.json",
-      "line": 24,
+      "line": 23,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/probe-live-cron-cas-claim.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:cron-cas-claim-live",
       "ref": {
         "file": "package.json",
-        "line": 24
+        "line": 23
       }
     },
     {
@@ -6065,14 +6065,14 @@
       "layer": "L6",
       "name": "check:cron-execution-record",
       "file": "package.json",
-      "line": 21,
+      "line": 20,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-cron-execution-record.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:cron-execution-record",
       "ref": {
         "file": "package.json",
-        "line": 21
+        "line": 20
       }
     },
     {
@@ -6080,14 +6080,14 @@
       "layer": "L6",
       "name": "check:cron-execution-record-live",
       "file": "package.json",
-      "line": 22,
+      "line": 21,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/probe-live-cron-execution-record.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:cron-execution-record-live",
       "ref": {
         "file": "package.json",
-        "line": 22
+        "line": 21
       }
     },
     {
@@ -6095,14 +6095,14 @@
       "layer": "L6",
       "name": "check:data-conformance",
       "file": "package.json",
-      "line": 52,
+      "line": 51,
       "trigger": "手动 / CI",
       "action": "node scripts/audit-data-conformance.cjs --ratchet",
       "note": "npm 守门入口",
       "recompute": "npm run check:data-conformance",
       "ref": {
         "file": "package.json",
-        "line": 52
+        "line": 51
       }
     },
     {
@@ -6110,14 +6110,14 @@
       "layer": "L6",
       "name": "check:design-tokens",
       "file": "package.json",
-      "line": 100,
+      "line": 98,
       "trigger": "手动 / CI",
       "action": "node scripts/check-design-tokens.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:design-tokens",
       "ref": {
         "file": "package.json",
-        "line": 100
+        "line": 98
       }
     },
     {
@@ -6125,14 +6125,14 @@
       "layer": "L6",
       "name": "check:design-tokens-runtime",
       "file": "package.json",
-      "line": 101,
+      "line": 99,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/probe-design-tokens-runtime.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:design-tokens-runtime",
       "ref": {
         "file": "package.json",
-        "line": 101
+        "line": 99
       }
     },
     {
@@ -6140,14 +6140,14 @@
       "layer": "L6",
       "name": "check:doctor",
       "file": "package.json",
-      "line": 65,
+      "line": 64,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-doctor.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:doctor",
       "ref": {
         "file": "package.json",
-        "line": 65
+        "line": 64
       }
     },
     {
@@ -6155,14 +6155,14 @@
       "layer": "L6",
       "name": "check:escalate-resident",
       "file": "package.json",
-      "line": 34,
+      "line": 33,
       "trigger": "手动 / CI",
       "action": "node scripts/test-escalate-resident-worker.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:escalate-resident",
       "ref": {
         "file": "package.json",
-        "line": 34
+        "line": 33
       }
     },
     {
@@ -6170,14 +6170,14 @@
       "layer": "L6",
       "name": "check:extract-retry",
       "file": "package.json",
-      "line": 48,
+      "line": 47,
       "trigger": "手动 / CI",
       "action": "node scripts/retry-failed-session-extract.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:extract-retry",
       "ref": {
         "file": "package.json",
-        "line": 48
+        "line": 47
       }
     },
     {
@@ -6185,14 +6185,14 @@
       "layer": "L6",
       "name": "check:f005-synclog-match",
       "file": "package.json",
-      "line": 107,
+      "line": 105,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json ../../../scripts/probes/probe-f005-pipeline-synclog-match.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:f005-synclog-match",
       "ref": {
         "file": "package.json",
-        "line": 107
+        "line": 105
       }
     },
     {
@@ -6200,14 +6200,14 @@
       "layer": "L6",
       "name": "check:failed-units",
       "file": "package.json",
-      "line": 43,
+      "line": 42,
       "trigger": "手动 / CI",
       "action": "node scripts/check-failed-units.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:failed-units",
       "ref": {
         "file": "package.json",
-        "line": 43
+        "line": 42
       }
     },
     {
@@ -6215,14 +6215,14 @@
       "layer": "L6",
       "name": "check:findings-decision",
       "file": "package.json",
-      "line": 33,
+      "line": 32,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/verify-findings-decision-consumed.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:findings-decision",
       "ref": {
         "file": "package.json",
-        "line": 33
+        "line": 32
       }
     },
     {
@@ -6230,14 +6230,14 @@
       "layer": "L6",
       "name": "check:flywheel-quality",
       "file": "package.json",
-      "line": 13,
+      "line": 12,
       "trigger": "手动 / CI",
       "action": "node scripts/flywheel-quality-gate.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:flywheel-quality",
       "ref": {
         "file": "package.json",
-        "line": 13
+        "line": 12
       }
     },
     {
@@ -6245,14 +6245,14 @@
       "layer": "L6",
       "name": "check:flywheel-report",
       "file": "package.json",
-      "line": 12,
+      "line": 11,
       "trigger": "手动 / CI",
       "action": "node scripts/check-flywheel-report.cjs --hours=1",
       "note": "npm 守门入口",
       "recompute": "npm run check:flywheel-report",
       "ref": {
         "file": "package.json",
-        "line": 12
+        "line": 11
       }
     },
     {
@@ -6260,14 +6260,14 @@
       "layer": "L6",
       "name": "check:fw-quality",
       "file": "package.json",
-      "line": 20,
+      "line": 19,
       "trigger": "手动 / CI",
       "action": "tsx --tsconfig packages/apps/mind/tsconfig.json scripts/test-product-quality.ts && tsx scripts/test-structured-order.ts && tsx scripts/test-structured-dedup-guard.ts && node scripts/test-structured-dedup.cjs && node scripts/fw-quality-guard.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:fw-quality",
       "ref": {
         "file": "package.json",
-        "line": 20
+        "line": 19
       }
     },
     {
@@ -6275,14 +6275,14 @@
       "layer": "L6",
       "name": "check:git-hooks",
       "file": "package.json",
-      "line": 58,
+      "line": 57,
       "trigger": "手动 / CI",
       "action": "node scripts/test-git-hooks-installed.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:git-hooks",
       "ref": {
         "file": "package.json",
-        "line": 58
+        "line": 57
       }
     },
     {
@@ -6290,14 +6290,14 @@
       "layer": "L6",
       "name": "check:global-search",
       "file": "package.json",
-      "line": 106,
+      "line": 104,
       "trigger": "手动 / CI",
       "action": "node scripts/test-global-search.cjs --live",
       "note": "npm 守门入口",
       "recompute": "npm run check:global-search",
       "ref": {
         "file": "package.json",
-        "line": 106
+        "line": 104
       }
     },
     {
@@ -6305,14 +6305,14 @@
       "layer": "L6",
       "name": "check:guard-registry",
       "file": "package.json",
-      "line": 40,
+      "line": 39,
       "trigger": "手动 / CI",
       "action": "node scripts/guard-registry.cjs --check && node scripts/test-guard-registry.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:guard-registry",
       "ref": {
         "file": "package.json",
-        "line": 40
+        "line": 39
       }
     },
     {
@@ -6320,14 +6320,14 @@
       "layer": "L6",
       "name": "check:human-decision-negation",
       "file": "package.json",
-      "line": 25,
+      "line": 24,
       "trigger": "手动 / CI",
       "action": "tsx scripts/probes/probe-human-decision-negation.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:human-decision-negation",
       "ref": {
         "file": "package.json",
-        "line": 25
+        "line": 24
       }
     },
     {
@@ -6335,14 +6335,14 @@
       "layer": "L6",
       "name": "check:human-only-classifier",
       "file": "package.json",
-      "line": 99,
+      "line": 97,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-human-only-classifier.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:human-only-classifier",
       "ref": {
         "file": "package.json",
-        "line": 99
+        "line": 97
       }
     },
     {
@@ -6350,14 +6350,14 @@
       "layer": "L6",
       "name": "check:install-structure",
       "file": "package.json",
-      "line": 62,
+      "line": 61,
       "trigger": "手动 / CI",
       "action": "node scripts/test-lions-install.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:install-structure",
       "ref": {
         "file": "package.json",
-        "line": 62
+        "line": 61
       }
     },
     {
@@ -6365,14 +6365,14 @@
       "layer": "L6",
       "name": "check:issue-key",
       "file": "package.json",
-      "line": 66,
+      "line": 65,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-issue-key.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:issue-key",
       "ref": {
         "file": "package.json",
-        "line": 66
+        "line": 65
       }
     },
     {
@@ -6380,14 +6380,14 @@
       "layer": "L6",
       "name": "check:known-issues",
       "file": "package.json",
-      "line": 82,
+      "line": 81,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-diagnose-bundle.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:known-issues",
       "ref": {
         "file": "package.json",
-        "line": 82
+        "line": 81
       }
     },
     {
@@ -6395,14 +6395,14 @@
       "layer": "L6",
       "name": "check:llm-failure",
       "file": "package.json",
-      "line": 85,
+      "line": 84,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-llm-failure-report.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:llm-failure",
       "ref": {
         "file": "package.json",
-        "line": 85
+        "line": 84
       }
     },
     {
@@ -6410,14 +6410,14 @@
       "layer": "L6",
       "name": "check:memory-ownership",
       "file": "package.json",
-      "line": 70,
+      "line": 69,
       "trigger": "手动 / CI",
       "action": "node scripts/migrate-memory-ownership.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-ownership",
       "ref": {
         "file": "package.json",
-        "line": 70
+        "line": 69
       }
     },
     {
@@ -6425,14 +6425,14 @@
       "layer": "L6",
       "name": "check:memory-permission",
       "file": "package.json",
-      "line": 72,
+      "line": 71,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-memory-permission.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-permission",
       "ref": {
         "file": "package.json",
-        "line": 72
+        "line": 71
       }
     },
     {
@@ -6440,14 +6440,14 @@
       "layer": "L6",
       "name": "check:memory-provenance",
       "file": "package.json",
-      "line": 79,
+      "line": 78,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-memory-provenance.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-provenance",
       "ref": {
         "file": "package.json",
-        "line": 79
+        "line": 78
       }
     },
     {
@@ -6455,14 +6455,14 @@
       "layer": "L6",
       "name": "check:memory-retrieval",
       "file": "package.json",
-      "line": 78,
+      "line": 77,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-memory-retrieval.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-retrieval",
       "ref": {
         "file": "package.json",
-        "line": 78
+        "line": 77
       }
     },
     {
@@ -6470,14 +6470,14 @@
       "layer": "L6",
       "name": "check:memory-schema-drift",
       "file": "package.json",
-      "line": 71,
+      "line": 70,
       "trigger": "手动 / CI",
       "action": "node scripts/check-memory-schema-drift.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-schema-drift",
       "ref": {
         "file": "package.json",
-        "line": 71
+        "line": 70
       }
     },
     {
@@ -6485,14 +6485,14 @@
       "layer": "L6",
       "name": "check:memory-tier",
       "file": "package.json",
-      "line": 77,
+      "line": 76,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/mind && tsx --tsconfig tsconfig.json scripts/test-memory-tier-policy.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:memory-tier",
       "ref": {
         "file": "package.json",
-        "line": 77
+        "line": 76
       }
     },
     {
@@ -6500,14 +6500,14 @@
       "layer": "L6",
       "name": "check:message-ts-type",
       "file": "package.json",
-      "line": 51,
+      "line": 50,
       "trigger": "手动 / CI",
       "action": "node scripts/repair-message-ts-type.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:message-ts-type",
       "ref": {
         "file": "package.json",
-        "line": 51
+        "line": 50
       }
     },
     {
@@ -6515,14 +6515,14 @@
       "layer": "L6",
       "name": "check:mind-restart",
       "file": "package.json",
-      "line": 105,
+      "line": 103,
       "trigger": "手动 / CI",
       "action": "bash scripts/auto-restart-mind-on-corruption.sh --threshold=1",
       "note": "npm 守门入口",
       "recompute": "npm run check:mind-restart",
       "ref": {
         "file": "package.json",
-        "line": 105
+        "line": 103
       }
     },
     {
@@ -6530,14 +6530,14 @@
       "layer": "L6",
       "name": "check:model-config",
       "file": "package.json",
-      "line": 69,
+      "line": 68,
       "trigger": "手动 / CI",
       "action": "cd packages/apps/console && tsx --tsconfig tsconfig.json scripts/test-model-config.ts",
       "note": "npm 守门入口",
       "recompute": "npm run check:model-config",
       "ref": {
         "file": "package.json",
-        "line": 69
+        "line": 68
       }
     },
     {
@@ -6545,14 +6545,14 @@
       "layer": "L6",
       "name": "check:nav-ia",
       "file": "package.json",
-      "line": 39,
+      "line": 38,
       "trigger": "手动 / CI",
       "action": "node scripts/check-nav-ia.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:nav-ia",
       "ref": {
         "file": "package.json",
-        "line": 39
+        "line": 38
       }
     },
     {
@@ -6560,14 +6560,14 @@
       "layer": "L6",
       "name": "check:no-hardcoded-home",
       "file": "package.json",
-      "line": 59,
+      "line": 58,
       "trigger": "手动 / CI",
       "action": "node scripts/check-no-hardcoded-home.cjs --check",
       "note": "npm 守门入口",
       "recompute": "npm run check:no-hardcoded-home",
       "ref": {
         "file": "package.json",
-        "line": 59
+        "line": 58
       }
     },
     {
@@ -6575,14 +6575,14 @@
       "layer": "L6",
       "name": "check:no-root-only-lock",
       "file": "package.json",
-      "line": 42,
+      "line": 41,
       "trigger": "手动 / CI",
       "action": "node scripts/check-no-root-only-lock.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:no-root-only-lock",
       "ref": {
         "file": "package.json",
-        "line": 42
+        "line": 41
       }
     },
     {
@@ -6590,14 +6590,14 @@
       "layer": "L6",
       "name": "check:no-undef-ops",
       "file": "package.json",
-      "line": 41,
+      "line": 40,
       "trigger": "手动 / CI",
       "action": "node scripts/check-no-undef-ops.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:no-undef-ops",
       "ref": {
         "file": "package.json",
-        "line": 41
+        "line": 40
       }
     },
     {
@@ -6605,14 +6605,14 @@
       "layer": "L6",
       "name": "check:open-source",
       "file": "package.json",
-      "line": 67,
+      "line": 66,
       "trigger": "手动 / CI",
       "action": "node scripts/check-open-source-readiness.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:open-source",
       "ref": {
         "file": "package.json",
-        "line": 67
+        "line": 66
       }
     },
     {
@@ -6620,14 +6620,14 @@
       "layer": "L6",
       "name": "check:open-source-boundary",
       "file": "package.json",
-      "line": 68,
+      "line": 67,
       "trigger": "手动 / CI",
       "action": "node scripts/check-open-source-boundary.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:open-source-boundary",
       "ref": {
         "file": "package.json",
-        "line": 68
+        "line": 67
       }
     },
     {
@@ -6635,14 +6635,14 @@
       "layer": "L6",
       "name": "check:ops",
       "file": "package.json",
-      "line": 95,
+      "line": 93,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-ops.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:ops",
       "ref": {
         "file": "package.json",
-        "line": 95
+        "line": 93
       }
     },
     {
@@ -6650,14 +6650,14 @@
       "layer": "L6",
       "name": "check:os-sensitive",
       "file": "package.json",
-      "line": 81,
+      "line": 80,
       "trigger": "手动 / CI",
       "action": "node scripts/scan-open-source-sensitive.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:os-sensitive",
       "ref": {
         "file": "package.json",
-        "line": 81
+        "line": 80
       }
     },
     {
@@ -6665,29 +6665,14 @@
       "layer": "L6",
       "name": "check:pack",
       "file": "package.json",
-      "line": 61,
+      "line": 60,
       "trigger": "手动 / CI",
       "action": "node scripts/test-lions-pack.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:pack",
       "ref": {
         "file": "package.json",
-        "line": 61
-      }
-    },
-    {
-      "id": "L6:check:pl-autonomy-iv-parity",
-      "layer": "L6",
-      "name": "check:pl-autonomy-iv-parity",
-      "file": "package.json",
-      "line": 93,
-      "trigger": "手动 / CI",
-      "action": "node scripts/test-pl-autonomy-iv-parity.cjs",
-      "note": "npm 守门入口",
-      "recompute": "npm run check:pl-autonomy-iv-parity",
-      "ref": {
-        "file": "package.json",
-        "line": 93
+        "line": 60
       }
     },
     {
@@ -6695,14 +6680,14 @@
       "layer": "L6",
       "name": "check:pl-trust",
       "file": "package.json",
-      "line": 26,
+      "line": 25,
       "trigger": "手动 / CI",
       "action": "node scripts/pl-trust-guard.cjs --selftest && node scripts/pl-trust-guard.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:pl-trust",
       "ref": {
         "file": "package.json",
-        "line": 26
+        "line": 25
       }
     },
     {
@@ -6710,14 +6695,14 @@
       "layer": "L6",
       "name": "check:pm-claim",
       "file": "package.json",
-      "line": 29,
+      "line": 28,
       "trigger": "手动 / CI",
       "action": "node scripts/pm-causality-check.cjs repo",
       "note": "npm 守门入口",
       "recompute": "npm run check:pm-claim",
       "ref": {
         "file": "package.json",
-        "line": 29
+        "line": 28
       }
     },
     {
@@ -6725,14 +6710,14 @@
       "layer": "L6",
       "name": "check:product-zero",
       "file": "package.json",
-      "line": 110,
+      "line": 108,
       "trigger": "手动 / CI",
       "action": "node scripts/finding-premise-check.cjs product-zero-verify \"Auto-rotation\" f-001",
       "note": "npm 守门入口",
       "recompute": "npm run check:product-zero",
       "ref": {
         "file": "package.json",
-        "line": 110
+        "line": 108
       }
     },
     {
@@ -6740,14 +6725,14 @@
       "layer": "L6",
       "name": "check:proposal-reopen",
       "file": "package.json",
-      "line": 35,
+      "line": 34,
       "trigger": "手动 / CI",
       "action": "node scripts/test-proposal-human-decision-reopen.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:proposal-reopen",
       "ref": {
         "file": "package.json",
-        "line": 35
+        "line": 34
       }
     },
     {
@@ -6755,14 +6740,14 @@
       "layer": "L6",
       "name": "check:proposal-stuck-h98raxa9",
       "file": "package.json",
-      "line": 109,
+      "line": 107,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/probe-proposal-stuck-h98raxa9.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:proposal-stuck-h98raxa9",
       "ref": {
         "file": "package.json",
-        "line": 109
+        "line": 107
       }
     },
     {
@@ -6770,14 +6755,14 @@
       "layer": "L6",
       "name": "check:proposal-stuck-luylg5l0",
       "file": "package.json",
-      "line": 108,
+      "line": 106,
       "trigger": "手动 / CI",
       "action": "node scripts/probes/probe-proposal-stuck-luylg5l0.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:proposal-stuck-luylg5l0",
       "ref": {
         "file": "package.json",
-        "line": 108
+        "line": 106
       }
     },
     {
@@ -6785,14 +6770,14 @@
       "layer": "L6",
       "name": "check:proposal-verdict-parse",
       "file": "package.json",
-      "line": 36,
+      "line": 35,
       "trigger": "手动 / CI",
       "action": "node scripts/test-proposal-verdict-parse.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:proposal-verdict-parse",
       "ref": {
         "file": "package.json",
-        "line": 36
+        "line": 35
       }
     },
     {
@@ -6800,14 +6785,14 @@
       "layer": "L6",
       "name": "check:quality-scored",
       "file": "package.json",
-      "line": 49,
+      "line": 48,
       "trigger": "手动 / CI",
       "action": "node scripts/check-product-quality-scored.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:quality-scored",
       "ref": {
         "file": "package.json",
-        "line": 49
+        "line": 48
       }
     },
     {
@@ -6815,14 +6800,14 @@
       "layer": "L6",
       "name": "check:readiness",
       "file": "package.json",
-      "line": 97,
+      "line": 95,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-readiness.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:readiness",
       "ref": {
         "file": "package.json",
-        "line": 97
+        "line": 95
       }
     },
     {
@@ -6830,14 +6815,14 @@
       "layer": "L6",
       "name": "check:responder-singleton",
       "file": "package.json",
-      "line": 54,
+      "line": 53,
       "trigger": "手动 / CI",
       "action": "python3 scripts/macs-responder/test-responder-singleton.py",
       "note": "npm 守门入口",
       "recompute": "npm run check:responder-singleton",
       "ref": {
         "file": "package.json",
-        "line": 54
+        "line": 53
       }
     },
     {
@@ -6845,14 +6830,14 @@
       "layer": "L6",
       "name": "check:retro-dedup",
       "file": "package.json",
-      "line": 28,
+      "line": 27,
       "trigger": "手动 / CI",
       "action": "node scripts/test-retro-dedup.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:retro-dedup",
       "ref": {
         "file": "package.json",
-        "line": 28
+        "line": 27
       }
     },
     {
@@ -6860,14 +6845,14 @@
       "layer": "L6",
       "name": "check:service-contract",
       "file": "package.json",
-      "line": 86,
+      "line": 85,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-contract-validate.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:service-contract",
       "ref": {
         "file": "package.json",
-        "line": 86
+        "line": 85
       }
     },
     {
@@ -6875,14 +6860,14 @@
       "layer": "L6",
       "name": "check:service-index",
       "file": "package.json",
-      "line": 88,
+      "line": 87,
       "trigger": "手动 / CI",
       "action": "node scripts/check-service-index.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:service-index",
       "ref": {
         "file": "package.json",
-        "line": 88
+        "line": 87
       }
     },
     {
@@ -6890,14 +6875,14 @@
       "layer": "L6",
       "name": "check:service-registry",
       "file": "package.json",
-      "line": 87,
+      "line": 86,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-service-registry.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:service-registry",
       "ref": {
         "file": "package.json",
-        "line": 87
+        "line": 86
       }
     },
     {
@@ -6905,14 +6890,14 @@
       "layer": "L6",
       "name": "check:service-review",
       "file": "package.json",
-      "line": 89,
+      "line": 88,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-service-review.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:service-review",
       "ref": {
         "file": "package.json",
-        "line": 89
+        "line": 88
       }
     },
     {
@@ -6920,14 +6905,14 @@
       "layer": "L6",
       "name": "check:session-freshness",
       "file": "package.json",
-      "line": 57,
+      "line": 56,
       "trigger": "手动 / CI",
       "action": "node scripts/session-sync-freshness.cjs --check",
       "note": "npm 守门入口",
       "recompute": "npm run check:session-freshness",
       "ref": {
         "file": "package.json",
-        "line": 57
+        "line": 56
       }
     },
     {
@@ -6935,14 +6920,14 @@
       "layer": "L6",
       "name": "check:session-source-bindings",
       "file": "package.json",
-      "line": 45,
+      "line": 44,
       "trigger": "手动 / CI",
       "action": "python3 scripts/macs-responder/apply-session-sources.py --all --verify",
       "note": "npm 守门入口",
       "recompute": "npm run check:session-source-bindings",
       "ref": {
         "file": "package.json",
-        "line": 45
+        "line": 44
       }
     },
     {
@@ -6950,14 +6935,14 @@
       "layer": "L6",
       "name": "check:session-sources",
       "file": "package.json",
-      "line": 98,
+      "line": 96,
       "trigger": "手动 / CI",
       "action": "python3 scripts/lions-sync.py --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:session-sources",
       "ref": {
         "file": "package.json",
-        "line": 98
+        "line": 96
       }
     },
     {
@@ -6965,14 +6950,14 @@
       "layer": "L6",
       "name": "check:settlement",
       "file": "package.json",
-      "line": 90,
+      "line": 89,
       "trigger": "手动 / CI",
       "action": "node scripts/test-settlement.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:settlement",
       "ref": {
         "file": "package.json",
-        "line": 90
+        "line": 89
       }
     },
     {
@@ -6980,14 +6965,14 @@
       "layer": "L6",
       "name": "check:sla",
       "file": "package.json",
-      "line": 94,
+      "line": 92,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-sla.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:sla",
       "ref": {
         "file": "package.json",
-        "line": 94
+        "line": 92
       }
     },
     {
@@ -7021,33 +7006,18 @@
       }
     },
     {
-      "id": "L6:check:sqlite-retirement",
-      "layer": "L6",
-      "name": "check:sqlite-retirement",
-      "file": "package.json",
-      "line": 9,
-      "trigger": "手动 / CI",
-      "action": "node scripts/check-sqlite-retirement-complete.cjs",
-      "note": "npm 守门入口",
-      "recompute": "npm run check:sqlite-retirement",
-      "ref": {
-        "file": "package.json",
-        "line": 9
-      }
-    },
-    {
       "id": "L6:check:status-keys",
       "layer": "L6",
       "name": "check:status-keys",
       "file": "package.json",
-      "line": 118,
+      "line": 116,
       "trigger": "手动 / CI",
       "action": "node scripts/check-status-key-coverage.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:status-keys",
       "ref": {
         "file": "package.json",
-        "line": 118
+        "line": 116
       }
     },
     {
@@ -7055,14 +7025,14 @@
       "layer": "L6",
       "name": "check:supersede-orphan",
       "file": "package.json",
-      "line": 53,
+      "line": 52,
       "trigger": "手动 / CI",
       "action": "node scripts/repair-knowledge-orphan.cjs --tables=Memory,Knowledge,Practice,Reflection,Skill",
       "note": "npm 守门入口",
       "recompute": "npm run check:supersede-orphan",
       "ref": {
         "file": "package.json",
-        "line": 53
+        "line": 52
       }
     },
     {
@@ -7070,14 +7040,14 @@
       "layer": "L6",
       "name": "check:tenant-isolation",
       "file": "package.json",
-      "line": 80,
+      "line": 79,
       "trigger": "手动 / CI",
       "action": "node scripts/check-tenant-isolation.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:tenant-isolation",
       "ref": {
         "file": "package.json",
-        "line": 80
+        "line": 79
       }
     },
     {
@@ -7085,14 +7055,14 @@
       "layer": "L6",
       "name": "check:ui-copy",
       "file": "package.json",
-      "line": 38,
+      "line": 37,
       "trigger": "手动 / CI",
       "action": "node scripts/test-ui-copy-business-terms.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:ui-copy",
       "ref": {
         "file": "package.json",
-        "line": 38
+        "line": 37
       }
     },
     {
@@ -7100,14 +7070,14 @@
       "layer": "L6",
       "name": "check:ui-design",
       "file": "package.json",
-      "line": 119,
+      "line": 117,
       "trigger": "手动 / CI",
       "action": "node scripts/audit-ui-design-conformance.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:ui-design",
       "ref": {
         "file": "package.json",
-        "line": 119
+        "line": 117
       }
     },
     {
@@ -7115,14 +7085,14 @@
       "layer": "L6",
       "name": "check:ui-design:dev",
       "file": "package.json",
-      "line": 120,
+      "line": 118,
       "trigger": "手动 / CI",
       "action": "PORT=3014 node scripts/audit-ui-design-conformance.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:ui-design:dev",
       "ref": {
         "file": "package.json",
-        "line": 120
+        "line": 118
       }
     },
     {
@@ -7130,14 +7100,14 @@
       "layer": "L6",
       "name": "check:uninstall",
       "file": "package.json",
-      "line": 96,
+      "line": 94,
       "trigger": "手动 / CI",
       "action": "node scripts/lions-uninstall.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:uninstall",
       "ref": {
         "file": "package.json",
-        "line": 96
+        "line": 94
       }
     },
     {
@@ -7145,14 +7115,14 @@
       "layer": "L6",
       "name": "check:upgrade-e2e",
       "file": "package.json",
-      "line": 63,
+      "line": 62,
       "trigger": "手动 / CI",
       "action": "node scripts/test-lions-upgrade.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:upgrade-e2e",
       "ref": {
         "file": "package.json",
-        "line": 63
+        "line": 62
       }
     },
     {
@@ -7160,14 +7130,14 @@
       "layer": "L6",
       "name": "check:upgrade-http",
       "file": "package.json",
-      "line": 64,
+      "line": 63,
       "trigger": "手动 / CI",
       "action": "node scripts/test-lions-upgrade-http.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:upgrade-http",
       "ref": {
         "file": "package.json",
-        "line": 64
+        "line": 63
       }
     },
     {
@@ -7175,14 +7145,14 @@
       "layer": "L6",
       "name": "check:v3-impact",
       "file": "package.json",
-      "line": 103,
+      "line": 101,
       "trigger": "手动 / CI",
       "action": "node scripts/audit-v3-validation-impact.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:v3-impact",
       "ref": {
         "file": "package.json",
-        "line": 103
+        "line": 101
       }
     },
     {
@@ -7190,14 +7160,14 @@
       "layer": "L6",
       "name": "check:website",
       "file": "package.json",
-      "line": 91,
+      "line": 90,
       "trigger": "手动 / CI",
       "action": "node scripts/check-website-facts.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:website",
       "ref": {
         "file": "package.json",
-        "line": 91
+        "line": 90
       }
     },
     {
@@ -7205,14 +7175,14 @@
       "layer": "L6",
       "name": "check:wild-listeners",
       "file": "package.json",
-      "line": 44,
+      "line": 43,
       "trigger": "手动 / CI",
       "action": "node scripts/check-wild-listeners.cjs --selftest",
       "note": "npm 守门入口",
       "recompute": "npm run check:wild-listeners",
       "ref": {
         "file": "package.json",
-        "line": 44
+        "line": 43
       }
     },
     {
@@ -7220,14 +7190,14 @@
       "layer": "L6",
       "name": "check:write-paths",
       "file": "package.json",
-      "line": 104,
+      "line": 102,
       "trigger": "手动 / CI",
       "action": "node scripts/audit-write-paths.cjs",
       "note": "npm 守门入口",
       "recompute": "npm run check:write-paths",
       "ref": {
         "file": "package.json",
-        "line": 104
+        "line": 102
       }
     }
   ]

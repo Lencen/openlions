@@ -1,6 +1,5 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 
 /**
  * /api/v1/knowledge/norms — 规范类知识列表 (2026-09-22, 知识库整理步骤4)
@@ -19,7 +18,6 @@ import path from "path";
  */
 export const dynamic = "force-dynamic";
 
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
 // 规范关键词(与 knowledge-domain-backfill.cjs NORM_RE 同口径)
 const NORM_RE = /(审视|纪律|必须|约定|守门|结单|提交规范|规范|红线|不得|禁止)/;
 
@@ -29,13 +27,11 @@ export async function GET(req: NextRequest) {
     const domain = sp.get("domain") || "platform";
     const limit = Math.min(parseInt(sp.get("limit") || "50", 10) || 50, 200);
 
-    const db = openMindDb({ role: "readonly", dbPath: DB_PATH, caller: "route" });
-
-    // 取 domain 命中 + 非 stale 的行, 在 JS 侧按规范关键词过滤(避免 SQL 正则方言差异)
-    const rows: any[] = db.prepare(
-      "SELECT id, title, content, tags, category FROM Knowledge WHERE domain = ? AND COALESCE(stale, 0) = 0 ORDER BY COALESCE(confidence, 0) DESC, createdAt DESC LIMIT ?"
-    ).all(domain, Math.min(limit * 8, 500));
-    db.close();
+    // 2026-10-26 SQLite 退役(P3): 只读 PG。
+    const rows: any[] = (await prisma.$queryRawUnsafe(
+      'SELECT "id","title","content","tags","category" FROM "Knowledge" WHERE "domain" = ? AND ("stale" IS NOT TRUE) ORDER BY COALESCE("confidence", 0) DESC, "createdAt" DESC LIMIT ?',
+      domain, Math.min(limit * 8, 500)
+    )) as any[];
     const norms = (rows || []).filter((r: any) => NORM_RE.test(String(r.title || "") + " " + String(r.content || "")))
       .map((r: any) => ({
         id: r.id,

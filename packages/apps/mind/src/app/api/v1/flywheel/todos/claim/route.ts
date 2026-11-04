@@ -1,8 +1,6 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
 // 2026-09-16 [机制修复] todo 端能力预检: 文本 agent 不能再领 [机制修复]/[落地] todo
 //   (与 tasks/claim 对齐, 防止领了又空转 -> 反复放回 -> 队列堵塞)。
 import { getAgentCapability, classifyTaskRequirement, missingCapabilities } from "@/server/pipeline/agent-capability";
@@ -31,15 +29,6 @@ export const dynamic = "force-dynamic";
  *   - Quarantine: meta.releaseCount >= 2 时不再放回 OPEN, 改置 BLOCKED + manualReview=true,
  *     从根上切断空转; 沿用 Task 的 QUARANTINE_AFTER_RELEASES=2 阈值 (单一真源常量)。
  */
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
-async function openDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "route" });
-
-  return db;
-}
-
 function rowToJson(r: any) {
   return {
     id: String(r.id), title: String(r.title), detail: r.detail == null ? null : String(r.detail),

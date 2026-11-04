@@ -154,9 +154,15 @@ ${conflictInfo}
       recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: `HTTP_${resp.status}`, promptLength: prompt.length });
       throw new Error(`LLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
     }
-    recordLlmCall({ entry: "improving-tasks", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length });
-
-    const data: any = await resp.json();
+    // 2026-10-26 精确 token: 必须在解析响应后拿 usage（此前先记账、后解析 -> token 永远缺失）。
+    const data: any = await resp.json().catch(() => null);
+    if (!data) {
+      recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: "PARSE_INVALID_JSON", promptLength: prompt.length, model: MODEL });
+      throw new Error("LLM 返回不是合法 JSON");
+    }
+    const _u = data.usage || {};
+    const _tk = Number(_u.input_tokens ?? _u.prompt_tokens ?? 0) + Number(_u.output_tokens ?? _u.completion_tokens ?? 0);
+    recordLlmCall({ entry: "improving-tasks", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: MODEL });
     const content = data.content?.[0]?.text ?? data.choices?.[0]?.message?.content;
     if (!content) throw new Error("LLM 无返回内容");
 

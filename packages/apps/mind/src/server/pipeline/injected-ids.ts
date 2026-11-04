@@ -29,6 +29,42 @@ export function parseInjectedIds(sourceTitle: unknown): string[] {
   return [];
 }
 
+
+/**
+ * extractCitedIds — 从产出正文里找"被引用的注入 id"（2026-10-26，ASSET_CITED 前向）
+ *
+ * 口径（必须与回填脚本一致）：
+ *   · 只认**完整 id**；不接受 6 位尾号（尾号会命中普通单词，假阳性不可控）；
+ *   · 边界：id 前后不能紧邻字母/数字，避免 "cmabc" 命中 "cmabcX"；
+ *   · 去重、保序；上限 50，防止异常产出把事件撑爆。
+ * 注意：命中只说明"产出里出现了这个 id"，不等于"语义上采用了它"；
+ *   采用仍以回填/验收为准，看板需标注"引用≠采用"。
+ */
+export function extractCitedIds(text: unknown, injectedIds: unknown): string[] {
+  const out: string[] = [];
+  const src = String(text ?? "");
+  const ids = Array.isArray(injectedIds) ? injectedIds : [];
+  if (!src || !ids.length) return out;
+  const seen = new Set<string>();
+  for (const raw of ids) {
+    const id = String(raw || "");
+    if (!id || seen.has(id)) continue;
+    let from = 0;
+    let hit = false;
+    while (from <= src.length - id.length) {
+      const i = src.indexOf(id, from);
+      if (i < 0) break;
+      const before = i > 0 ? src[i - 1] : "";
+      const after = i + id.length < src.length ? src[i + id.length] : "";
+      const boundary = !/[A-Za-z0-9]/.test(before) && !/[A-Za-z0-9]/.test(after);
+      if (boundary) { hit = true; break; }
+      from = i + 1;
+    }
+    if (hit) { seen.add(id); out.push(id); if (out.length >= 50) break; }
+  }
+  return out;
+}
+
 /** 生成统一的注入事件 sourceTitle(三条路径共用, 保证有的解析就有得写) */
 export function buildInjectedTitle(input: {
   agentId?: string | null;

@@ -34,36 +34,13 @@
  *   - 建表/读写走 better-sqlite3 原生(与 todo-store 同套路): 既不在 1GB 生产 dev.db 上跑 prisma migrate,
  *     也绕开 Prisma 对「原生建表的 INTEGER 列」原始查询的映射问题。
  */
-import { openMindDb } from "@/server/lib/open-mind-db";
-import path from "path";
 import { createHash } from "crypto";
+import { prisma } from "@/lib/prisma";
 import { requireEvidence } from "./evidence";
 
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
+// 2026-10-26 SQLite 退役(P3): FindingClosure 已在 PG；唯一索引 (theme,subjectType,subjectKey)
+//   由 2026-10-26 的 PG DDL 补齐（SQLite 时代只有 id 主键，ON CONFLICT 需要它）。
 const TABLE = "FindingClosure";
-
-const DDL =
-  "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
-  "id TEXT PRIMARY KEY, theme TEXT NOT NULL, subjectType TEXT NOT NULL, subjectKey TEXT NOT NULL, " +
-  "subjectSuffix TEXT, closureReason TEXT NOT NULL, resolutionNote TEXT, evidenceRef TEXT, " +
-  "owner TEXT, ownerRule TEXT, decidedBy TEXT, decidedAt INTEGER, createdAt INTEGER NOT NULL, updatedAt INTEGER NOT NULL, " +
-  // 2026-09-15 机制修复(f-003 Pipeline mt57s0): 裁决方可显式声明「本结单额外覆盖的 finding category」(JSON 数组文本)。
-  //   默认空 = 维持原口径(仅 CONFLICT / FIX_DATA / MERGE_CONFLICT); 只有确实需要跨类的裁决才 opt-in, 避免一刀切误伤。
-  "matchCategories TEXT)";
-
-async function openDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "finding-closure-store" });
-
-  db.exec(DDL);
-  // 已存在的旧表不会因 CREATE TABLE IF NOT EXISTS 补列 —— 幂等补一次(老库平滑升级)。
-  const cols = db.prepare(`PRAGMA table_info(${TABLE})`).all() as Array<{ name?: string }>;
-  if (!cols.some((c) => c?.name === "matchCategories")) {
-    db.exec(`ALTER TABLE ${TABLE} ADD COLUMN matchCategories TEXT`);
-  }
-  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS FindingClosure_key ON " + TABLE + " (theme, subjectType, subjectKey)");
-  return db;
-}
 
 export interface FindingClosureRow {
   id: string;
@@ -106,51 +83,44 @@ export const findingClosureId = (theme: string, subjectType: string, subjectKey:
 export async function registerFindingClosure(input: FindingClosureInput): Promise<string> {
   const now = Date.now();
   const id = findingClosureId(input.theme, input.subjectType, input.subjectKey);
-  const db = await openDb();
-  try {
-    db.prepare(
-      `INSERT INTO ${TABLE} (id, theme, subjectType, subjectKey, subjectSuffix, closureReason, resolutionNote, evidenceRef, owner, ownerRule, decidedBy, decidedAt, matchCategories, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(theme, subjectType, subjectKey) DO UPDATE SET
-         subjectSuffix=excluded.subjectSuffix, closureReason=excluded.closureReason,
-         resolutionNote=excluded.resolutionNote, evidenceRef=excluded.evidenceRef,
-         owner=excluded.owner, ownerRule=excluded.ownerRule, decidedBy=excluded.decidedBy,
-         decidedAt=excluded.decidedAt, matchCategories=excluded.matchCategories, updatedAt=excluded.updatedAt`
-    ).run(
-      id,
-      input.theme,
-      input.subjectType,
-      input.subjectKey,
-      input.subjectSuffix ?? null,
-      input.closureReason,
-      input.resolutionNote ?? null,
-      input.evidenceRef ?? null,
-      input.owner ?? null,
-      input.ownerRule ?? null,
-      input.decidedBy ?? null,
-      input.decidedAt ?? now,
-      input.matchCategories?.length ? JSON.stringify(input.matchCategories) : null,
-      now,
-      now
-    );
-    return id;
-  } finally {
-    db.close();
-  }
+  await prisma.$executeRawUnsafe(
+    `INSERT INTO "${TABLE}" ("id","theme","subjectType","subjectKey","subjectSuffix","closureReason","resolutionNote","evidenceRef","owner","ownerRule","decidedBy","decidedAt","matchCategories","createdAt","updatedAt")
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT ("theme","subjectType","subjectKey") DO UPDATE SET
+       "subjectSuffix"=excluded."subjectSuffix", "closureReason"=excluded."closureReason",
+       "resolutionNote"=excluded."resolutionNote", "evidenceRef"=excluded."evidenceRef",
+       "owner"=excluded."owner", "ownerRule"=excluded."ownerRule", "decidedBy"=excluded."decidedBy",
+       "decidedAt"=excluded."decidedAt", "matchCategories"=excluded."matchCategories", "updatedAt"=excluded."updatedAt"`,
+    id,
+    input.theme,
+    input.subjectType,
+    input.subjectKey,
+    input.subjectSuffix ?? null,
+    input.closureReason,
+    input.resolutionNote ?? null,
+    input.evidenceRef ?? null,
+    input.owner ?? null,
+    input.ownerRule ?? null,
+    input.decidedBy ?? null,
+    input.decidedAt ?? now,
+    input.matchCategories?.length ? JSON.stringify(input.matchCategories) : null,
+    now,
+    now
+  );
+  return id;
 }
 
 /** 读取登记表(可按 theme 过滤)。失败返回 [] (非致命)。 */
 export async function loadFindingClosures(theme?: string): Promise<FindingClosureRow[]> {
   try {
-    const db = await openDb();
-    try {
-      const rows = theme
-        ? db.prepare(`SELECT * FROM ${TABLE} WHERE theme=? ORDER BY updatedAt DESC`).all(theme)
-        : db.prepare(`SELECT * FROM ${TABLE} ORDER BY updatedAt DESC`).all();
-      return (rows as FindingClosureRow[]) || [];
-    } finally {
-      db.close();
-    }
+    const rows: any[] = theme
+      ? (await prisma.$queryRawUnsafe(`SELECT * FROM "${TABLE}" WHERE "theme"=? ORDER BY "updatedAt" DESC`, theme)) as any[]
+      : (await prisma.$queryRawUnsafe(`SELECT * FROM "${TABLE}" ORDER BY "updatedAt" DESC`)) as any[];
+    return rows.map((r) => {
+      const o: any = { ...r };
+      for (const k of ["decidedAt", "createdAt", "updatedAt"]) if (typeof o[k] === "bigint") o[k] = Number(o[k]);
+      return o as FindingClosureRow;
+    });
   } catch (e: any) {
     console.warn(`[finding-closure] 读取登记表失败(非致命): ${(e?.message || "").slice(0, 120)}`);
     return [];

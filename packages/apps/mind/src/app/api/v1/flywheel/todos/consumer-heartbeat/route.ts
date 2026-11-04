@@ -1,4 +1,3 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { runtimeRepo } from "@/server/lib/runtime-repo";
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
@@ -22,23 +21,11 @@ export const dynamic = "force-dynamic";
  * 判据(见 @/server/pipeline/todo-consumer): consumer := 心跳新鲜(<=30min) || 近 24h 有真实消费活动。
  * 本接口只写心跳; 指派闸门在 todos/route.ts, 超时释放/巡检在 scripts/todo-consumer-guard.cjs。
  */
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
-async function openDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "route" });
-
-  return db;
-}
-
 export async function GET() {
   let db: any = null;
   try {
-    db = await openDb();
-    ensureConsumerTable(db);
-    const all = await consumerStates(db);
-    db.close();
-    db = null;
+    ensureConsumerTable(null);
+    const all = await consumerStates(null);
     const consumers = all.filter((s) => s.active && s.consumer);
     const consumerless = all.filter((s) => s.active && !s.consumer);
     return NextResponse.json({
@@ -59,16 +46,13 @@ export async function POST(req: NextRequest) {
   if (!agentId) return NextResponse.json({ ok: false, error: "need agentId" }, { status: 400 });
   let db: any = null;
   try {
-    db = await openDb();
-    const r = await recordHeartbeat(db, {
+    const r = await recordHeartbeat(null, {
       agentId,
       host: b.host != null ? String(b.host).slice(0, 120) : null,
       pid: b.pid != null ? Number(b.pid) : null,
       worker: b.worker != null ? String(b.worker).slice(0, 120) : "todo_worker",
     });
     const row: any = await runtimeRepo.get("SELECT * FROM " + CONSUMER_TABLE + " WHERE agent_id = ?", agentId);
-    db.close();
-    db = null;
     return NextResponse.json({ ok: true, consumer: { agentId: r.agentId, lastHeartbeatAt: Number(row.last_heartbeat_at), heartbeatCount: Number(row.heartbeat_count) }, asOf: new Date(r.at).toISOString() });
   } catch (e: any) {
     try { db?.close(); } catch {}

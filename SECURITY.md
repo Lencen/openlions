@@ -4,7 +4,7 @@
 
 请**不要**用公开 Issue 报告安全漏洞。请通过私有渠道联系我们：
 
-- 邮件：[email]
+- 邮件：iamlencen@qq.com
 - 或仓库托管平台的「私有安全公告 (Private vulnerability reporting)」入口
 
 请在报告中包含：受影响版本 / 复现步骤 / 影响面 / 你的联系方式。我们会在 7 个工作日内首次回复。

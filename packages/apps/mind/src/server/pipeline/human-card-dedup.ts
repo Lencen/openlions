@@ -38,8 +38,8 @@
  *   - 回顾型识别只认**两个强文本标记**(上次发现的 hash 列表 / "上次…N 项(条)" 计数), 不做语义猜测;
  *     刻意不把裸词 `dedupHash`、`上次反思发现` 当标记 —— 实测会误伤真实复发型 finding(回归有负样本)。
  */
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepoFor } from "@/server/lib/todo-repo";
+import { prisma } from "@/lib/prisma";
 
 import { createHash } from "crypto";
 
@@ -369,14 +369,11 @@ export function findDecidedTopicMatch(
  */
 export async function loadResolvedTopics(dbPath?: string): Promise<DecidedTopic[]> {
   try {
-    const path = await import("path");
-    const mod: any = await import("better-sqlite3");
     const { parseStructuredFindings } = await import("./findings-parse");
-    const Database = mod.default ?? mod;
-    const db = openMindDb({ role: "readonly", dbPath: dbPath || process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db"), caller: "human-card-dedup" });
-
-    const rows: any[] = db.prepare("SELECT id, structuredFindings FROM FlywheelReflection WHERE structuredFindings IS NOT NULL").all() as any[];
-    db.close();
+    const rows: any[] = (await prisma.flywheelReflection.findMany({
+      where: { structuredFindings: { not: null } },
+      select: { id: true, structuredFindings: true },
+    })) as any[];
     const agg = new Map<string, DecidedTopic>();
     for (const r of rows) {
       const findings = parseStructuredFindings(r.structuredFindings) as any[];
@@ -668,11 +665,6 @@ export function identityFromTodoRow(row: { id: string; status: string; sourceRef
  */
 export async function loadExistingCardIdentities(dbPath?: string): Promise<ExistingCardIdentity[]> {
   try {
-    const path = await import("path");
-    const mod: any = await import("better-sqlite3");
-    const Database = mod.default ?? mod;
-    const db = openMindDb({ role: "readonly", dbPath: dbPath || process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db"), caller: "human-card-dedup" });
-
     // 只取人类决策卡: 三个产卡来源, 或带 decision-card-language 产出的业务身份标记的卡。
     // 2026-09-17 独立复核 R1: 原实现还带 `meta LIKE '%"findingKey"%'`, 会把 13 条
     //   `agent:* 巡检反馈` 卡(agent-finding.ts 用**另一套算法**生成的 16 位 findingKey)也拉进来;

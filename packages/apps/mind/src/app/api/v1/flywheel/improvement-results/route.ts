@@ -1,8 +1,6 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
 import { runtimeRepo } from "@/server/lib/runtime-repo";
 import { NextRequest, NextResponse } from "next/server";
-import path from "path";
 import { rangeFromRequest } from "@/lib/range";
 
 export const dynamic = "force-dynamic";
@@ -22,8 +20,6 @@ export const dynamic = "force-dynamic";
  *
  * 只读: 不改任何表(台账由 scripts/acceptance/runner.cjs 写)。
  */
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
 function acceptanceJson(a: any) {
   if (!a) return { state: "PENDING", verdict: null, specType: null, checkedAt: null, fails: [] };
   let fails: any[] = []; try { fails = JSON.parse(String(a.failsJson || "[]")); } catch { fails = []; }
@@ -39,11 +35,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const source = String(url.searchParams.get("source") || "").trim();
   const limit = Math.min(500, Math.max(1, Number(url.searchParams.get("limit") || 100)));
-  let db: any = null;
   try {
-
-    db = openMindDb({ role: "readonly", dbPath: DB_PATH, caller: "route" });
-
     // 2026-10-13 round 76-CC: **opt-in** 时间窗(③) —— 只有显式传 ?range= 才按 Todo.createdAt 过滤。
     const rf = rangeFromRequest(req);
     const since = rf && rf.since > 0 ? rf.since : 0;
@@ -76,12 +68,21 @@ export async function GET(req: NextRequest) {
     const todoAcc = await verdictRows("Todo", todos.map((t) => String(t.id)));
     const taskAcc = await verdictRows("Task", taskIdsAll);
 
+    // 2026-10-26 SQLite 退役(P3): 升级任务一次从 PG 取回，不再开 SQLite 句柄。
+    const taskById = new Map<string, any>();
+    if (taskIdsAll.length) {
+      try {
+        const ph = taskIdsAll.map(() => "?").join(",");
+        const rs = (await runtimeRepo.all("SELECT id,title,status,improvementType FROM Task WHERE id IN (" + ph + ")", ...taskIdsAll)) as any[];
+        for (const r of rs) taskById.set(String(r.id), r);
+      } catch { /* 任务缺失 -> tasks 留空 */ }
+    }
+
     const items = todos.map((t) => {
       const ids = rowTaskIds.get(String(t.id)) || [];
       let tasks: any[] = [];
       if (ids.length) {
-        const ph = ids.map(() => "?").join(",");
-        const rs = db.prepare("SELECT id,title,status,improvementType FROM Task WHERE id IN (" + ph + ")").all(...ids) as any[];
+        const rs = ids.map((id) => taskById.get(String(id))).filter(Boolean) as any[];
         tasks = rs.map((r) => ({ id: String(r.id), title: r.title, status: r.status, improvementType: r.improvementType,
           acceptance: acceptanceJson(taskAcc.get(String(r.id))) }));
       }
@@ -111,6 +112,6 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     return NextResponse.json({ ok: false, error: (e?.message || String(e)).slice(0, 300) }, { status: 500 });
   } finally {
-    try { db?.close(); } catch { /* 忽略 */ }
+    /* 2026-10-26 SQLite 退役(P3): 不再有 db 句柄需要关闭 */
   }
 }

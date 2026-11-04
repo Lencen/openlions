@@ -74,17 +74,20 @@ function dbCandidates(): string[] {
 
 /** 主路径: prisma 原生查询 */
 async function readViaPrisma(sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
-  // 内联整数毫秒窗口边界(非用户输入): 不依赖驱动对 Date/ISO 的序列化, 实测最稳。
-  const w = Math.trunc(sinceMs);
+  // 2026-10-26 SQLite 退役(P3): 时间参数用 epoch ms（方言层会包 to_timestamp），JSON 用 jsonb。
+  const since = Math.trunc(sinceMs);
   const calls: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= " + w + " AND " + COUNTED_TARGET_PREDICATE
+    "SELECT COUNT(*)::bigint c FROM \"FlywheelEvent\" WHERE \"stage\"='CALL_LLM' AND \"createdAt\" >= ? AND " + COUNTED_TARGET_PREDICATE,
+    since
   );
   const net: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= " + w + " AND " + NETWORK_FAILURE_PREDICATE
+    "SELECT COUNT(*)::bigint c FROM \"FlywheelEvent\" WHERE \"stage\"='CALL_LLM' AND \"createdAt\" >= ? AND " + NETWORK_FAILURE_PREDICATE,
+    since
   );
   const real: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COALESCE(SUM(CAST(json_extract(sourceTitle,'$.calls') AS INTEGER)),0) s FROM FlywheelEvent " +
-      "WHERE stage='LLM_USE_REAL' AND json_valid(sourceTitle) AND createdAt >= " + w
+    "SELECT COALESCE(SUM((\"sourceTitle\"::jsonb->>'calls')::numeric),0)::bigint s FROM \"FlywheelEvent\" " +
+      "WHERE \"stage\"='LLM_USE_REAL' AND \"sourceTitle\" ~ '^\\s*\\{' AND \"createdAt\" >= ?",
+    since
   );
   return {
     platform: Number(calls?.[0]?.c ?? 0),
@@ -93,49 +96,9 @@ async function readViaPrisma(sinceMs: number): Promise<{ platform: number; real:
   };
 }
 
-/** 兜底 1: 直连只读 sqlite(绕开 prisma 连接池; 连接池故障/脏视图时仍可复算) */
-async function readViaSqlite(sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
-  const mod: any = await import("better-sqlite3");
-  const Database = mod.default ?? mod;
-  let lastErr: any = null;
-  for (const p of dbCandidates()) {
-    try {
-      if (!fs.existsSync(p)) continue;
-      const db = new Database(p, { readonly: true, fileMustExist: true });
-      try {
-        const platform = Number(
-          db
-            .prepare(
-              "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= ? AND " + COUNTED_TARGET_PREDICATE
-            )
-            .get(sinceMs).c
-        );
-        const networkFailures = Number(
-          db
-            .prepare(
-              "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= ? AND " + NETWORK_FAILURE_PREDICATE
-            )
-            .get(sinceMs).c
-        );
-        const real = Math.round(
-          Number(
-            db
-              .prepare(
-                "SELECT COALESCE(SUM(CAST(json_extract(sourceTitle,'$.calls') AS INTEGER)),0) s FROM FlywheelEvent " +
-                  "WHERE stage='LLM_USE_REAL' AND json_valid(sourceTitle) AND createdAt >= ?"
-              )
-              .get(sinceMs).s
-          )
-        );
-        return { platform, real, networkFailures };
-      } finally {
-        db.close();
-      }
-    } catch (e: any) {
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error("no readable mind db candidate");
+/** 兜底 1（2026-10-26 已退役）：不再直连 SQLite；失败直接落到快照兜底。 */
+async function readViaSqlite(_sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
+  throw new Error("[llm-calls-5h] SQLite 已退役：数据源是 PG；只保留快照兜底");
 }
 
 /** 兜底 2: 上次成功读到的快照(本地缓存, 跨进程重启可用) */

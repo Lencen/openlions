@@ -8,6 +8,10 @@ import {
   isTerminal,
   normalizeReviveTarget,
   reviveEventTitle,
+  // 2026-10-25: OwnerGateVerdict 在 task-revive-core.ts 已 export, 但本文件此前**漏 import**
+  //   -> tsc 报 TS2552(2 处), 并连带让 pre-commit 的 "tsc 基线 0" 闸门拒绝**任何**提交。
+  //   本次因提交 stale-dedup 修复被该闸门挡住, 补上这一行(纯类型导入, 不改任何运行时行为)。
+  type OwnerGateVerdict,
 } from "./task-revive-core";
 
 /**
@@ -80,19 +84,51 @@ async function loadTasks(ids: string[]): Promise<Map<string, ReviveTaskRow>> {
   return map;
 }
 
-async function loadActiveAgents(candidates: (string | null | undefined)[]): Promise<Set<string>> {
+/**
+ * 加载归属的**可认领性**判定结果(实践遗留 MINOR-1, 2026-10)。
+ *
+ * 口径 = status='ACTIVE' **且** channel != 'human'。
+ *   • 只看 status 是 MINOR-1 的根因: operator 这类 human 通道注册项是 ACTIVE 的,
+ *     于是 keepOwner=true 保留该归属后闸门放行、回 200; 但认领端点只按
+ *     `assignedAgent = ?` 字面比对且无 human 分支, 人类也不轮询该端点 ——
+ *     这条 PENDING 任务对所有 agent 不可领且永不领取, 回到 todo_d563d97665df49428c45
+ *     当初要根治的"复活件静默不可领"。
+ *   • 排除 human 通道后, keepOwner=true 指向人会在闸门阶段就 422 报出 missing,
+ *     而不是产出一条看似成功实则不可领的复活件(keepOwner=false 清空归属不受影响)。
+ */
+type OwnerVerdicts = Map<string, OwnerGateVerdict>;
+
+async function loadOwnerVerdicts(candidates: (string | null | undefined)[]): Promise<OwnerVerdicts> {
   const uniq = Array.from(new Set(candidates.filter(Boolean).map((x) => String(x))));
-  if (!uniq.length) return new Set();
+  const out: OwnerVerdicts = new Map();
+  if (!uniq.length) return out;
   try {
     const rows = await prisma.$queryRawUnsafe<any[]>(
-      `SELECT agent_id FROM AgentRegistry WHERE status='ACTIVE' AND agent_id IN (${placeholders(uniq.length)})`,
+      `SELECT agent_id, channel FROM AgentRegistry WHERE status='ACTIVE' AND agent_id IN (${placeholders(uniq.length)})`,
       ...uniq,
     );
-    return new Set((rows || []).map((r) => String(r.agent_id)));
+    for (const r of rows || []) {
+      const id = String(r.agent_id);
+      out.set(id, String(r.channel) === "human" ? "HUMAN_CHANNEL" : "OK");
+    }
+    for (const id of uniq) if (!out.has(id)) out.set(id, "NOT_REGISTERED_OR_INACTIVE");
+    return out;
   } catch {
-    // 隔离/测试库可能没有 AgentRegistry: 退化为"不校验归属 ACTIVE", 不因此阻断复活
-    return new Set(uniq);
+    // 隔离/测试库可能没有 AgentRegistry: 退化为"不校验归属", 不因此阻断复活
+    for (const id of uniq) out.set(id, "OK");
+    return out;
   }
+}
+
+/** 把 loadOwnerVerdicts 的 Map 适配成 claimGateMissing 需要的判据函数。 */
+function ownerGateFn(verdicts: OwnerVerdicts): (agentId: string) => OwnerGateVerdict {
+  return (agentId: string) => verdicts.get(agentId) ?? "NOT_REGISTERED_OR_INACTIVE";
+}
+
+/** 兼容旧调用点: 只要"可认领归属"的 agent 集合。 */
+async function loadActiveAgents(candidates: (string | null | undefined)[]): Promise<Set<string>> {
+  const verdicts = await loadOwnerVerdicts(candidates);
+  return new Set(Array.from(verdicts.entries()).filter(([, v]) => v === "OK").map(([k]) => k));
 }
 
 /** 全库体检: 当前有多少 PENDING 任务**对所有人**都领不到(口径与认领闸门一致)。 */

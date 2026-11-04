@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import Database from "better-sqlite3";
+import { sessionQuery } from "@/server/lib/session-pg";
 import { parseStructuredFindings } from "./findings-parse";
 
 // 2026-09-09 每日 00:00 日结反思 — 固定大纲结构(无数据也有键, 页面按框架渲染)
@@ -15,20 +15,19 @@ function dayWindow(): { start: number; end: number; dateKey: string } {
 }
 function safe<T>(s: string | null, fb: T): T { try { return JSON.parse(s || "") as T; } catch { return fb; } }
 
-// 2026-09-10: session 服务 DB 只读窗口统计 (真实会话来源; SessionRegistry 已停写)
-const SESSION_DB = process.env.LIONS_SESSION_DB || "" + (process.env.LIONS_HOME || process.cwd()) + "/packages/apps/session/prisma/dev.db";
-function readSessionWindow(startMs: number, endMs: number): { count: number; messages: number; byAgent: Array<{ agentId: string; sessions: number; messages: number }> } {
+// 2026-10-26 SQLite 退役(P3): 改为只读 lions_session（PG）。
+async function readSessionWindow(startMs: number, endMs: number): Promise<{ count: number; messages: number; byAgent: Array<{ agentId: string; sessions: number; messages: number }> }> {
   try {
-    const db = new Database(SESSION_DB, { readonly: true });
-    const rows = db.prepare(
-      "SELECT agentId, COUNT(*) sessions, COALESCE(SUM(messageCount),0) messages FROM Session WHERE updatedAt >= ? AND updatedAt < ? GROUP BY agentId ORDER BY sessions DESC"
-    ).all(startMs, endMs) as any[];
+    const rows = await sessionQuery<any>(
+      'SELECT "agentId", COUNT(*)::int AS sessions, COALESCE(SUM("messageCount"),0)::int AS messages ' +
+      'FROM "Session" WHERE "updatedAt" >= $1 AND "updatedAt" < $2 GROUP BY "agentId" ORDER BY sessions DESC',
+      [new Date(startMs), new Date(endMs)]
+    );
     const count = rows.reduce((a, r) => a + Number(r.sessions || 0), 0);
     const messages = rows.reduce((a, r) => a + Number(r.messages || 0), 0);
-    db.close();
     return { count, messages, byAgent: rows.map((r) => ({ agentId: r.agentId || "?", sessions: Number(r.sessions), messages: Number(r.messages) })) };
   } catch (e: any) {
-    console.warn("[reflect-daily] session DB 读取失败: " + (e?.message || e));
+    console.warn("[reflect-daily] session PG 读取失败: " + (e?.message || e));
     return { count: 0, messages: 0, byAgent: [] };
   }
 }
@@ -83,7 +82,7 @@ export async function runDailyReflection() {
 
   // 2) 会话 (2026-09-10 遗留修复: 原读 mind.SessionRegistry — 该表自 08-28 起已停写, 窗口恒 0;
   //    真实会话在 session 服务 DB(Session 表), 改为只读直查该库, 口径与 flow/看板一致)
-  const sessionSessions = readSessionWindow(start, end);
+  const sessionSessions = await readSessionWindow(start, end);
   stats.source.sessions = { active: sessionSessions.count, messages: sessionSessions.messages };
   stats.source.sessionsByAgent = sessionSessions.byAgent;
 

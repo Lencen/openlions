@@ -102,7 +102,7 @@ export default function CommPage() {
     <div className="panel"><div className="panel-header"><span className="panel-title">通信服务统计</span></div><div style={{fontSize:"var(--fs-md)",padding: "var(--sp-1) 0"}}>{macsOk ? <span className="badge badge-green">运行中</span> : <span className="badge badge-red">离线</span>} <span style={{color:"var(--text-dim)",fontSize:"var(--fs-base)"}}>平台化管理</span></div><pre style={{fontSize:"var(--fs-sm)",color:"var(--text-dim)",whiteSpace:"pre-wrap",margin:0}}>{JSON.stringify(data?.macs_stats ?? {}, null, 2).slice(0, 300)}</pre></div>
   </div>); }
 
-  async function sendAsoperator(to: string) {
+  async function sendAsLencen(to: string) {
     const text = draft.trim();
     if (!text || sending) return;
     setSending(true);
@@ -149,7 +149,7 @@ export default function CommPage() {
           <div style={{ fontSize: "var(--fs-md)", marginBottom: "var(--sp-2)" }}>发起会话 → <b>{nameOf(targetAgent)}</b> ({targetAgent})</div>
           <textarea value={draft} onChange={(e) => setDraft(e.target.value)} placeholder={t('comm.send.placeholder', { name: nameOf(targetAgent) })} style={{ width: "100%", minHeight: 70, boxSizing: "border-box", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", padding: "var(--sp-2)", fontSize: "var(--fs-md)", resize: "vertical", background: "var(--bg)" }} />
           <div style={{ marginTop: "var(--sp-2)", display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
-            <button onClick={() => sendAsoperator(targetAgent)} disabled={sending || !draft.trim()} style={{ padding: "var(--sp-2) var(--sp-4)", borderRadius: "var(--radius-md)", border: "none", background: "var(--primary)", color: "var(--on-primary)", fontWeight: 600, cursor: "pointer", fontSize: "var(--fs-md)" }}>{sending ? "发送中…" : "发送"}</button>
+            <button onClick={() => sendAsLencen(targetAgent)} disabled={sending || !draft.trim()} style={{ padding: "var(--sp-2) var(--sp-4)", borderRadius: "var(--radius-md)", border: "none", background: "var(--primary)", color: "var(--on-primary)", fontWeight: 600, cursor: "pointer", fontSize: "var(--fs-md)" }}>{sending ? "发送中…" : "发送"}</button>
             <span style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)" }}>{t('comm.send.note')}</span>
           </div>
         </div>

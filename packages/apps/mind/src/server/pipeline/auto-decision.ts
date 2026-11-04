@@ -17,8 +17,8 @@
  *
  * 可测: 纯函数见 scripts/test-auto-decision-parse.ts; 写回逻辑(真库快照)见 scripts/test-auto-decision-apply.ts。
  */
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
+import { prisma } from "@/lib/prisma";
 
 /** 匹配 `AUTO_DECISION: <一句话>`; 行尾兼容真实换行与字面量 `\n`(agent 回显材料时常见)。 */
 const AUTO_DECISION_RE = /AUTO_DECISION\s*[:：]\s*([\s\S]*?)(?:\r?\n|\\n|$)/g;
@@ -99,8 +99,6 @@ export async function applyAutoDecisionToTodo(opts: {
   const parsed = extractAutoDecision(opts.output);
   const now = opts.now ?? Date.now();
 
-  const db = openMindDb({ role: "direct-rw", dbPath: opts.dbPath, caller: "auto-decision" });
-
   try {
     if (parsed.ok) {
       const decision = parsed.decision.trim().slice(0, 800);
@@ -116,12 +114,17 @@ export async function applyAutoDecisionToTodo(opts: {
            ("8 维审视任务 " + opts.taskId + " 提交于 " + new Date(now).toISOString() + "(by " + opts.agentId + ") 但输出无有效 AUTO_DECISION 行(原因=" + parsed.reason +
             "); 未把该输出当决策。输出节选: " + opts.output.slice(0, 1200)), now, opts.todoId);
     if (r.changes === 1) {
-      db.prepare("INSERT INTO FlywheelEvent (id,stage,sourceType,sourceId,sourceTitle,targetStage,createdAt) VALUES (?,?,?,?,?,?,?)")
-        .run("ad_" + now.toString(36) + Math.random().toString(36).slice(2, 8), "AUTO_DECISION_MISSING", "todo", opts.todoId,
-             ("8 维审视任务无有效 AUTO_DECISION 行(原因=" + parsed.reason + "), 拒绝结单/拒绝生成落地单").slice(0, 300), "FAIL", now);
+      await prisma.flywheelEvent.create({
+        data: {
+          id: "ad_" + now.toString(36) + Math.random().toString(36).slice(2, 8),
+          stage: "AUTO_DECISION_MISSING", sourceType: "todo", sourceId: opts.todoId,
+          sourceTitle: ("8 维审视任务无有效 AUTO_DECISION 行(原因=" + parsed.reason + "), 拒绝结单/拒绝生成落地单").slice(0, 300),
+          targetStage: "FAIL", createdAt: new Date(now),
+        },
+      }).catch(() => null);
     }
     return { ok: false, reason: parsed.reason, noteWritten: r.changes === 1 };
-  } finally {
-    db.close();
+  } catch (e) {
+    throw e;
   }
 }
