@@ -43,6 +43,11 @@ jobs:
           pnpm --filter @lions/session prebuild
           pnpm --filter @lions/selfimproving prebuild
 
+      - name: Build workspace libraries
+        # Apps resolve @lions/* through dist (webpack alias), so libraries must be built
+        # before typecheck. Do not build the 5 apps here: next build needs a live DB.
+        run: pnpm --filter "./packages/core/**" --filter "./packages/modules/**" --filter "./packages/configs/**" --filter "./packages/ui/**" -r build
+
       - name: Typecheck apps
         run: |
           pnpm --filter @lions/mind typecheck
