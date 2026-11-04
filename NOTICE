@@ -1,0 +1,10 @@
+LIONS 多 Agent 管理系统
+Copyright 2026 Lencen
+
+This product includes software developed by the LIONS 多 Agent 管理系统 project.
+
+This product bundles third-party open-source components. Their licenses and
+copyright notices are available in each package's LICENSE file under
+node_modules/ and are referenced by the corresponding entry in package.json.
+
+Distributed under the Apache License, Version 2.0 (see LICENSE).

@@ -1,0 +1,117 @@
+{
+ "_meta": {
+  "createdAt": "2026-10-08",
+  "purpose": "Single source for product-table controlled vocabularies. Consumed by: mind pipeline (TS), modules stores (TS), scripts (CJS via require). Eliminates the TS↔CJS mirror drift that round 52/53/54 relied on per-key drift tests to detect.",
+  "note": "See data-schema-spec.md §6 (outcome), §8c (category), §8 (domain). Any change here must be intentional + committed; downstream drift tests retire once both consumers read this JSON."
+ },
+ "domains": [
+  "platform",
+  "agent-ops",
+  "devops",
+  "product",
+  "data",
+  "security",
+  "ai"
+ ],
+ "domainCategoryMap": {
+  "PROCESS": "platform",
+  "DEVOPS": "devops",
+  "BACKEND": "devops",
+  "FRONTEND": "devops",
+  "DEV": "devops",
+  "PRODUCT": "product",
+  "DESIGN": "platform",
+  "ARCHITECTURE": "platform",
+  "AGENT_OUTPUT": "agent-ops",
+  "DATA": "data",
+  "SECURITY": "security",
+  "AI": "ai",
+  "WORKFLOW": "platform",
+  "TECH": "devops",
+  "TOOL": "devops"
+ },
+ "domainAliases": {},
+ "categoryContract": [
+  "FRONTEND",
+  "BACKEND",
+  "DEVOPS",
+  "DESIGN",
+  "PRODUCT",
+  "PROCESS",
+  "OTHER"
+ ],
+ "categoryMarkers": [
+  "AGENT_OUTPUT",
+  "ARCHITECTURE",
+  "MISSED_TOPIC",
+  "CONFLICT",
+  "IMPROVEMENT",
+  "DATA_QUALITY",
+  "COVERAGE_GAP",
+  "RECURRING",
+  "ADR_INDEX",
+  "SKILL",
+  "DOCUMENT",
+  "LEARNING"
+ ],
+ "categoryReflectionExtras": [
+  "TOOL",
+  "TECH",
+  "WORKFLOW"
+ ],
+ "categorySkillExtras": [
+  "DERIVED"
+ ],
+ "categoryAliases": {
+  "后端": "BACKEND",
+  "后端开发": "BACKEND",
+  "服务端": "BACKEND",
+  "前端": "FRONTEND",
+  "前端开发": "FRONTEND",
+  "前端框架": "FRONTEND",
+  "运维": "DEVOPS",
+  "部署": "DEVOPS",
+  "基础设施": "DEVOPS",
+  "设计": "DESIGN",
+  "架构设计": "DESIGN",
+  "产品": "PRODUCT",
+  "业务": "PRODUCT",
+  "流程": "PROCESS",
+  "规范": "PROCESS",
+  "项目管理": "PROCESS"
+ },
+ "categoryFallback": "OTHER",
+ "practiceOutcomes": [
+  "SUCCESS",
+  "PARTIAL",
+  "FAILED"
+ ],
+ "practiceOutcomeFallback": "UNKNOWN",
+ "practiceOutcomeSynonyms": {
+  "RESOLVED": "SUCCESS",
+  "DONE": "SUCCESS",
+  "COMPLETED": "SUCCESS",
+  "OK": "SUCCESS",
+  "PARTIALLY_DONE": "PARTIAL",
+  "ERROR": "FAILED",
+  "BROKEN": "FAILED"
+ },
+ "practiceTypes": [
+  "FEATURE",
+  "BUGFIX",
+  "REFACTOR",
+  "INTEGRATION",
+  "OTHER"
+ ],
+ "memoryTypes": [
+  "DECISION",
+  "PREFERENCE",
+  "EXPERIENCE",
+  "CONTEXT"
+ ],
+ "tiers": [
+  "HOT",
+  "WARM",
+  "COLD"
+ ]
+}

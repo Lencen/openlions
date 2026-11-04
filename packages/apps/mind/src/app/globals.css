@@ -1,0 +1,81 @@
+/* Cognitive OS 主题 — 跨 mind + task 共用 */
+/* 主题 token (4 主题 dark/light/glass/mono) + 业务语义命名 */
+@import "../styles/tokens.css";
+/* 工具类 (kpi-value/status-pill/card/clock/pagination/empty/pulse) */
+@import "../styles/utilities.css";
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg-base) !important;
+  color: var(--ink-primary) !important;
+  font-family: var(--font-body);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Inter 字体 + JetBrains Mono 数字 (Google Fonts) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* Antd v6 dark theme overrides — 走 CSS variable 桥接 */
+:root {
+  --antd-color-primary: var(--brand-mind);
+  --antd-color-primary-hover: var(--brand-mind-soft);
+  --antd-color-bg-container: var(--bg-elevated);
+  --antd-color-bg-elevated: var(--surface-hi);
+  --antd-color-bg-layout: var(--bg-base);
+  --antd-color-bg-spotlight: var(--surface-hi);
+  --antd-color-text: var(--ink-primary);
+  --antd-color-text-secondary: var(--ink-tertiary);
+  --antd-color-border: var(--border-hi);
+}
+
+/* Antd 组件 dark 模式桥接 */
+.ant-card {
+  background: var(--bg-elevated) !important;
+  border: 1px solid var(--border-hi) !important;
+  color: var(--ink-primary) !important;
+}
+.ant-card-body { background: var(--bg-elevated) !important; }
+.ant-card-head {
+  color: var(--ink-primary) !important;
+  border-bottom: 1px solid var(--border-hi) !important;
+}
+.ant-card-head-title { color: var(--ink-primary) !important; }
+.ant-table {
+  background: transparent !important;
+  color: var(--ink-primary) !important;
+}
+.ant-table-thead > tr > th {
+  background: var(--surface) !important;
+  color: var(--ink-tertiary) !important;
+  border-bottom: 1px solid var(--border-hi) !important;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ant-table-tbody > tr > td {
+  border-bottom: 1px solid var(--border-soft) !important;
+  color: var(--ink-primary) !important;
+  font-size: 14px;
+}
+.ant-table-tbody > tr:hover > td {
+  background: var(--surface) !important;
+}
+.ant-tag {
+  border: none;
+  font-weight: 500;
+}
+
+a { color: var(--brand-mind); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { cursor: pointer; font-family: var(--font-body); }
+
+/* 滚动条 */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

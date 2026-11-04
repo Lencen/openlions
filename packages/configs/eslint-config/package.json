@@ -1,0 +1,10 @@
+{
+  "name": "@lions/eslint-config",
+  "version": "0.1.0",
+  "description": "Shared ESLint configurations for LIONS monorepo",
+  "private": true,
+  "files": [
+    "next.cjs",
+    "node.cjs"
+  ]
+}

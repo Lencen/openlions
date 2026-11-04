@@ -1,0 +1,11 @@
+packages:
+  - 'packages/apps/*'
+  - 'packages/modules/*'
+  - 'packages/core/*'
+  - 'packages/plugins/*'
+  - 'packages/configs/*'
+  - 'packages/sdk/*'
+  - 'packages/cli/*'
+  - 'packages/ui'
+  - 'packages/ui/*'
+  - 'packages/adapters/*'
