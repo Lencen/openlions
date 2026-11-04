@@ -1,4 +1,3 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
 import { runtimeRepo } from "@/server/lib/runtime-repo";
 import { prisma } from "@/lib/prisma";
@@ -103,18 +102,6 @@ export interface ConsumeResult {
 
 function parseMeta(raw: unknown): any {
   try { return raw ? JSON.parse(String(raw)) : {}; } catch { return {}; }
-}
-
-/**
- * Todo 是**运行期自建表**: Prisma 的 $queryRawUnsafe 读它会报
- *   "Raw query failed. Code: N/A"(实测, 与讨论表同一个坑), 因此这里统一走 better-sqlite3;
- *   Task / FlywheelEvent 仍用 prisma(模型表)。
- */
-async function openTodoDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db"), caller: "human-decision-consumer" });
-
-  return db;
 }
 
 /**
@@ -226,6 +213,26 @@ export async function consumeHumanDecision(todoId: string): Promise<ConsumeResul
    * 把源待办标记为"无需落地"并写事件 —— 「no-action 文本判据」与「选项 C=无需处理」共用。
    * (只改 meta + 写 FlywheelEvent, 不生成任何落地待办/任务)
    */
+  /**
+   * 2026-10-26 审计 P0: 人类决策落地必须留痕（AuditLog, 本地墙钟）。
+   * 只记最小事实：actor/action/todoId/决策摘要/落点；不记整段正文。
+   */
+  async function auditHumanDecision(action: string, after: Record<string, unknown>, extra?: Record<string, unknown>): Promise<void> {
+    try {
+      const id = "audit_hd_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      const actor = String(doneBy || "system:human-decision-consumer");
+      const actorType = /^human/i.test(actor) ? "human" : /^agent/i.test(actor) ? "agent" : "system";
+      await prisma.$executeRawUnsafe(
+        'INSERT INTO "AuditLog" (id, "entityType", "entityId", action, actor, "actorType", before, after, metadata, "createdAt") ' +
+        "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,(now() at time zone 'Asia/Shanghai'))",
+        id, "Todo", String(t.id), action, actor, actorType,
+        JSON.stringify({ status: String(t.status || "") }),
+        JSON.stringify(after || {}),
+        JSON.stringify({ decision: decision.slice(0, 300), ...(extra || {}) }).slice(0, 2000),
+      );
+    } catch { /* 审计失败不阻断决策消费 */ }
+  }
+
   async function closeWithoutAction(reasonTag: string, why: string): Promise<ConsumeResult> {
     const meta0 = parseMeta(t.meta);
     meta0.closedWithoutAction = true;
@@ -236,6 +243,7 @@ export async function consumeHumanDecision(todoId: string): Promise<ConsumeResul
       data: { stage: "HUMAN_DECISION_CLOSED_NO_ACTION", sourceType: "todo", sourceId: t.id,
         sourceTitle: ("decision by " + doneBy + ": 直接关闭, 不落地(" + reasonTag + ") — " + why.slice(0, 110)).slice(0, 300), targetStage: "OK" },
     }).catch(() => null);
+    await auditHumanDecision("HUMAN_DECISION_APPLIED", { closedWithoutAction: true, reasonTag }, { path: "closeWithoutAction" });
     return { ok: true, todoId: t.id, closedWithoutAction: true, reason: "CLOSED_NO_ACTION" };
   }
 
@@ -415,5 +423,6 @@ export async function consumeHumanDecision(todoId: string): Promise<ConsumeResul
     }
   } catch { /* 讨论回写失败不影响建单 */ }
 
+  await auditHumanDecision("HUMAN_DECISION_APPLIED", { followUpTaskId: task.id, wroteBackToDiscussion: wroteBack }, { path: "landing" });
   return { ok: true, todoId: t.id, followUpTaskId: task.id, wroteBackToDiscussion: wroteBack };
 }

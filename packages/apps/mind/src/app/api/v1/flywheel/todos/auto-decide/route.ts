@@ -1,8 +1,6 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import path from "path";
 
 /**
  * POST /api/v1/flywheel/todos/auto-decide — 2026-09-14
@@ -21,17 +19,8 @@ import path from "path";
  * 与"人类干预"口径的关系: 自动决策记的 actor 是 **system**, 不是 human —— 不会污染自主率指标;
  *   人类任何时候仍可在待办上提交自己的决定(那是 human 结单, 覆盖自动结论)。
  */
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
 // 8 维审视清单见 @/server/pipeline/eight-dimensions(Next 路由文件不允许额外导出, 故独立成模块)
 import { EIGHT_DIMENSIONS } from "@/server/pipeline/eight-dimensions";;
-
-async function openDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "route" });
-
-  return db;
-}
 
 export async function POST(_req: NextRequest) {
   const TIMEOUT_MIN = Number(process.env.HUMAN_DECISION_TIMEOUT_MIN ?? 30);

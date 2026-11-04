@@ -36,8 +36,11 @@ export type ConsumerState = {
 
 export type AssignGate = { reject: boolean; code: string; reason: string; state: ConsumerState | null };
 
-export function ensureConsumerTable(db: any): string {
-  try { db.exec(CONSUMER_DDL); } catch { /* readonly 连接: 沿用已存在的表 */ }
+/**
+ * 2026-10-26 SQLite 退役(P3): TodoConsumer 表已在 PG；DDL 不再是运行时职责。
+ * 保留函数签名(调用方传 null 即可)，避免 SQLite 句柄继续被当参数传递。
+ */
+export function ensureConsumerTable(_db: any): string {
   return CONSUMER_TABLE;
 }
 
@@ -61,23 +64,14 @@ export async function recordHeartbeat(_db: any, { agentId, host, pid, worker, no
  * **不认**「Todo.status='DOING' 且归属它」—— 见 CJS 同名函数的说明: 那是可伪造的(独立复核 RK2 绕过就
  * 用一条手工 DOING 待办伪造出"有消费者")。
  */
-export async function lastConsumerActivity(db: any, agentId: string): Promise<number | null> {
+export async function lastConsumerActivity(_db: any, agentId: string): Promise<number | null> {
   const id = String(agentId);
-  // 2026-10-23 修迁移遗留: 切 PG 后 FlywheelEvent 在 PG，SQLite 里是冻结快照(实测最新停在 10-21)，
-  //   继续读 SQLite 会把"最近认领过"误判成"无活动"。PG 模式下走 prisma。
-  const isPg = (process.env.MIND_DB_DRIVER || "").toLowerCase() === "pg";
+  // 2026-10-26 SQLite 退役(P3): 只读 PG。FlywheelEvent 的 SQLite 副本是冻结快照，读它会误判"无活动"。
   let claimAt: number | null = null;
   try {
-    if (isPg) {
-      const rows: any[] = await prisma.$queryRawUnsafe(
-        'SELECT (extract(epoch from MAX("createdAt"))*1000)::bigint AS m FROM "FlywheelEvent" WHERE stage=\'TODO_CLAIMED\' AND strpos("sourceTitle", \'by=\' || $1 || \' \') = 1', id);
-      claimAt = rows?.[0]?.m == null ? null : Number(rows[0].m);
-    } else {
-      const claim: any = db.prepare(
-        "SELECT MAX(createdAt) m FROM FlywheelEvent WHERE stage='TODO_CLAIMED' AND instr(sourceTitle, 'by=' || ? || ' ') = 1"
-      ).get(id);
-      claimAt = claim?.m == null ? null : Number(claim.m);
-    }
+    const rows: any[] = await prisma.$queryRawUnsafe(
+      'SELECT (extract(epoch from MAX("createdAt"))*1000)::bigint AS m FROM "FlywheelEvent" WHERE stage=\'TODO_CLAIMED\' AND strpos("sourceTitle", \'by=\' || $1 || \' \') = 1', id);
+    claimAt = rows?.[0]?.m == null ? null : Number(rows[0].m);
   } catch { claimAt = null; }
   let doneAt: number | null = null;
   try {
@@ -92,10 +86,9 @@ export async function lastConsumerActivity(db: any, agentId: string): Promise<nu
 export async function consumerStates(db: any, now?: number): Promise<ConsumerState[]> {
   const ts = Number(now || Date.now());
   ensureConsumerTable(db);
-  const isPg = (process.env.MIND_DB_DRIVER || "").toLowerCase() === "pg";
-  const agents: any[] = isPg
-    ? ((await prisma.$queryRawUnsafe('SELECT agent_id, status, channel FROM "AgentRegistry" ORDER BY agent_id')) as any[])
-    : db.prepare("SELECT agent_id, status, channel FROM AgentRegistry ORDER BY agent_id").all();
+  // 2026-10-26 SQLite 退役(P3): AgentRegistry 只读 PG。
+  const agents: any[] = (await prisma.$queryRawUnsafe(
+    'SELECT agent_id, status, channel FROM "AgentRegistry" ORDER BY agent_id')) as any[];
   let hbRows: any[] = [];
   try { hbRows = await runtimeRepo.all("SELECT * FROM " + CONSUMER_TABLE); } catch { hbRows = []; }
   const hb = new Map<string, any>(hbRows.map((r: any) => [String(r.agent_id), r]));

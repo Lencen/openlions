@@ -59,10 +59,11 @@ function scan(root, prefixes) {
     for (const r of RULES) {
       r.re.lastIndex = 0; let m;
       while ((m = r.re.exec(text)) !== null) {
-        // 版权署名/公开贡献者是公开信息（2026-11-04 人类确认 operator），不是内部操作员泄露。
+        // 版权署名/公开贡献者是公开信息（2026-11-04 人类确认 Lencen），不是内部操作员泄露。
         //   只放行首字母大写的公开署名；小写 operator 仍按内部操作员 id 拦截。
         if (r.id === "username" && (rel === "NOTICE" || rel === "LICENSE")) continue;
-        if (r.id === "username" && m[0] === "operator") continue;
+        if (r.id === "username" && m[0] === "Lencen") continue;
+        if (r.id === "email" && /^iamoperator@qq\.com$/i.test(m[0])) continue;
         hits.push({ cat: r.cat, id: r.id, file: rel, value: mask(m[0]) });
         if (hits.length > 5000) return hits;
       }

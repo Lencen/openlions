@@ -5,6 +5,7 @@ import { scopeSqlFragment } from "@/server/pipeline/asset-scope";
 import { resolveRequestActor } from "@/server/lib/request-actor";
 // 2026-10-25: 列存在性探测 —— 窗口前 K/S 不附加过滤（= 旧行为），窗口后自动生效，不需要再改代码
 import { hasAssetColumns } from "@/server/lib/asset-columns";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,21 @@ export async function GET(req: NextRequest) {
       scopeSql,
       scopeSqlByKind: ksScope,
     });
+    // 2026-10-26 审计（访问类）: root_admin 是唯一能跨 scope 读的身份；记一条"谁在何时读了哪些类型/多少条"。
+    //   普通 agent 读已被 scope 过滤，不记（避免把每天 2k+ 次注入写成审计噪声）。
+    if (who.rootAdmin) {
+      try {
+        const id = "audit_read_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        const kinds = Array.from(new Set(hits.map((h) => h.kind)));
+        await prisma.$executeRawUnsafe(
+          'INSERT INTO "AuditLog" (id, "entityType", "entityId", action, actor, "actorType", before, after, metadata, "createdAt") ' +
+          "VALUES ($1,$2,$3,$4,$5,$6,NULL,$7::text,$8::text,(now() at time zone 'Asia/Shanghai'))",
+          id, "AssetQuery", String(src).slice(0, 120), "ADMIN_READ", "admin:root", "human",
+          JSON.stringify({ count: hits.length, kinds }),
+          JSON.stringify({ source: src, query: String(sp.get("query") || "").slice(0, 120), countUsage: sp.get("countUsage") !== "false" }).slice(0, 2000),
+        );
+      } catch { /* 审计失败不影响读 */ }
+    }
     return NextResponse.json({ ok: true, count: hits.length, hits });
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || String(e) }, { status: 500 });

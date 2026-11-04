@@ -80,10 +80,24 @@ export function hasReflectionSource(sourceReflectionIds: string | null | undefin
 }
 
 /**
+ * 归属失效的原因分类(2026-10, 实践遗留 MINOR-1)。
+ *
+ * 为什么需要分类而不是一个 boolean: 认领端点(tasks/claim、tasks/claim-by-id)只做
+ * `assignedAgent = ?` 字面比对, **没有 human 通道分支**; 人类不轮询 POST /tasks/claim。
+ * 所以把任务留在 human 通道的注册项(如 operator)名下, 等价于"对所有 agent 锁死且永不领取" ——
+ * 与"归属未登记/已停用"是同一个后果, 但根因不同, 报给使用者的文案必须能区分, 否则
+ * keepOwner=true 出问题时排查会朝错方向走(去找注册表有没有这个人, 而他明明 ACTIVE)。
+ */
+export type OwnerGateVerdict = "OK" | "NOT_REGISTERED_OR_INACTIVE" | "HUMAN_CHANNEL";
+
+/**
  * 闸门断言: 给出复活后的**目标字段**, 返回"仍然不可认领"的缺失明细(空数组 = 通过)。
  * 与认领 SQL(tasks/claim)同口径, 差别只是"不依赖具体认领者"。
  *
- * @param isActiveAgent 归属有效性判据(来自 AgentRegistry); 不传则跳过归属 ACTIVE 校验。
+ * @param ownerVerdict 归属可认领性判据(来自 AgentRegistry)。既可传
+ *   `(agentId) => boolean`(旧口径, 只看 status='ACTIVE'), 也可传
+ *   `(agentId) => OwnerGateVerdict`(新口径, 额外排除 human 通道)。
+ *   不传则跳过归属校验。
  */
 export function claimGateMissing(
   after: {
@@ -95,17 +109,32 @@ export function claimGateMissing(
     improvementType: string | null | undefined;
     sourceReflectionIds: string | null | undefined;
   },
-  isActiveAgent?: (agentId: string) => boolean,
+  ownerVerdict?: (agentId: string) => boolean | OwnerGateVerdict,
 ): string[] {
+  const judge = (agentId: string): OwnerGateVerdict => {
+    if (!ownerVerdict) return "OK";
+    const r = ownerVerdict(agentId);
+    return typeof r === "boolean" ? (r ? "OK" : "NOT_REGISTERED_OR_INACTIVE") : r;
+  };
+  const describe = (field: string, agentId: string, v: OwnerGateVerdict): string | null => {
+    if (v === "OK") return null;
+    if (v === "HUMAN_CHANNEL") {
+      return `${field}=${agentId} 是 human 通道(人类不轮询认领端点, 保留归属=对所有 agent 锁死且永不领取)`;
+    }
+    return `${field}=${agentId} 未登记或非 ACTIVE(保留归属会锁死认领)`;
+  };
+
   const missing: string[] = [];
   if (after.status !== "PENDING") missing.push(`status=${after.status}(非 PENDING)`);
   if (after.manualReview) missing.push("manualReview=1(会被认领闸门整体排除)");
   if (after.leaseExpiresAt != null) missing.push("leaseExpiresAt 未清(仍被视为在租)");
-  if (after.assignedAgent != null && isActiveAgent && !isActiveAgent(String(after.assignedAgent))) {
-    missing.push(`assignedAgent=${after.assignedAgent} 未登记或非 ACTIVE(保留归属会锁死认领)`);
+  if (after.assignedAgent != null) {
+    const m = describe("assignedAgent", String(after.assignedAgent), judge(String(after.assignedAgent)));
+    if (m) missing.push(m);
   }
-  if (after.expectedOwner != null && isActiveAgent && !isActiveAgent(String(after.expectedOwner))) {
-    missing.push(`expectedOwner=${after.expectedOwner} 未登记或非 ACTIVE`);
+  if (after.expectedOwner != null) {
+    const m = describe("expectedOwner", String(after.expectedOwner), judge(String(after.expectedOwner)));
+    if (m) missing.push(m);
   }
   if (!hasReflectionSource(after.sourceReflectionIds) && !isClaimableImprovementType(after.improvementType)) {
     missing.push(

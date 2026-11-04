@@ -44,6 +44,8 @@ import {
 } from "./execute-improving-task";
 // 2026-09-24 机制修复(finding f-004 主题对齐误报 -> 人类决策卡): 计数口径必须与反思引擎一致(别名族感知)
 import { themeVariants } from "./resolver";
+// 2026-10-25 撤回流程补漏: "已存在/已沉淀"判定统一只认活行(未撤回 + 未被取代)
+import { liveRowWhere } from "./stale-aware-dedup";
 
 const sha256Hex = (s: string) => createHash("sha256").update(s, "utf-8").digest("hex");
 const knowledgeHashOf = (title: string, content: string) => sha256Hex(title + "\n" + content);
@@ -211,8 +213,11 @@ export async function premiseSatisfiedFor(finding: any, theme: string): Promise<
     const content = `${finding.why || ""}\n\n${finding.evidenceSnippet || ""}`.trim().slice(0, 1000);
     if (content) {
       const hash = knowledgeHashOf(title, content);
+      // 2026-10-25 撤回流程补漏: 判定"同主题同内容知识已存在"必须只认**活行**。
+      //   被撤回(stale=1, supersededBy=NULL)的知识行若被算作"已沉淀", finding 会被误判为
+      //   前提不成立而**直接关闭** —— 撤回后该主题再也不会补上这条结论, 且无人复核。
       const dup = await prisma.knowledge.findFirst({
-        where: { theme, contentHash: hash, supersededBy: null },
+        where: liveRowWhere("knowledge", { theme, contentHash: hash }),
         select: { id: true },
       });
       if (dup) {
@@ -220,7 +225,7 @@ export async function premiseSatisfiedFor(finding: any, theme: string): Promise<
           satisfied: true,
           detail: `同主题同内容 Knowledge 已存在 (${dup.id.slice(-6)}), finding 所述未沉淀前提不成立`,
           evidenceRef: negativeResultEvidence(
-            `sql:SELECT id,contentHash FROM Knowledge WHERE theme='${theme}' AND contentHash='${hash}' AND supersededBy IS NULL`,
+            `sql:SELECT id,contentHash FROM Knowledge WHERE theme='${theme}' AND contentHash='${hash}' AND supersededBy IS NULL AND COALESCE(stale,0)=0`,
             1,
             `命中 id=${dup.id}, 同主题同内容知识早已沉淀`
           ),
@@ -239,8 +244,10 @@ export async function premiseSatisfiedFor(finding: any, theme: string): Promise<
     const desc = String(finding.requirement || "").trim().slice(0, 500);
     if (desc) {
       const hash = practiceHashOf(title, desc);
+      // 2026-10-25 撤回流程补漏: 同上, Practice 有 stale 列 —— 被撤回的行不算"已沉淀",
+      //   否则 finding 会被误判为前提不成立而关闭。
       const dup = await prisma.practice.findFirst({
-        where: { theme, contentHash: hash, supersededBy: null },
+        where: liveRowWhere("practice", { theme, contentHash: hash }),
         select: { id: true },
       });
       if (dup) {
@@ -248,7 +255,7 @@ export async function premiseSatisfiedFor(finding: any, theme: string): Promise<
           satisfied: true,
           detail: `同主题同内容 Practice 已存在 (${dup.id.slice(-6)}), finding 所述未沉淀前提不成立`,
           evidenceRef: negativeResultEvidence(
-            `sql:SELECT id,contentHash FROM Practice WHERE theme='${theme}' AND contentHash='${hash}' AND supersededBy IS NULL`,
+            `sql:SELECT id,contentHash FROM Practice WHERE theme='${theme}' AND contentHash='${hash}' AND supersededBy IS NULL AND COALESCE(stale,0)=0`,
             1,
             `命中 id=${dup.id}, 同主题同内容实践早已沉淀`
           ),
