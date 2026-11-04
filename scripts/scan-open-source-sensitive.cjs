@@ -27,7 +27,7 @@ const RULES = [
   { cat: "pii", id: "users-path", re: /\/Users\/[A-Za-z0-9._-]+/g },
   { cat: "pii", id: "private-ip", re: /\b(?:192\.168|10\.\d{1,3}|172\.(?:1[6-9]|2\d|3[01])|100\.(?:6[4-9]|[7-9]\d|1[01]\d|12[0-7]))\.\d{1,3}\.\d{1,3}\b/g },
   { cat: "pii", id: "email", re: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
-  { cat: "pii", id: "username", re: /\b(?:operator|[operator]|operator|[host]|[host])\b/gi },
+  { cat: "pii", id: "username", re: /\b(?:lencen|[operator]|operator|agent-x-E500|[host])\b/gi },
 ];
 const SKIP_EXT = /\.(?:png|jpe?g|gif|webp|ico|pdf|zip|gz|tgz|db|db-wal|db-shm|woff2?|ttf|otf|mp4|webm)$/i;
 function mask(v) { const s = String(v); return s.slice(0, 3) + "***(" + s.length + ")"; }
@@ -60,10 +60,10 @@ function scan(root, prefixes) {
       r.re.lastIndex = 0; let m;
       while ((m = r.re.exec(text)) !== null) {
         // 版权署名/公开贡献者是公开信息（2026-11-04 人类确认 Lencen），不是内部操作员泄露。
-        //   只放行首字母大写的公开署名；小写 operator 仍按内部操作员 id 拦截。
+        //   只放行首字母大写的公开署名；小写 lencen 仍按内部操作员 id 拦截。
         if (r.id === "username" && (rel === "NOTICE" || rel === "LICENSE")) continue;
         if (r.id === "username" && m[0] === "Lencen") continue;
-        if (r.id === "email" && /^iamoperator@qq\.com$/i.test(m[0])) continue;
+        if (r.id === "email" && /^iamlencen@qq\.com$/i.test(m[0])) continue;
         hits.push({ cat: r.cat, id: r.id, file: rel, value: mask(m[0]) });
         if (hits.length > 5000) return hits;
       }
@@ -81,7 +81,7 @@ function selftest() {
   let bad = 0; const t = (n, c, d) => { console.log((c ? "PASS" : "FAIL") + "  " + n + (d ? " :: " + d : "")); if (!c) bad++; };
   const dir = fs.mkdtempSync(path.join(require("os").tmpdir(), "scan-os-"));
   fs.mkdirSync(path.join(dir, ".git"));
-  fs.writeFileSync(path.join(dir, "a.txt"), "-----BEGIN RSA PRIVATE KEY-----\nAKIAABCDEFGHIJKLMNOP\n~/x\n192.168.1.5\n");
+  fs.writeFileSync(path.join(dir, "a.txt"), "-----BEGIN RSA PRIVATE KEY-----\nAKIAABCDEFGHIJKLMNOP\n/home/alice/x\n192.168.1.5\n");
   fs.writeFileSync(path.join(dir, "b.txt"), "sk-mind-abcdefghijklmnopqrstuvwx\n");
   const saved = process.cwd;
   const r = scan(dir);
