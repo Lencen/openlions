@@ -1,0 +1,54 @@
+{
+  "compilerOptions": {
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2017",
+    "downlevelIteration": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    // 2026-10-14: 收窄到本应用源码。原先的 "**/*.ts" 会把仓库里任何落在本目录下的
+    //   .ts 都拉进编译图(历史上 archive/ 就是这么混进来的), 现按目录边界显式限定。
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "archive",
+    // 2026-10-14: crewai@1.0.1 的 npm tarball 把 package.json main 指向 src/crewai/cli/cli.ts,
+    //   且随包发布的源码本身有语法错误 (crewai/src/crewai/memory/long_term/long_term_memory_item.ts:8
+    //   的 `metadata | | {}`) —— 该依赖在运行期同样无法 require, 对应集成是死代码。
+    //   注意: exclude 只能过滤 include 命中的文件, 拦不住被 import 进来的文件;
+    //   crewai 的 72 个源文件是被本文件 import 后进入编译图的, 所以这里必须排除"引入方"本身。
+    //   src/server/agents/crew/orchestrator.ts 无任何引用 (git grep 全仓为 0 命中),
+    //   排除它不改变任何运行时行为; 待该能力改用可用依赖或整段删除后, 请同时删掉这一行。
+    "src/server/agents/crew/orchestrator.ts"
+  ]
+}

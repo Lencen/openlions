@@ -1,0 +1,23 @@
+{
+  "extends": "@lions/typescript-config/tsconfig.next.json",
+  "compilerOptions": {
+    "incremental": true,
+    "paths": {
+      "@/*": [
+        "./*"
+      ],
+      "@lions/events": [
+        "../../core/events/dist"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
+}

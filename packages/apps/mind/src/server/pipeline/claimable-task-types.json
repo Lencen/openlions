@@ -1,0 +1,11 @@
+{
+  "$comment": "认领白名单的唯一数据源 (2026-09-17, 待办 todo_d563d97665df49428c45)。改这里一处, 生成侧(tasks/route.ts)与认领侧(tasks/claim/route.ts)以及脚本侧(scripts/lib/task-revive.cjs, scripts/task-metrics.cjs)同时生效。历史事故: 'VERIFY' 漏在认领白名单外 -> 该任务对所有人都不可认领; 体检/认领各持一份白名单又分叉 -> 补了 VERIFY 只补了一边。禁止在别处再手写这份列表。",
+  "claimableImprovementTypes": [
+    "GOAL_GAP",
+    "PLATFORM_REVIEW",
+    "VERIFY_AGENT_OUTPUT",
+    "DISCUSSION_QUESTION",
+    "VERIFICATION",
+    "VERIFY"
+  ]
+}

@@ -1,0 +1,169 @@
+# deps
+# 无尾斜杠: 同时忽略 node_modules 目录与 worktree 里的 node_modules 符号链接
+# (带斜杠的目录型模式匹配不到符号链接, 会让 git status --porcelain 一直被 ?? node_modules 污染,
+#  进而让 integrate-agent-branches.sh 把"有未提交改动"误判为阻碍 rebase —— 实测待办 todo_26870e9503e14fc79b66)
+node_modules
+.pnpm-store/
+
+# build
+**/.next/
+**/dist/
+**/out/
+**/build/
+**/.turbo/
+
+# logs / caches
+**/*.log
+logs/
+.eslintcache
+**/.next/cache/
+
+# env
+**/.env
+**/.env.local
+**/.env.*.local
+
+# database
+**/prisma/dev.db
+packages/apps/session/dev.db
+packages/apps/mind/prisma/corrupt-*/
+**/prisma/dev.db-journal
+**/*.db-shm
+**/*.db-wal
+
+# archives
+_archive/
+.lions-task.v1.bak/
+**/*.preMigrate-*
+**/dev.db.bak-*
+**/dev.db.bak.*
+**/staging.db
+
+# event outbox / runtime data (大文件, 运行时生成)
+**/data/*.jsonl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+packages/apps/mind/state.db
+视频宣传片/
+packages/apps/portal/node_modules/
+packages/apps/portal/.next/
+packages/apps/portal/.env.local
+packages/apps/portal/tsconfig.tsbuildinfo
+packages/apps/portal/package-lock.json
+*.compiled.js
+
+# runtime state
+run/*.pid
+**/*.tsbuildinfo
+__pycache__/
+*.pyc
+docs/.obsidian/
+tmp-inspect*.js
+tmp-g*.js
+tmp-norm.js
+
+# macs circuit-test 运行时数据(每次测试更新, 不入库)
+packages/apps/mcp-agent-chat-server/mcp_agent_chat_server/data/circuit_latest.json
+packages/apps/mcp-agent-chat-server/mcp_agent_chat_server/data/circuit_history.json
+
+# agent 提交消息草稿 / 工作树验证产物 scratch (2026-09-18):
+#   实测各 agent 工作树长期堆积 .commit-msg-*.txt(agent-x) / .git-commit-msg-*.txt(agent-x) / .verify/,
+#   它们不是"未提交改动", 既不该阻碍 rebase, 也不该被 integrate 判成 dirty 而重复派单。
+.commit-msg-*.txt
+.git-commit-msg-*.txt
+.verify/
+
+# 2026-09-18 补齐(实测仍被判成"未提交改动"的四类, 导致同一警报反复出现 —— 改模式比每次扫一遍更根治):
+#   ① 根目录 dev.db(模式 **/prisma/dev.db 只覆盖 prisma 下, 根目录那份漏了)
+#   ② corrupt-<date>/corrupt-autosnap 是**文件**而非目录(旧模式 corrupt-*/ 带斜杠, 匹配不到)
+#   ③ backups/ (库快照)
+#   ④ 不带点的 commit-msg-*.txt(旧模式只覆盖带点的那种; 实测我的提交草稿是不带点的)
+/dev.db
+packages/apps/mind/prisma/corrupt-*
+/backups/
+commit-msg-*.txt
+# 2026-09-18: 解析失败样本(含会话原文片段) —— 只作本地归因用, 绝不入库
+logs/session-extract-parse-fail/
+
+# 2026-09-18 session35: 历史 UI 走查证据包，从未 commit，原作者归属不明
+# 本地保留用于复核，不入 git
+verification/todo_7522e2a21e9a4878ae60/
+packages/apps/*/.next-dev-backup*/
+packages/apps/*/.next-bak*/
+packages/apps/*/.next-dev-backup
+# 2026-10-15: console **开发实例**(3014, lions-console-dev.service) 的独立构建产物目录。
+#   与发布产物 packages/apps/console/.next 物理隔离(dev 编译绝不能写发布产物);
+#   它是构建产物, 绝不入库 —— 今天刚有人误把 140 个 .next 产物暂存过。
+packages/apps/*/.next-dev-3014/
+*.tsbuildinfo
+
+# 2026-11-02（devops 线，④ 清理"打不出包"）：
+#   实测 .next 的**历史备份/回滚目录**有十几种命名（.next.rollback-*、.next.old-*、.next.pre-*、
+#   .next-repair-backup-* …），原规则只盖住 .next/ 与 .next-dev-backup*/，于是它们被当成
+#   "未跟踪的包内文件" —— 一处就 19,596 个，让打包工具直接拒绝出包。
+#   这些都是构建产物，绝不该入库：用"目录"通配一次盖住所有变体（不带斜杠会误伤同名文件）。
+**/.next.*/
+**/.next-*/
+# 源码手工备份（*.bak-20261027-093914 这类时间戳副本）与一次性探针脚本
+packages/apps/**/*.bak-*
+packages/apps/*/scripts/tmp-probe-*
+# 客户端发布产物（.deb 二进制，按版本堆在 run/ 下）
+run/client-releases/
+# 2026-11-02（devops 线，④）：仓库根的调试输出、agent 元数据、以及一个拼错的 docs/docs 路径。
+#   它们会被"包内未跟踪文件"判据算进去（实测 37 条），但显然不该进发布产物。
+/*.out
+/.claude/
+/docs/docs/
+# 源码/脚本的时间戳备份（*.bak-20261026-195004 这类），任何目录下都不该入库
+**/*.bak-*
+# 仓库根的一次性调试脚本（非产品，2026-11-02 盘点时确认）
+/runner.js
+/runner2.js
+/q_pg_13_tmp.cjs
+/test-goal-gap-tmp.ts
+/m3.txt
+/pl-trust-guard-HEAD-T5CHECK.cjs
+
+# 运行期数据/密钥（2026-10-16 清理）
+/backups
+**/prisma/quarantine/
+mind.db
+packages/apps/*/dev.db
+.dbstat
+.git-tmp-*
+# 密钥/环境：任何 *.env 不入库（.env.example 例外）
+*.env
+
+# 2026-10-16: 账本损坏/恢复的**留档件** —— 它们是证据(供事后解剖), 不是构建产物;
+#   保留在磁盘上但不入库。此前 `prisma/*.db` 匹配不到带后缀的名字, 于是 5 个恢复残件
+#   一直绊住发布前的 worktree-dirty 闸(挡住了一次正当发布)。
+packages/apps/mind/prisma/dev.db.corrupt-*
+packages/apps/mind/prisma/dev.db-*.recovery-*
+packages/apps/mind/prisma/dev.db.corrupt-*-shm
+packages/apps/mind/prisma/dev.db.corrupt-*-wal
+
+# 开源治理（2026-10-16）：不跟踪运行期数据库（session 遗留 0 字节占位库一并取消跟踪）
+packages/apps/session/data/*.db
+packages/apps/session/prisma/*.db
+
+# secrets (never commit)
+run/pg-password
+run/internal-secret
+
+
+# 2026-10-22 MACS session watcher 的本地镜像（运行时产物，不入库）
+run/macs-session/
+
+# 2026-10-26 飞轮快照物化（timer 每 10 分钟重写；归档件在 verification/ 另行提交）
+run/flywheel-snapshot-*.json
+# 2026-11-02: check-reply-targets 的基线状态文件（运行态；首次由 dpkg.log 生成，之后以此为准）
+run/reply-targets-baseline.json
+run/reply-idempotency-baseline.json
+# 2026-10-27 业务看板扩展快照（timer 每 10 分钟重写；不入库）
+run/flywheel-business-snapshot-*.json
+# 2026-11-07 会话完整性审计（latest 为运行时产物；日报在 verification/）
+run/session-source-audit-*.json

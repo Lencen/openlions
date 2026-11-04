@@ -1,0 +1,42 @@
+{
+  "id": "nas-backup",
+  "name": "NAS 备份",
+  "version": "1.0.0",
+  "vendor": "LIONS",
+  "description": "家庭 NAS 备份服务",
+  "entrypoint": {
+    "kind": "mcp",
+    "command": "node",
+    "args": [
+      "server.js"
+    ]
+  },
+  "auth": {
+    "mode": "api-key",
+    "secretsEnv": [
+      "NAS_TOKEN"
+    ]
+  },
+  "capabilities": [
+    {
+      "name": "backup",
+      "description": "备份指定目录"
+    }
+  ],
+  "permissions": [
+    "filesystem",
+    "network"
+  ],
+  "health": {
+    "probe": "http://127.0.0.1:9/healthz",
+    "intervalSec": 60
+  },
+  "pricing": {
+    "model": "one-time",
+    "priceCny": 0
+  },
+  "metering": {
+    "unit": "calls"
+  },
+  "license": "proprietary"
+}

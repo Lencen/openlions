@@ -1,0 +1,50 @@
+/* ============================================================================
+ * @lions/ui — v1 → v2 语义别名桥 (Phase1 S3 交付物, todo_043bc321c207451089cd)
+ *
+ * 目的: 三端(console/portal/session)现有 ~44 个组件页面沿用 v1 旧语义名
+ *   (--text / --text-dim / --text-muted / --primary / --status-ok / --status-warn /
+ *    --status-crit / --primary-dim / --status-fail 等),
+ *   Phase1 拍板决定 6 色用 v2 语义名 (--text-3 / --ok / --warn / --danger / --info / --brand),
+ *   此文件把这批 v1 旧名**统一指向 v2**, 让旧代码零改动继续渲染。
+ *
+ * 机制:
+ *   - 本文件由 `scripts/check-design-tokens.cjs --write` 与 tokens.css 一起注入到三端 globals.css。
+ *   - 由于 CSS 自定义属性是"按元素惰性求值", 别名指向语义名后, 在三主题下
+ *     会自动跟随 [data-theme=dark|hc] 覆盖块换值 —— 组件零改动即可换肤。
+ *   - 与 canonical 块的关系: canonical 块定义 --text-3/--ok/--warn/--danger/--info/--brand,
+ *     aliases.css 仅做"重命名桥", 不再起新值, 避免出现"两处各自定义颜色"的漂移。
+ *
+ * 三主题(light/dark/hc)在 v2 语义名下的取值由 tokens.css 的 [data-theme="..."] 覆盖块决定;
+ *   本别名表始终 `var(--v2)`, 不在主题块里重复声明, 保证单点修改全局生效。
+ * ========================================================================== */
+
+/* @lions-design-aliases:begin — 由 packages/ui/ui/src/aliases.css 生成, 勿在副本中直接改 */
+:root {
+  /* ── 文字 ── */
+  --text: #1e293b;                /* v1 主文字色; 三主题跟随由数据层覆盖 */
+  --text-dim: #475569;
+  --text-muted: var(--text-3);     /* v2: --text-3 是三级文字 */
+  --text-hi: var(--text);
+
+  /* ── 品牌/主色 ── */
+  --primary: var(--brand);        /* v1 别名 → v2 品牌色 */
+  --primary-dim: rgba(11, 110, 130, 0.10);  /* v2 --brand 10% 透明, Light 与 console 同语义 */
+  --accent-primary: var(--brand);
+  --accent-quiet: var(--primary-dim);
+
+  /* ── 状态色 (v1 → v2) ── */
+  --status-ok: var(--ok);
+  --status-warn: var(--warn);
+  --status-crit: var(--danger);
+  --status-fail: var(--danger);
+  --status-pending: var(--warn);
+  --status-none: var(--text-muted);
+
+  /* ── 字号/行高/动效(已有 canonical 别名, 这里保留 v1 同义别名) ── */
+  --font-sans: var(--c-font-sans);
+  --font-mono: var(--c-font-mono);
+  --transition: var(--c-transition);
+
+  /* ── 阴影(由各端覆盖; 此处不强制桥) ── */
+}
+/* @lions-design-aliases:end */

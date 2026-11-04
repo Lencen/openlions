@@ -1,0 +1,17 @@
+{
+  "name": "@lions/mind-sdk",
+  "version": "1.0.0",
+  "description": "MindClient SDK for shared brain (lions-mind 3000) - agent-side wrapper",
+  "main": "src/client.ts",
+  "types": "src/client.ts",
+  "scripts": {
+    "test": "node --import tsx tests/*.test.ts"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.0.0",
+    "@types/node": "^20.0.0"
+  }
+}
