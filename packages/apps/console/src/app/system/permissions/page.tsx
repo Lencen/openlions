@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import KPICard from "@/components/KPICard";
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 export default function PermissionsPage() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -32,7 +33,7 @@ export default function PermissionsPage() {
 
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">权限管理</span></div>
-    <div className="page-header"><div className="page-title">{t('permissions.title')}</div><div className="page-subtitle">{t('permissions.subtitle')}</div></div>
+    <PageHeader><PageTitle>{t('permissions.title')}</PageTitle><div className="page-subtitle">{t('permissions.subtitle')}</div></PageHeader>
     {error && <div style={{ color: "var(--status-crit)", marginBottom: "var(--sp-3)" }}>⚠ {error}</div>}
     <div className="kpi-grid">
       <KPICard label={t('permissions.kpi.agents')} value={String(agents.length)} />

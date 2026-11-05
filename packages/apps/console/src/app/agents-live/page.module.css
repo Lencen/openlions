@@ -1,0 +1,13 @@
+/* /agents-live 页内样式（P2 呈现层改造：内联 style 清零）
+   只放本页真正需要、globals.css 里没有的几条；
+   能复用 .page / .tiny / .panel / .card-grid 的一律复用。 */
+
+/* 数据源降级提示与下方看板留白（原来是内联 margin-bottom） */
+.warnAlert { margin-bottom: var(--sp-4); }
+
+/* 逐源「数据时刻」行：右对齐、次要色（原来是内联 text-align + color） */
+.momentLine { text-align: right; color: var(--text-dim); }
+
+/* DataMoment 自带 margin-left: var(--sp-2) 的内联样式；本页原先用 style 把它归零，
+   现在由这一条后代规则表达同样的意图（内联样式只能用 !important 覆盖）。 */
+.momentLine :global(.tiny) { margin-left: 0 !important; }

@@ -11,6 +11,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useApi } from "@/lib/api";
 import { fmtNum } from "@/lib/format";
 import Icon from "@/components/Icon";
+import styles from "../page.module.css";
+
+/** 负载条宽度：5% 一档的宽度类（页面内不写内联 style） */
+const pctClass = (v: number, m: Record<string, string>) =>
+  m["p" + Math.round((Math.max(0, Math.min(1, v)) * 100) / 5) * 5] || m.p0;
 
 type NodeState = "ok" | "warn" | "crit" | "idle";
 const STATE_TEXT: Record<NodeState, string> = { ok: "正常", warn: "积压", crit: "异常", idle: "空闲" };
@@ -177,15 +182,13 @@ export default function LoopRing() {
               strokeWidth={hover === i ? 22 : 16}
               strokeLinecap="round"
               opacity={e.state === "idle" ? 0.32 : hover === null || hover === i ? 0.95 : 0.55}
-              style={{ transition: "stroke-width .16s, opacity .16s" }} />
+              className={styles.lrEdge} />
           ))}
         </svg>
 
         {edges.map((e, i) => {
-          const c = ptOn((e.a + e.b) / 2, RX, RY);
           return (
-            <div key={"p" + e.label} className="lr-pill"
-              style={{ left: `${(c.x / 1120) * 100}%`, top: `${(c.y / 680) * 100}%` }}
+            <div key={"p" + e.label} className={"lr-pill " + styles["lrPillPos" + (i + 1)]}
               onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
               <span>{e.label}</span>
               <b>{fmtNum(e.v)}</b>
@@ -195,10 +198,8 @@ export default function LoopRing() {
         })}
 
         {nodes.map((n, i) => {
-          const c = ptOn(n.angle, NRX, NRY);
           return (
-            <div key={n.id} className="lr-node" data-state={n.state}
-              style={{ left: `${(c.x / 1120) * 100}%`, top: `${(c.y / 680) * 100}%` }}
+            <div key={n.id} className={"lr-node " + styles["lrNodePos" + (i + 1)]} data-state={n.state}
               onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)}>
               <div className="lr-node-head">
                 <Icon name={ICON_BY_ID[n.id]} size={16} />
@@ -207,7 +208,7 @@ export default function LoopRing() {
               </div>
               <div className="lr-node-val"><b>{fmtNum(n.val)}</b><span>{n.unit}</span></div>
               <div className="lr-node-cap">{n.cap}</div>
-              <div className="lr-node-bar"><i style={{ width: `${Math.round(n.fill * 100)}%` }} /></div>
+              <div className="lr-node-bar"><i className={pctClass(n.fill, styles as unknown as Record<string, string>)} /></div>
             </div>
           );
         })}

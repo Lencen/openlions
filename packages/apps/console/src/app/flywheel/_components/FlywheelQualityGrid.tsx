@@ -1,11 +1,25 @@
 "use client";
-import { ERROR_COLORS, QUALITY_COLORS, QUALITY_LABELS, fmt } from "./shared";
+// 数据质量 (堆叠条) + LLM 调用观测 + 错误分类
+//
+// 2026-11-04（ord-20261104-032）：呈现层内联样式清零（23 处 → 0），LLM 入口表由自写表格换成白名单 DataTable
+//   （列：入口/调用/成功/平均耗时，一列没删）。动态色（质量档 / 错误类型 / resolver 动作）走 data-* 属性选择器。
+//   取数、文案、数字口径未动。
+import { QUALITY_LABELS, fmt } from "./shared";
 import { t } from "@/i18n";
 import { entityLabel } from "@/config/artifactTypes";
 import type { DashboardData } from "./shared";
+import { DataTable } from "@/components/ui";
+import type { DataColumn } from "@/components/ui";
 import TableCopyButton from "@/components/TableCopyButton";
+import styles from "../page.module.css";
 
-/** Section 5: 数据质量 (堆叠条) + LLM 调用观测 + 错误分类 */
+/** 5% 一档的宽度类（组件内不写内联 style） */
+const pctClass = (v: number, m: Record<string, string>) =>
+  m["p" + Math.round((Math.max(0, Math.min(1, v)) * 100) / 5) * 5] || m.p0;
+const toneOfRate = (rate: number) => (rate >= 90 ? "ok" : rate >= 60 ? "warn" : "crit");
+
+type Entry = DashboardData["llmStats"]["byEntry"][number];
+
 export default function FlywheelQualityGrid({
   d,
   llmTotal,
@@ -17,14 +31,21 @@ export default function FlywheelQualityGrid({
   llmOkRate: number;
   totalErrors: number;
 }) {
+  const entryColumns: DataColumn<Entry>[] = [
+    { key: "entry", title: "入口", render: (en) => en.entry },
+    { key: "calls", title: "调用", align: "right", render: (en) => en.calls },
+    { key: "ok", title: "成功", align: "right", render: (en) => en.ok },
+    { key: "avgMs", title: "平均耗时", align: "right", render: (en) => Math.round(en.avgMs) + "ms" },
+  ];
+
   return (
     <div className="grid-2">
       <div className="panel">
         <div className="panel-header"><span className="panel-title">数据质量分布</span></div>
         <div className="stack-legend">
           {(["high","mid","low","zero"] as const).map(k => (
-            <span key={k} style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)" }}>
-              <span className="dot" style={{ background: QUALITY_COLORS[k] }} />
+            <span key={k} className={styles.qgLegendRow}>
+              <span className={"dot " + styles.qgDot} data-band={k} />
               {QUALITY_LABELS[k]}
             </span>
           ))}
@@ -35,14 +56,14 @@ export default function FlywheelQualityGrid({
           const byBand: Record<string, number> = { high: 0, mid: 0, low: 0, zero: 0 };
           items.forEach((q: any) => { byBand[q.b] = q.c; });
           return (
-            <div key={type} style={{ marginBottom: "var(--sp-2-5)" }}>
-              <div style={{ fontSize: "var(--fs-sm)", fontWeight: 600, marginBottom: "var(--sp-0-5)" }}>
-                {entityLabel(type)} <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>· {fmt(total)}</span>
+            <div key={type} className={styles.qgBlock}>
+              <div className={styles.qgSub}>
+                {entityLabel(type)} <span className={styles.qgTotal}>· {fmt(total)}</span>
               </div>
               <div className="stack-bar">
                 {(["high","mid","low","zero"] as const).map(k => (
                   byBand[k] > 0 && (
-                    <div key={k} className="stack-seg" style={{ width: `${(byBand[k] / total) * 100}%`, background: QUALITY_COLORS[k] }} />
+                    <div key={k} className={"stack-seg " + styles.qgSeg + " " + pctClass(byBand[k] / total, styles as unknown as Record<string, string>)} data-band={k} />
                   )
                 ))}
               </div>
@@ -54,29 +75,17 @@ export default function FlywheelQualityGrid({
       <div className="panel">
         <div className="panel-header"><span className="panel-title">LLM 调用观测 (24h)</span></div>
         {llmTotal === 0 ? (
-          <div style={{ color: "var(--text-dim)", fontSize: "var(--fs-md)" }}>暂无 CALL_LLM 事件 (P1-C 打点待首次 LLM 调用)</div>
+          <div className={styles.qgEmpty}>暂无 CALL_LLM 事件 (P1-C 打点待首次 LLM 调用)</div>
         ) : (
           <>
-            <div style={{ display: "flex", gap: "var(--sp-6)", marginBottom: "var(--sp-3)" }}>
-              <div><span style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>总调用</span><div style={{ fontSize: "var(--fs-2xl)", fontWeight: 700 }}>{fmt(llmTotal)}</div></div>
-              <div><span style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>成功</span><div style={{ fontSize: "var(--fs-2xl)", fontWeight: 700, color: "var(--status-ok)" }}>{fmt(d.llmStats.ok24h)}</div></div>
-              <div><span style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>失败</span><div style={{ fontSize: "var(--fs-2xl)", fontWeight: 700, color: "var(--status-crit)" }}>{fmt(d.llmStats.fail24h)}</div></div>
-              <div><span style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>成功率</span><div style={{ fontSize: "var(--fs-2xl)", fontWeight: 700, color: llmOkRate >= 90 ? "var(--status-ok)" : llmOkRate >= 60 ? "var(--status-warn)" : "var(--status-crit)" }}>{llmOkRate}%</div></div>
+            <div className={styles.qgStats}>
+              <div><span className={styles.qgStatK}>总调用</span><div className={styles.qgStatV}>{fmt(llmTotal)}</div></div>
+              <div><span className={styles.qgStatK}>成功</span><div className={styles.qgStatV} data-tone="ok">{fmt(d.llmStats.ok24h)}</div></div>
+              <div><span className={styles.qgStatK}>失败</span><div className={styles.qgStatV} data-tone="crit">{fmt(d.llmStats.fail24h)}</div></div>
+              <div><span className={styles.qgStatK}>成功率</span><div className={styles.qgStatV} data-tone={toneOfRate(llmOkRate)}>{llmOkRate}%</div></div>
             </div>
             <TableCopyButton />
-            <table className="tbl">
-              <thead><tr><th>入口</th><th>调用</th><th>成功</th><th>平均耗时</th></tr></thead>
-              <tbody>
-                {d.llmStats.byEntry.map(en => (
-                  <tr key={en.entry}>
-                    <td>{en.entry}</td>
-                    <td>{en.calls}</td>
-                    <td>{en.ok}</td>
-                    <td>{Math.round(en.avgMs)}ms</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable columns={entryColumns} rows={d.llmStats.byEntry} rowKey={(en) => en.entry} />
           </>
         )}
       </div>
@@ -84,23 +93,23 @@ export default function FlywheelQualityGrid({
       <div className="panel">
         <div className="panel-header"><span className="panel-title">错误分类 (24h)</span></div>
         {d.errors.length === 0 ? (
-          <div style={{ color: "var(--status-ok)", fontSize: "var(--fs-md)" }}>✅ 无错误</div>
+          <div className={styles.qgEmptyOk}>✅ 无错误</div>
         ) : (
           <>
             {d.errors.map(e => (
-              <div key={e.errorType} className="theme-row" style={{ marginBottom: "var(--sp-1-5)" }}>
-                <span className="theme-name" style={{ color: ERROR_COLORS[e.errorType] || "var(--err-unknown)" }}>{e.errorType}</span>
+              <div key={e.errorType} className={"theme-row " + styles.qgErrRow}>
+                <span className={"theme-name " + styles.qgErrName} data-err={e.errorType}>{e.errorType}</span>
                 <div className="theme-bar-wrap">
-                  <div className="theme-bar" style={{ width: `${(e.cnt / totalErrors) * 100}%`, background: ERROR_COLORS[e.errorType] || "var(--err-unknown)" }} />
+                  <div className={"theme-bar " + styles.qgErrBar + " " + pctClass(e.cnt / totalErrors, styles as unknown as Record<string, string>)} data-err={e.errorType} />
                 </div>
                 <span className="theme-cnt">{e.cnt}</span>
               </div>
             ))}
-            <div style={{ marginTop: "var(--sp-4)", fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>
+            <div className={styles.qgRes}>
               {t('biz.resolver.decision1h')}
               {d.resolverStats.length === 0 ? <span> 无数据</span> : d.resolverStats.map(r => (
-                <span key={r.resolverAction} style={{ marginLeft: "var(--sp-2-5)" }}>
-                  <strong style={{ color: r.resolverAction === "CREATE" ? "var(--info)" : r.resolverAction === "UPDATE" ? "var(--status-ok)" : "var(--text-muted)" }}>{r.cnt}</strong> {r.resolverAction}
+                <span key={r.resolverAction} className={styles.qgResItem}>
+                  <strong className={styles.qgResNum} data-act={r.resolverAction}>{r.cnt}</strong> {r.resolverAction}
                 </span>
               ))}
             </div>

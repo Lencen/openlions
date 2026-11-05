@@ -13,6 +13,7 @@ import TableCopyButton from "@/components/TableCopyButton";
 import KPICard from "@/components/KPICard";
 import StuckTasksStrip from "./_components/StuckTasksStrip";
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 export default function ImprovementResultsPage() {
   // 2026-10-13 round 76-CE: 改用 useApi(path, { pollMs: 0 }) —— 自带序号守卫与非 2xx 错误通道,
@@ -35,10 +36,10 @@ export default function ImprovementResultsPage() {
 
   return (
     <main className="page">
-      <div className="page-header">
-        <div className="page-title">改进结果（按来源）</div>
+      <PageHeader>
+        <PageTitle>改进结果（按来源）</PageTitle>
         <div className="page-subtitle">某个来源的需求改进到什么程度：待办状态 · 任务状态 · 验收结论 · 证据锚点。DONE ≠ 验收通过。</div>
-      </div>
+      </PageHeader>
       {/* 2026-10-19 B4(方案 L2-1): 修前这三个数字挤在筛选条里的一行 tiny 小字里 ✗,
           管理员第一眼看不到"到底过了几条"。提升为 ≤3 张 KPI 卡(带单位"项"与口径"近 7 天")。
           数据时刻: 本页**单源**(只有 /api/improvement-results), 按 DataMoment 自身纪律不在页内重复标注,

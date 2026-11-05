@@ -1,0 +1,337 @@
+/* /todo · P1 试点页呈现层（ord-20261104-032）。
+   全局令牌与 .dt/.pill/.todo-* 等类都在 globals.css；这里只补本页布局，
+   以及把改前散在 JSX 里的固定色值改成 data-* 选择器（内联样式清零）。
+   FilterBar 的 .toolbar/.filters/.filter 是设计原型类名（assets/app.css），console 的
+   globals.css 尚未收录 —— 按「不许改 globals.css」的约定，本页用 CSS Module 作用域补上。 */
+.headTags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+.inlineLink {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-decoration: none;
+}
+.inlineLink:hover {
+  color: var(--text-dim);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.toolbar > :global(.toolbar) {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.toolbar :global(.filters) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.toolbar :global(.filter) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.toolbar :global(.filter:hover) {
+  border-color: var(--border-hi);
+  background: var(--bg-hover);
+}
+.toolbar :global(.filter.on) {
+  background: var(--primary-dim);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  font-weight: 600;
+}
+.toolbar :global(.filter .n) {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.toolbar :global(.filter.on .n) {
+  color: var(--primary);
+}
+.toolbar :global(.spacer) {
+  flex: 1;
+}
+.search {
+  height: 28px;
+  width: 280px;
+  max-width: 100%;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+.search::placeholder {
+  color: var(--text-muted);
+}
+.search:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.subToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.sortSelect {
+  height: 28px;
+}
+.clickable :global(tbody tr) {
+  cursor: pointer;
+}
+.prio {
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+.prio[data-prio="P0"] {
+  color: var(--status-crit);
+}
+.prio[data-prio="P1"] {
+  color: var(--status-warn);
+}
+.prio[data-prio="P2"] {
+  color: var(--text-muted);
+}
+.due {
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.due[data-due="crit"] {
+  color: var(--status-crit);
+  font-weight: 600;
+}
+.due[data-due="warn"] {
+  color: var(--status-warn);
+}
+.titleLine {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: var(--fs-md);
+}
+.tagRow {
+  display: inline-flex;
+  align-items: center;
+}
+.dashed {
+  border-bottom: 1px dashed var(--border);
+}
+.ellipsis {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+  display: inline-block;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+.tipBox {
+  max-width: 380px;
+  white-space: pre-wrap;
+}
+.nowrap {
+  white-space: nowrap;
+  font-size: var(--fs-xs);
+}
+.actions {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+.btnFlat {
+  padding: 0;
+}
+.btnFlatDanger {
+  padding: 0;
+  color: var(--status-crit);
+}
+.hidden {
+  display: none;
+}
+.rowLink {
+  color: var(--text-muted);
+  font-size: var(--fs-md);
+}
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: var(--sp-2);
+}
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.pagerLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+.pagerBtn {
+  padding: var(--sp-1) var(--sp-2-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+.pagerBtn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.pagerBtn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.notice {
+  margin-bottom: var(--sp-3);
+}
+.footer {
+  text-align: right;
+}
+/* ── 弹窗（TodoCreateModal / TodoDecideModal）—— 2026-11-04 P1 收尾：内联样式清零 ── */
+.formRow {
+  display: flex;
+  gap: var(--sp-3);
+}
+.formRow > :global(.ui-form-item) {
+  flex: 1;
+  min-width: 0;
+}
+.fullWidth {
+  width: 100%;
+}
+.decideMeta {
+  margin-bottom: var(--sp-2);
+  color: var(--text-dim);
+}
+.decideDetail {
+  max-height: 220px;
+  overflow: auto;
+  background: var(--bg-surface2, rgba(0, 0, 0, 0.03));
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-base);
+  white-space: pre-wrap;
+  margin-bottom: var(--sp-3);
+}
+.decideFoot {
+  margin-top: var(--sp-1-5);
+  color: var(--text-dim);
+}
+
+/* ── 近 N 天积压趋势（TodoBacklogTrend）── */
+.trendPanel {
+  margin-bottom: var(--sp-3);
+}
+.panelBody {
+  padding: var(--sp-3);
+}
+.dim {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+.trendRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.axisWrap {
+  display: flex;
+  align-items: stretch;
+  gap: var(--sp-2);
+}
+.axisCol {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: right;
+  min-width: 44px;
+}
+.axisColRight {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 40px;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.min120 {
+  min-width: 120px;
+}
+.basis {
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  margin-top: var(--sp-2);
+}
+
+/* ── 待办构成（TodoDistribution）──
+   条形宽度是数据驱动的：改成 5% 一档的类名（bar0…bar100），不再写内联 width。 */
+.distBody {
+  padding: var(--sp-3);
+}
+.distBasis {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.bar0 { width: 0%; }
+.bar5 { width: 5%; }
+.bar10 { width: 10%; }
+.bar15 { width: 15%; }
+.bar20 { width: 20%; }
+.bar25 { width: 25%; }
+.bar30 { width: 30%; }
+.bar35 { width: 35%; }
+.bar40 { width: 40%; }
+.bar45 { width: 45%; }
+.bar50 { width: 50%; }
+.bar55 { width: 55%; }
+.bar60 { width: 60%; }
+.bar65 { width: 65%; }
+.bar70 { width: 70%; }
+.bar75 { width: 75%; }
+.bar80 { width: 80%; }
+.bar85 { width: 85%; }
+.bar90 { width: 90%; }
+.bar95 { width: 95%; }
+.bar100 { width: 100%; }

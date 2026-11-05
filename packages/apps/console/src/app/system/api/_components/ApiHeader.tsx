@@ -2,6 +2,8 @@
 // system/api 页 · 页头 + 指标卡行 (从 page.tsx 抽出, 页面瘦身)
 import KPICard from "@/components/KPICard";
 import { t } from "@/i18n";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "../page.module.css";
 
 export function ApiHeader({
   loading,
@@ -19,18 +21,18 @@ export function ApiHeader({
   return (
     <>
       <div className="breadcrumb">
-        <span style={{ color: "var(--text-dim)" }}>业务与系统</span>
+        <span className={styles.crumbDim}>业务与系统</span>
         <span className="sep">/</span>
         <span className="current">{t('api.crumb')}</span>
       </div>
-      <div className="page-header">
-        <div className="page-title">{t('api.title')}</div>
+      <PageHeader>
+        <PageTitle>{t('api.title')}</PageTitle>
         <div className="page-subtitle">
           {loading
             ? "加载中..."
             : t('api.meta', { rest: restCount, trpc: trpcCount, mcp: mcpCount, tools: toolCount })}
         </div>
-      </div>
+      </PageHeader>
     </>
   );
 }

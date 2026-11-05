@@ -10,6 +10,7 @@ import FlowQueuesPanel from "./_components/FlowQueuesPanel";
 import FlowQualityPanel from "./_components/FlowQualityPanel";
 import FlowQualityAuditPanel from "./_components/FlowQualityAuditPanel";
 import FlowLogsPanel from "./_components/FlowLogsPanel";
+import styles from "./page.module.css";
 
 // 飞轮运转动态图 v2 (2026-09-03)
 // 被动动态: 10s 自动刷新; 展示 ①在不在转 ②每步输入/输出量+来源 ③堆积 ④质量 ⑤session 处理情况
@@ -48,7 +49,7 @@ export default function FlywheelFlowPage() {
       <FlowQualityAuditPanel d={d} />
       <FlowLogsPanel logs={d?.logs} ready={!!d} />
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={`tiny ${styles.flowRelatedLinks}`}>
         <span>相关视图：</span>
         <Link href="/system/pipeline">流水线监控 →</Link>
         <Link href="/flywheel/executions">执行记录 →</Link>

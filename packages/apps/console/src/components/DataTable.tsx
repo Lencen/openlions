@@ -4,12 +4,15 @@
 //   5 条记录占满一屏、没有列对齐、状态标签漂在空白里、无法扫读（评审 §3-5）。
 // 约束：只做展示（排序/筛选由页面上层控制）；数值列右对齐 + 等宽数字；
 //   状态用「色点 + 文字」不只靠颜色（WCAG 1.4.1）。
+// 2026-11-05 P2 呈现层改造：列宽 / 对齐 / 骨架宽度不再写内联 style，
+//   改为 DataTable.module.css 里的档位类（.w40…w360 / .p0…p100 / .cellLeft/.cellRight）。
 import type { ReactNode } from "react";
+import styles from "./DataTable.module.css";
 
 export interface DataColumn<T> {
   key: string;
   title: string;
-  width?: string;
+  width?: string | number;
   align?: "left" | "right";
   render?: (row: T, index: number) => ReactNode;
 }
@@ -27,6 +30,25 @@ export interface DataTableProps<T> {
   onRetry?: () => void;
 }
 
+/** 列宽 -> 档位类（10px 一档；非像素值返回空，交给浏览器自适应） */
+function widthClass(width?: string | number): string {
+  if (width === undefined || width === null) return "";
+  const n = Number(String(width).replace(/px$/, "").trim());
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const step = Math.min(360, Math.max(40, Math.round(n / 10) * 10));
+  return styles["w" + step] || "";
+}
+
+/** 骨架宽度 -> 档位类（5% 一档） */
+function pctClass(pct: number): string {
+  const step = Math.min(100, Math.max(0, Math.round(pct / 5) * 5));
+  return styles["p" + step] || "";
+}
+
+function alignClass(align?: "left" | "right"): string {
+  return align === "right" ? "dt-num " + styles.cellRight : styles.cellLeft;
+}
+
 export default function DataTable<T>({ columns, rows, rowKey, loading, empty, error, onRetry }: DataTableProps<T>) {
   return (
     <div className="dt-wrap">
@@ -34,7 +56,7 @@ export default function DataTable<T>({ columns, rows, rowKey, loading, empty, er
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key} style={{ width: c.width, textAlign: c.align === "right" ? "right" : "left" }}>{c.title}</th>
+              <th key={c.key} className={[widthClass(c.width), alignClass(c.align)].filter(Boolean).join(" ")}>{c.title}</th>
             ))}
           </tr>
         </thead>
@@ -53,7 +75,7 @@ export default function DataTable<T>({ columns, rows, rowKey, loading, empty, er
             Array.from({ length: 5 }).map((_, i) => (
               <tr key={"sk" + i}>
                 {columns.map((c) => (
-                  <td key={c.key}><div className="dt-skel" style={{ width: `${40 + ((i * 17) % 40)}%` }} /></td>
+                  <td key={c.key}><div className={"dt-skel " + pctClass(40 + ((i * 17) % 40))} /></td>
                 ))}
               </tr>
             ))
@@ -71,8 +93,7 @@ export default function DataTable<T>({ columns, rows, rowKey, loading, empty, er
             rows.map((r, i) => (
               <tr key={rowKey(r, i)}>
                 {columns.map((c) => (
-                  <td key={c.key} style={{ textAlign: c.align === "right" ? "right" : "left" }}
-                    className={c.align === "right" ? "dt-num" : undefined}>
+                  <td key={c.key} className={alignClass(c.align)}>
                     {c.render ? c.render(r, i) : String((r as any)[c.key] ?? "—")}
                   </td>
                 ))}

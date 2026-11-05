@@ -212,7 +212,7 @@ export function PageHero({
       <div>
         {/* 2026-10-20 信息分层批1：原来是 div —— 全站 13 个用 PageHero 的页面**一个 h1 都没有**
             （实测只有 /agents/onboard 手写了一个）。改成 h1：视觉不变，但有了语义大纲，h2 分节可以挂进来。 */}
-        <h1 className="hero-title page-title">{title}</h1>
+        <h1 className="hero-title ph-title">{title}</h1>
         {subtitle ? <div className="hero-sub">{subtitle}</div> : null}
         {tags ? <div className="hero-tags">{tags}</div> : null}
       </div>

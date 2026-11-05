@@ -1,0 +1,28 @@
+/* /system/health 页内样式（P1 试点页呈现层改造 ord-20261104-032）
+   只放本页真正需要、globals.css 里没有的几条；
+   能复用 .panel / .panel-header / .panel-title / .tiny / .nowrap / .mono / .grid-2 的一律复用。
+   规则：本页 style={{ 计数必须为 0（内联 color / font-size 是令牌失效的根源）。 */
+
+/* 面包屑里「业务与系统」那一级（原来是内联 color） */
+.bcDim { color: var(--text-dim); }
+
+/* 页头权限 / 口径 chip 行 */
+.headerTags { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); }
+
+/* 下钻入口行（看板 §2：每个显示值要有落点） */
+.drillRow { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+
+/* 图表外层留白（原来是内联 padding） */
+.chartPad { padding: var(--sp-3); }
+
+/* 卡死任务清理表单 */
+.stuckForm { display: flex; gap: var(--sp-2-5); align-items: flex-end; flex-wrap: wrap; padding: var(--sp-3-5); }
+.stuckField { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-base); color: var(--text-dim); }
+.stuckInput { width: 120px; }
+.stuckMsg { padding: 0 var(--sp-3-5) var(--sp-3-5); }
+
+/* 面板右上角的说明字 */
+.panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 页脚口径 */
+.footNote { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.8; }

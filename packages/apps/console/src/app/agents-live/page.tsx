@@ -17,6 +17,7 @@ import AgentsLiveHero from "./_components/AgentsLiveHero";
 import AgentsLiveMetrics from "./_components/AgentsLiveMetrics";
 import AgentCardGrid from "./_components/AgentCardGrid";
 import AgentsLiveBottom from "./_components/AgentsLiveBottom";
+import styles from "./page.module.css";
 
 export default function AgentsLivePage() {
   const f = useGlobalFilter();
@@ -72,7 +73,7 @@ export default function AgentsLivePage() {
       <ViewSwitch view={view} onChange={setView} hint={t('agentsLive.switchHint')} />
 
       {data?.warnings?.length ? (
-        <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-4)" }} title="部分数据源降级" description={data.warnings.join("；")} />
+        <Alert type="warning" showIcon className={styles.warnAlert} title="部分数据源降级" description={data.warnings.join("；")} />
       ) : null}
 
       <AgentsLiveMetrics s={s} loadingAll={loadingAll} agentTodoOpen={agentTodoOpen} />
@@ -85,8 +86,8 @@ export default function AgentsLivePage() {
           此前本页**完全没有**"数据是什么时候的" -> 两组数字都无法判断新旧。
           实测两源各自都有顶层 asOf（agents-live / todos），故**无需改 BFF**, 纯页面改动 ✓。
           口径说明: 这里只在**默认视图**加；workplan / collab 是各自独立取数的子视图, 不属本页数据源 ✓。 */}
-      <div className="tiny" style={{ textAlign: "right", color: "var(--text-dim)" }}>
-        <DataMoment items={[{ label: "看板", at: data?.asOf }, { label: "待办", at: todoData?.asOf }]} style={{ marginLeft: 0 }} />
+      <div className={"tiny " + styles.momentLine}>
+        <DataMoment items={[{ label: "看板", at: data?.asOf }, { label: "待办", at: todoData?.asOf }]} />
       </div>
 
       {/* ---------- 最近执行流水 ---------- */}

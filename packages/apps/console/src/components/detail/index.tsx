@@ -4,6 +4,7 @@
 // 目标：抽屉（CognitiveDetailDrawer / 待办抽屉）与独立详情页（/cognitive/*/detail、/sessions/detail…）
 // 用**同一批**组件，避免"同一实体两种长相"。
 import type { ReactNode } from "react";
+import styles from "./index.module.css";
 
 /** 区块外壳：统一标题样式与上下间距（不再每页自造 panel/panel-header） */
 export function DetailSection({ title, extra, children }: { title: string; extra?: ReactNode; children: ReactNode }) {
@@ -25,7 +26,7 @@ export type DetailField = {
   kind?: "mono" | "wide";
 };
 
-/** 关键字段：定义列表（label 12px 灰 / value 14px），比原来用 <table class="tbl"> 轻一档 */
+/** 关键字段：定义列表（label 12px 灰 / value 14px），比原来手写 .tbl 表格轻一档 */
 export function DetailFields({ title, items, cols = 2 }: { title: string; items: DetailField[]; cols?: 1 | 2 }) {
   return (
     <DetailSection title={title}>
@@ -58,7 +59,7 @@ export function DetailTech({ items }: { items: { k: string; v: unknown }[] }) {
     <section className="dt-section">
       <details className="tech-detail">
         <summary>技术信息（{rows.length} 项）</summary>
-        <dl className="dt-fields one" style={{ marginTop: "var(--gap-label)" }}>
+        <dl className={"dt-fields one " + styles.techFields}>
           {rows.map((it) => (
             <div className="dt-field" key={it.k}>
               <dt>{it.k}</dt>

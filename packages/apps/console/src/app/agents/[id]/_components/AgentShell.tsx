@@ -3,6 +3,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { fmtAgo, type AgentRow, type LiveAgent } from "../_data";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "../page.module.css";
 
 export interface TabDef {
   key: string;
@@ -59,25 +61,25 @@ export default function AgentShell({
           <span className="current">{display}</span>
         </div>
 
-        <div className="page-header">
-          <div className="page-title">{display}</div>
+        <PageHeader>
+          <PageTitle>{display}</PageTitle>
           <div className="page-subtitle">
             <span className="mono">{agent?.agent_id || id}</span>
             {roleLabel ? ` · ${roleLabel}` : ""}
             {` · ${channel} · ${host}`}
           </div>
-        </div>
+        </PageHeader>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)", alignItems: "center", marginBottom: "var(--sp-3)" }}>
+        <div className={styles.statusRow}>
           <span className={stateBadgeClass(live?.state)}>{stateLabel}</span>
           <span className="badge badge-blue">注册 {live?.registryStatus || agent?.status || "-"}</span>
           <span className="badge">通信服务 {live?.macsStatus || "-"}</span>
-          <span style={{ fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>
+          <span className={styles.lastSeen}>
             最近露面 {fmtAgo(live?.lastSeenAt || agent?.last_seen_at)}
           </span>
           <Link
             href={`/agents/detail?id=${encodeURIComponent(agent?.agent_id || id)}`}
-            style={{ marginLeft: "auto", color: "var(--primary)", fontSize: "var(--fs-base)", textDecoration: "none" }}
+            className={styles.permLink}
           >
             权限调整入口
           </Link>
@@ -85,7 +87,7 @@ export default function AgentShell({
 
         <nav
           aria-label="智能体详情页签"
-          style={{ display: "flex", gap: "var(--sp-1)", borderBottom: "1px solid var(--border)", marginBottom: "var(--sp-4)" }}
+          className={styles.tabs}
         >
           {tabs.map((tb) => {
             const on = tb.key === active;
@@ -93,15 +95,8 @@ export default function AgentShell({
               <Link
                 key={tb.key}
                 href={tb.href}
-                style={{
-                  padding: "var(--sp-2) var(--sp-3-5)",
-                  fontSize: "var(--fs-md)",
-                  fontWeight: on ? 600 : 500,
-                  color: on ? "var(--primary)" : "var(--text-dim)",
-                  textDecoration: "none",
-                  borderBottom: on ? "2px solid var(--primary)" : "2px solid transparent",
-                  marginBottom: -1,
-                }}
+                className={styles.tab}
+                data-on={on ? "true" : "false"}
               >
                 {tb.label}
               </Link>

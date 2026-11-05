@@ -1,0 +1,6 @@
+/* components/detail 样式（P2 呈现层改造：内联 style 清零）
+   详情解剖的骨架类（.dt-section / .dt-fields / .dt-prose / .dt-timeline）都在 app/globals.css，
+   这里只补「技术信息」折叠块里需要的一点间距。 */
+
+/* 技术信息字段表：与上方 summary 留出标签间距（原来是内联 margin-top） */
+.techFields { margin-top: var(--gap-label); }

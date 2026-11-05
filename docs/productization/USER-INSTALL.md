@@ -8,7 +8,7 @@
 - 一台 Linux 机器（建议 4 核 / 8GB 内存 / 10GB 可用磁盘）；
 - Node.js 20 或更高版本；
 - 一个模型服务 API Key（MiniMax / Anthropic 兼容 / 自部署）；
-- 安装介质：lions-0.4.23.tar.gz，以及可选的 pg/ 目录（自带 PostgreSQL）。
+- 安装介质：lions-0.4.28.tar.gz，以及可选的 pg/ 目录（自带 PostgreSQL）。
 
 介质目录长这样：
 
@@ -29,7 +29,7 @@
 ## 2. 一条命令安装
 
     mkdir -p "$HOME/lions-media"
-    tar -xzf lions-0.4.23.tar.gz -C "$HOME/lions-media"
+    tar -xzf lions-0.4.28.tar.gz -C "$HOME/lions-media"
 
     node "$HOME/lions-media/scripts/lions-install.cjs" \
       --from="$HOME/lions-media" \

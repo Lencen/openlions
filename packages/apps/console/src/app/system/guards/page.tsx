@@ -11,6 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import KPICard from "@/components/KPICard";
 import GuardDetailDrawer from "@/components/guards/GuardDetailDrawer";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface Guard {
   id: string; layer: string; name: string; file: string; line: number;
@@ -119,12 +120,12 @@ export default function GuardsPage() {
   return (
     <div className="layout-with-sidebar"><main className="main">
       <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>平台管理</span><span className="sep">/</span><span className="current">守门规则管理</span></div>
-      <div className="page-header">
-        <div className="page-title">守门规则管理</div>
+      <PageHeader>
+        <PageTitle>守门规则管理</PageTitle>
         <div className="page-subtitle">
           平台全部守门机制的单一入口 · 由源码自动抽取(SSOT), 不手工维护 · 防漂移由守门注册表自动校验 · 行点击看详情
         </div>
-      </div>
+      </PageHeader>
 
       {err && <div className="panel"><div className="panel-header"><span className="panel-title" style={{ color: "var(--status-crit)" }}>总表加载失败</span></div><div style={{ padding: "var(--sp-3)" }}>{err} — 请先重建总表（命令见下方「如何复算 / 防漂移」）</div></div>}
 

@@ -1,7 +1,11 @@
 "use client";
 // system/api 页 · REST / tRPC 端点表 (从 page.tsx 抽出, 页面瘦身)
+// 2026-11-05 P2 呈现层改造：两张手写 .tbl 表格换成白名单 DataTable（列与字段不变）；
+//   等宽/不换行改由 page.module.css 的 .monoCell/.nowrapCell 表达，内联样式清零。
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import styles from "../page.module.css";
 
 export const REST_ENDPOINTS = [
   ["GET", "/api/v1/memory", "记忆列表"],
@@ -41,35 +45,23 @@ export function RestEndpointsPanel() {
         <span className="panel-title">{t('api.panel.rest')}</span>
       </div>
       <TableCopyButton />
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>方法</th>
-            <th>路径</th>
-            <th>说明</th>
-          </tr>
-        </thead>
-        <tbody>
-          {REST_ENDPOINTS.map((r, i) => (
-            <tr key={i}>
-              <td className="nowrap">
-                <span
-                  className={`badge ${r[0] === "GET" ? "badge-blue" : "badge-yellow"}`}
-                >
-                  {r[0]}
-                </span>
-              </td>
-              <td
-                className="nowrap"
-                style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-sm)" }}
-              >
-                {r[1]}
-              </td>
-              <td>{r[2]}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        rowKey={(_r, i) => i}
+        rows={REST_ENDPOINTS}
+        columns={[
+          {
+            key: "method",
+            title: "方法",
+            render: (r) => (
+              <span className={"badge " + (r[0] === "GET" ? "badge-blue" : "badge-yellow") + " " + styles.nowrapCell}>
+                {r[0]}
+              </span>
+            ),
+          },
+          { key: "path", title: "路径", render: (r) => <span className={styles.monoCell}>{r[1]}</span> },
+          { key: "desc", title: "说明", render: (r) => r[2] },
+        ]}
+      />
     </div>
   );
 }
@@ -81,30 +73,15 @@ export function TrpcRoutersPanel() {
         <span className="panel-title">{t('api.panel.trpc')}</span>
       </div>
       <TableCopyButton />
-      <table className="tbl">
-        <thead>
-          <tr>
-            <th>{t('field.router')}</th>
-            <th>核心端点</th>
-            <th>数量</th>
-          </tr>
-        </thead>
-        <tbody>
-          {TRPC_ROUTERS.map((r, i) => (
-            <tr key={i}>
-              <td className="nowrap">
-                <b>{r[0]}</b>
-              </td>
-              <td style={{ fontFamily: "var(--font-mono)", fontSize: "var(--fs-sm)" }}>
-                {r[1]}
-              </td>
-              <td className="num">
-                <span className="badge badge-blue">{r[2]}</span>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <DataTable
+        rowKey={(_r, i) => i}
+        rows={TRPC_ROUTERS}
+        columns={[
+          { key: "router", title: t('field.router'), render: (r) => <b className={styles.nowrapCell}>{r[0]}</b> },
+          { key: "endpoints", title: "核心端点", render: (r) => <span className={styles.monoCell}>{r[1]}</span> },
+          { key: "count", title: "数量", align: "right", render: (r) => <span className="badge badge-blue">{r[2]}</span> },
+        ]}
+      />
     </div>
   );
 }

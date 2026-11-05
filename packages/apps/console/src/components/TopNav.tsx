@@ -13,6 +13,7 @@ import { fmtNum } from "@/lib/format";
 import GlobalSearch from "@/components/GlobalSearch";
 import TopNavNotifications from "@/components/TopNavNotifications";
 import DataMomentBadge from "@/components/DataMomentBadge";
+import styles from "./TopNav.module.css";
 
 export default function TopNav() {
   const pathname = usePathname() || "/";
@@ -71,7 +72,7 @@ export default function TopNav() {
       <div className="topnav-context">
         {hit ? (
           <>
-            <span className="ctx-group" style={{ color: hit.group.color }}>{hit.group.label}</span>
+            <span className={"ctx-group " + styles.ctxGroup}>{hit.group.label}</span>
             <span className="ctx-sep">/</span>
             <span className="ctx-page">{hit.item.label}</span>
             {hit.item.desc ? <span className="ctx-desc">{hit.item.desc}</span> : null}
@@ -99,9 +100,9 @@ export default function TopNav() {
           </Link>
         </Tooltip>
         {/* 2026-10-22 a11y：aria-label 不能挂在没有 role 的 span 上（axe: aria-prohibited-attr），补 role="img" */}
-        <span className="pulse-dot" role="img" style={{ background: "var(--status-ok)" }} title="服务在线" aria-label="服务在线" />
+        <span className={"pulse-dot " + styles.pulseOk} role="img" title="服务在线" aria-label="服务在线" />
         <span
-          style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)" }}
+          className={styles.version}
           title={
             version
               ? `版本号 ${version.platform}${version.gitSha ? ` · ${version.gitSha}` : ""}${version.gitDirty ? " · 工作区有未提交改动" : ""}（来自仓库根 VERSION，/api/version）`

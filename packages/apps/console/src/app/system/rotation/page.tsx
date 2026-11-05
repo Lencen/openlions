@@ -8,6 +8,7 @@ import KPICard from "@/components/KPICard";
 import { useApi } from "@/lib/api";
 import { Alert, Button, Empty, Input, Skeleton, Tag } from "@/components/primitives";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface Status {
   enabled?: boolean; status?: string; cronExpression?: string; cronHumanReadable?: string;
@@ -74,7 +75,7 @@ export default function RotationPage() {
   const running = st?.status === "RUNNING" || st?.isCurrentlyRunning === true;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>平台管理</span><span className="sep">/</span><span className="current">飞轮轮转</span></div>
-    <div className="page-header"><div className="page-title">飞轮自动轮转</div><div className="page-subtitle">定时把会话轮转成认知资产；此处可启停、立即执行一次、并调整定时与单次上限。</div></div>
+    <PageHeader><PageTitle>飞轮自动轮转</PageTitle><div className="page-subtitle">定时把会话轮转成认知资产；此处可启停、立即执行一次、并调整定时与单次上限。</div></PageHeader>
     {error && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="轮转状态加载失败" description={String((error as Error)?.message || error).slice(0, 200)} /></div>}
     {!error && <div className="kpi-grid">
       <KPICard label="运行状态" value={loading && !st ? "..." : (st?.isCurrentlyRunning ? "执行中" : (running ? "运行中" : "已停止"))} />

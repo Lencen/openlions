@@ -4,6 +4,7 @@ import ChartPanel from "@/components/common/ChartPanel";
 import { chartBase, useChartBase } from "@/components/EChart";
 import { t } from "@/i18n";
 import { fmtCompact, fmtNum, fmtTokens } from "@/lib/format";
+import styles from "../page.module.css";
 
 const MODEL_COLORS = ["#2563eb", "#7c3aed", "#0d9488", "#d97706", "#db2777", "#64748b"];
 
@@ -118,7 +119,7 @@ export default function CostAttributionPanels({
 
 function ModelCaliberNote({ data, byModel }: { data: any; byModel: any[] }) {
   return (
-    <div className="tiny" style={{ marginTop: "var(--sp-2)", lineHeight: 1.7 }}>
+    <div className={`tiny ${styles.attrNote}`}>
       {data?.modelAttribution === "recorded" ? (
         <>当前口径: <b>事件实测</b> —— 模型调用事件自带模型标注, 直接按事件里的模型聚合, 不再依赖推定。</>
       ) : data?.modelAttribution === "mixed" ? (

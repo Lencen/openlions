@@ -9,6 +9,7 @@ import KPICard from "@/components/KPICard";
 import { Segmented } from "@/components/primitives";
 import { classify, textFor, type AsyncPhase } from "@/lib/asyncState";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 export default function CommPage() {
   const [data, setData] = useState<any>(null);
@@ -64,7 +65,7 @@ export default function CommPage() {
 
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">通信服务</span></div>
-    <div className="page-header"><div className="page-title">{t('comm.title')}</div><div className="page-subtitle">{t('comm.subtitle')}</div></div>
+    <PageHeader><PageTitle>{t('comm.title')}</PageTitle><div className="page-subtitle">{t('comm.subtitle')}</div></PageHeader>
     <div style={{ fontSize: "var(--fs-base)", color: "var(--text-muted)", marginBottom: "var(--sp-2)" }}>{t('comm.autoReply')}</div>
     {phase !== "ready" && (() => {
       const v = textFor(phase, errView || undefined);

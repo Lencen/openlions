@@ -1,0 +1,12 @@
+/* components/SubSidebar 样式（P2 呈现层改造：内联 style 清零）
+   侧栏骨架（.sidebar / .sidebar-group / .sidebar-item / .sidebar-footer）复用 globals.css。 */
+
+/* 未读/新增角标：推到行尾（原来是内联 margin-left: auto + font-size） */
+.badgeNew { margin-left: auto; font-size: var(--fs-xs); }
+
+/* 未实现模块的锁标记：推到行尾并用告警色（原来是内联三件） */
+.locked { margin-left: auto; font-size: var(--fs-xs); color: var(--status-warn); }
+
+/* 页脚状态点：数据实时 / 当前模块（原来是内联 background） */
+.dotOk { background: var(--status-ok); }
+.dotCore { background: var(--module-core); }

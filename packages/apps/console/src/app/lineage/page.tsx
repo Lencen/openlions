@@ -18,6 +18,7 @@ import LineageSourceMixPanel from "./_components/LineageSourceMixPanel";
 import LineageConsumptionPanel from "./_components/LineageConsumptionPanel";
 import LineageCompositionPanels from "./_components/LineageCompositionPanels";
 import LineageDetailDrawer from "./_components/LineageDetailDrawer";
+import styles from "./page.module.css";
 
 export default function LineagePage() {
   const f = useGlobalFilter();
@@ -48,7 +49,7 @@ export default function LineagePage() {
       <LineageHero data={data} agent={f.agent} theme={f.theme} />
 
       {data?.warnings?.length ? (
-        <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-4)" }} title="部分数据源降级" description={data.warnings.join("；")} />
+        <Alert type="warning" showIcon className={styles.warnAlert} title="部分数据源降级" description={data.warnings.join("；")} />
       ) : null}
 
       {/* ---------- 1. 端到端链路 ---------- */}
@@ -58,7 +59,7 @@ export default function LineagePage() {
       <div className="card-grid main-side">
         <LineageArtifactsTable artifacts={artifacts} loadingAll={loadingAll} onSelect={setSel} />
 
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+        <div className={styles.sideCol}>
           <LineageBacklogPanel backlog={backlog} loadingAll={loadingAll} />
           <LineageSourceMixPanel sourceMix={sourceMix} loadingAll={loadingAll} />
           <LineageConsumptionPanel consumption={consumption} loadingAll={loadingAll} />
@@ -71,12 +72,12 @@ export default function LineagePage() {
       {/* ---------- 4. 详情抽屉 ---------- */}
       <LineageDetailDrawer sel={sel} detail={detail} detailLoading={detailLoading} detailError={detailError} onClose={() => setSel(null)} />
 
-      <div className="tiny" style={{ textAlign: "right" }}>
+      <div className={"tiny " + styles.asOf}>
         {t('lineage.source')}{" "}
         {data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "-"}
       </div>
       {/* 2026-10-19 B5: 修前本页正文 0 条出链 ✗；补"相关视图"（每条都指向真实相关页, 非凑数）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.related}>
         <span>相关视图：</span>
         <Link href="/cognitive/knowledge">知识库 →</Link>
         <Link href="/flywheel/tasks">改进任务 →</Link>

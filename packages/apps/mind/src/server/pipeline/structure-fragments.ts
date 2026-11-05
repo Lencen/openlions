@@ -16,6 +16,7 @@
  * 不复用 db-writer.ts 主入口的原因: db-writer 是 session 级批量入口,
  * V1.7 是按 theme 反向入口 (输入语义不同), 复用其内部 runResolver() 而非主入口。
  */
+import { extractLlmText } from "@/server/llm/extract-text";
 import { prisma } from "../../lib/prisma";
 import crypto from "node:crypto";
 // P1-A 2026-08-31: 统一 fetch 封装 (原本地重复实现移除)
@@ -26,6 +27,8 @@ import { recordLlmCall } from "./llm-observability";
 //   (根因: 本产线曾漏写 qualityScore, 后又把 confidence 当 valueScore 传 —— 参数漂移静默拉低 FW-QUALITY)
 import { classifyStructuredOutput, MIN_PRODUCT_QUALITY } from "./product-quality";
 import { markLaterDuplicateSuperseded } from "./structured-dedup";
+// 2026-10-25 撤回流程补漏: 去重/存在性判定统一走"活行口径"(未撤回 + 未被取代)
+import { liveRowWhere } from "./stale-aware-dedup";
 // 2026-10-09 round 72-D3: Memory 写入改走**统一出口**(module store) —— 认知闸/受控投影挂在那里,
 //   直连 prisma.memory.create 等于让闸管不到本产线(它曾是 Memory 的 95% 流量)。
 import { safeCreateMemory } from "./safe-create";
@@ -118,8 +121,10 @@ async function checkAndAcquireLock(
 
   if (!force) {
     // ★ 飞轮修复: 已结构化主题 24h 锁, 未结构化主题 1h 锁 (首次快速重试)
+    // 2026-10-25 撤回流程补漏: "该主题已结构化"的存在性判定只认活行 —— 已被取代的旧结构化行
+    //   不算"已结构化", 否则主题被永久锁住不再重新结构化。
     const hasStructured = await prisma.memory.findFirst({
-      where: { theme, sourceType: "FLYWHEEL_STRUCTURED" },
+      where: liveRowWhere("memory", { theme, sourceType: "FLYWHEEL_STRUCTURED" }),
       select: { id: true },
     });
     // 2026-09-11 第 25 轮修(实测缺陷): 若上次结论是"碎片数=0, 无需结构化", 未结构化主题的 1h 锁会导致**每小时重试** ——
@@ -209,7 +214,9 @@ async function loadThemeFragments(theme: string, lookbackDays: number): Promise<
       select: { id: true, title: true, content: true, createdAt: true },
     }).then(rows => rows.map(r => ({ ...r, content: r.content ?? "" }))),
     prisma.practice.findMany({
-      where: { theme, createdAt: { gte: cutoff } },
+      // 2026-10-25 撤回流程补漏: Practice 与 Knowledge 同理 —— 已撤回/被取代的实践不再作为
+      //   结构化归纳的输入, 否则撤回的结论会被重新合成(撤回等于没撤)。原实现只给 Knowledge 加了。
+      where: { theme, createdAt: { gte: cutoff }, stale: false, supersededBy: null },
       select: { id: true, title: true, description: true, createdAt: true },
     }),
     // FlywheelReflection 是反思报告 (元数据), 不作为碎片输入
@@ -303,10 +310,17 @@ async function callLLMStructureFragments(
     recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: `HTTP_${resp.status}`, promptLength: prompt.length });
     throw new Error(`LLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
   }
-  recordLlmCall({ entry: "structured", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length });
-  const data: any = await resp.json();
+  // 2026-10-26 精确 token: 先解析响应拿 usage，再记账（此前先记后解析 -> token 永远缺失）。
+  const data: any = await resp.json().catch(() => null);
+  if (!data) {
+    recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: "PARSE_INVALID_JSON", promptLength: prompt.length, model: MODEL });
+    throw new Error("LLM 返回不是合法 JSON");
+  }
+  const _u = data.usage || {};
+  const _tk = Number(_u.input_tokens ?? _u.prompt_tokens ?? 0) + Number(_u.output_tokens ?? _u.completion_tokens ?? 0);
+  recordLlmCall({ entry: "structured", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: MODEL });
   // Anthropic API 格式: data.content[0].text (不是 data.choices[0].message.content)
-  const content = data.content?.[0]?.text ?? data.choices?.[0]?.message?.content;
+  const content = extractLlmText(data);
   if (!content) throw new Error("LLM 无返回内容");
 
   // 2026-09-11 第 29 轮诊断(实测缺陷): 畸形 JSON 的真实形态必须看原始返回才能定位, 不能靠错误信息猜。
@@ -443,8 +457,9 @@ async function ingestStructuredOutputs(
     const contentHash = crypto.createHash("sha256").update(o.content).digest("hex");
 
     // contentHash 去重 (V3 五件套第 1 道防护): 已有同 hash 的 FLYWHEEL_STRUCTURED 不重复写
+    // 2026-10-25 撤回流程补漏: 只认活行(未被取代) —— 被取代的旧结构化记忆不得挡住新结构化行落库。
     const existing = await prisma.memory.findFirst({
-      where: { theme, sourceType: "FLYWHEEL_STRUCTURED", contentHash },
+      where: liveRowWhere("memory", { theme, sourceType: "FLYWHEEL_STRUCTURED", contentHash }),
       select: { id: true },
     });
     if (existing) {

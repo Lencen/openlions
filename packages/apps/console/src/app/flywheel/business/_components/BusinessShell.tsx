@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import type { ApiResponse } from "./types";
 import { DIMENSIONS, cp, ci, ctime } from "./caliber";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 const TABS = [
   { id: "overview", href: "/flywheel/business", label: "总览" },
@@ -33,10 +34,10 @@ export default function BusinessShell({
   return (
     <div className="layout-with-sidebar">
       <main className="main" data-testid="flywheel-business">
-        <div className="page-header">
+        <PageHeader>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "var(--sp-3)", flexWrap: "wrap" }}>
             <div>
-              <div className="page-title">飞轮业务看板 · {title}</div>
+              <PageTitle>飞轮业务看板 · {title}</PageTitle>
               <div className="page-subtitle">{subtitle}</div>
             </div>
             <div className="tiny" style={{ textAlign: "right", color: "var(--text-muted)", lineHeight: 1.7 }}>
@@ -47,7 +48,7 @@ export default function BusinessShell({
               <DataMoment items={[{ label: "快照", at: data.asOf }]} />
             </div>
           </div>
-        </div>
+        </PageHeader>
 
         <nav aria-label="业务维度" style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "1px solid var(--border)", paddingBottom: 8, marginBottom: 4 }}>
           {TABS.map((t) => {

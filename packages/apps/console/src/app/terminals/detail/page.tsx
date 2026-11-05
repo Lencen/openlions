@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Alert, Skeleton, Tag } from "@/components/primitives";
 import { useApi } from "@/lib/api";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 type BlockState = "ok" | "partial" | "unknown";
 interface Block {
@@ -95,7 +96,7 @@ export default function TerminalDetailPage({ searchParams }: { searchParams: { a
   if (!agentId) {
     return (
       <div className="layout-with-sidebar"><main className="main">
-        <div className="page-header"><div className="page-title">终端详情</div></div>
+        <PageHeader><PageTitle>终端详情</PageTitle></PageHeader>
         <Alert type="warning" showIcon title="缺少终端标识" description="请从终端列表点进详情。" />
       </main></div>
     );
@@ -120,12 +121,12 @@ export default function TerminalDetailPage({ searchParams }: { searchParams: { a
 
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <div className="page-header">
-        <div className="page-title">{fmt(b.identity?.display_name) === UNKNOWN ? agentId : fmt(b.identity?.display_name)}</div>
+      <PageHeader>
+        <PageTitle>{fmt(b.identity?.display_name) === UNKNOWN ? agentId : fmt(b.identity?.display_name)}</PageTitle>
         <div className="page-subtitle">
           终端详情 · {agentId} · 数据时刻 {fmt(data?.asOf)}
         </div>
-      </div>
+      </PageHeader>
 
       {/* 顶部四灯：运行时 / 接入 / 通信 / 工作 —— 四种故障域分开，避免"在线却收不到消息"被读成一个状态 */}
       <div className="kpi-grid" style={{ marginBottom: "var(--gap-block)" }}>

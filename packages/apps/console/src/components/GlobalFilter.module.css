@@ -1,0 +1,8 @@
+/* components/GlobalFilter 样式（P2 呈现层改造：内联 style 清零）
+   筛选条外壳与标签（.global-filter / .gf-label / .gf-spacer / .gf-asof）复用 globals.css。 */
+
+/* 下拉筛选的最小宽度（两处 Select，原来是内联 minWidth: 168） */
+.select { min-width: 168px; }
+
+/* 「本页不适用时间范围」提示用正常字重（原来是内联 fontWeight: 400） */
+.notApplicable { font-weight: 400; }

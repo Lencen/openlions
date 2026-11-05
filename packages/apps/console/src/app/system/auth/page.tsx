@@ -4,6 +4,7 @@ import KPICard from "@/components/KPICard";
 import { Alert } from "@/components/primitives";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 export default function AuthPage() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -34,7 +35,7 @@ export default function AuthPage() {
 
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">统一认证</span></div>
-    <div className="page-header"><div className="page-title">统一认证</div><div className="page-subtitle">平台密钥认证体系（每业务独立密钥）· 单点登录 / 角色权限预留</div></div>
+    <PageHeader><PageTitle>统一认证</PageTitle><div className="page-subtitle">平台密钥认证体系（每业务独立密钥）· 单点登录 / 角色权限预留</div></PageHeader>
     {error && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="密钥数据加载失败" description={String(error).slice(0, 200)} /></div>}
     <div className="kpi-grid">
       <KPICard label="认证方式" value="接口密钥" />

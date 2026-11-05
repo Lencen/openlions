@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Alert, Button, Input } from "@/components/primitives";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 const TEXT_FIELDS: { key: string; label: string; ph: string; rows: number }[] = [
   { key: "description", label: "任务描述", ph: "完整描述任务目标与预期成果", rows: 4 },
@@ -46,7 +47,7 @@ export default function NewTaskPage() {
   const label = (t: string) => <span style={{ display: "block", fontSize: "var(--fs-base)", color: "var(--text-dim)", marginBottom: "var(--sp-1-5)" }}>{t}</span>;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>飞轮引擎</span><span className="sep">/</span><Link href="/flywheel/tasks" style={{ color: "inherit" }}>改进任务看板</Link><span className="sep">/</span><span className="current">新建</span></div>
-    <div className="page-header"><div className="page-title">新建改进任务</div><div className="page-subtitle">手工登记一个改进任务；提交后会写飞轮事件、审计，并同步通知 Mind。</div></div>
+    <PageHeader><PageTitle>新建改进任务</PageTitle><div className="page-subtitle">手工登记一个改进任务；提交后会写飞轮事件、审计，并同步通知 Mind。</div></PageHeader>
     {err && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="创建失败" description={err.slice(0, 200)} /></div>}
     <form onSubmit={submit} className="panel" style={{ padding: "var(--sp-4)", maxWidth: 900 }}>
       <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3-5)" }}>

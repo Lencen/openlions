@@ -1,0 +1,9 @@
+/* ServiceCard · P2 批2 呈现层（2026-11-05）
+   服务名与呼吸点按运行状态取色：ok -> --status-ok，crit -> --status-crit。
+   .service-card/.status-badge/.pulse-dot 的布局与底色仍在 globals.css。 */
+
+.name[data-tone="ok"] { color: var(--status-ok); }
+.name[data-tone="crit"] { color: var(--status-crit); }
+
+.dot[data-tone="ok"] { background: var(--status-ok); }
+.dot[data-tone="crit"] { background: var(--status-crit); }

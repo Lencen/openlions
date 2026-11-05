@@ -1,0 +1,18 @@
+/* GlobalSearch · P2 批2 呈现层（2026-11-05）
+   只放本组件需要的类；颜色/字号/间距一律走 globals.css 的令牌。
+   分组点颜色来自导航配置（--text-dim / --primary / --table-memory 三个令牌），
+   用 data-tone + 属性选择器承接，不再写内联 background。 */
+
+.modal {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+}
+
+.modal :global(.ui-modal-body) {
+  padding: 0;
+}
+
+.dot[data-tone="dim"] { background: var(--text-dim); }
+.dot[data-tone="primary"] { background: var(--primary); }
+.dot[data-tone="memory"] { background: var(--table-memory); }

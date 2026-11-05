@@ -1,0 +1,8 @@
+/* Breadcrumb 组件样式（P2 呈现层改造：内联 style 清零） */
+
+/* 每一段（分隔符 + 链接/当前段）横排对齐（原来是内联 display/alignItems/gap） */
+.crumb {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}

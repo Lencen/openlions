@@ -10,6 +10,7 @@
  * 5. calibrateMemory — 参照校准 (一次 LLM 批量判定)
  */
 
+import { extractLlmText } from "@/server/llm/extract-text";
 import { skillNameFields, upsertPublicSkill } from "./skill-naming";
 import { sessionApiKey } from "@/lib/secret";
 import { prisma } from "@/lib/prisma";
@@ -551,7 +552,7 @@ ${knowledgeText}
     }
 
     const data = await res.json();
-    const rawText: string = data.content?.[0]?.text || "";
+    const rawText: string = extractLlmText(data);
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       console.error("[synthesizeSkill] LLM 返回非 JSON, 跳过");
@@ -1158,7 +1159,7 @@ ${fragmentsText}
   }
 
   const data = await res.json();
-  const rawText: string = data.content?.[0]?.text || "";
+  const rawText: string = extractLlmText(data);
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
     console.error("[calibrateMemory] LLM 返回非 JSON, 跳过校准");
@@ -1629,7 +1630,7 @@ ${V3_FIVE_PIECE_HARD_RULES}`;
   }
 
   const data = await res.json();
-  const rawText: string = data.content?.[0]?.text || "";
+  const rawText: string = extractLlmText(data);
 
   // 从可能包含 markdown 代码块的响应中提取 JSON
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);

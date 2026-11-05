@@ -11,6 +11,7 @@ import { Alert, Empty, Skeleton } from "@/components/primitives";
 import DiscussionPanel from "@/components/DiscussionPanel";
 import ErrorAlert from "@/components/ErrorAlert";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface F { success?:boolean; data?:Array<{id:string;category:string;what:string;why?:string;background?:string;recommendation?:string;severity?:string}>; meta?:any; /** 77-S: BFF 顶层新增的数据时刻 */ asOf?:string }
 interface S { data?:{findings?:{total:number;byCategory?:any;byActionType?:any;byStatus?:any};structuredFindings?:{covered:number;total:number;rate:number}}; /** 77-S: BFF 顶层新增的数据时刻 */ asOf?:string }
@@ -43,7 +44,7 @@ export default function FindingsPage() {
   const catLabels: Record<string,string> = {COVERAGE_GAP:"覆盖缺口",MISSED_TOPIC:"遗漏主题",STALE_INFO:"信息过期",DUPLICATE:"重复",INCONSISTENCY:"前后不一致",OTHER:"其他"};
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">结构化发现</span></div>
-    <div className="page-header"><div className="page-title">结构化发现</div><div className="page-subtitle">{st?`${st.findings?.total??0} 条 · 覆盖率 ${((st.structuredFindings?.rate??0)*100).toFixed(1)}%`:"加载中..."}</div></div>
+    <PageHeader><PageTitle>结构化发现</PageTitle><div className="page-subtitle">{st?`${st.findings?.total??0} 条 · 覆盖率 ${((st.structuredFindings?.rate??0)*100).toFixed(1)}%`:"加载中..."}</div></PageHeader>
     <div className="kpi-grid">
       <KPICard label="发现总量" value={st?.findings?.total?.toString()??"..."} />
       <KPICard label="覆盖率" value={st?((st.structuredFindings?.rate??0)*100).toFixed(1)+"%":"..."} />

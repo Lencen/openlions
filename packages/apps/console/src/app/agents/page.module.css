@@ -1,0 +1,125 @@
+/* /agents · P1 试点页呈现层（ord-20261104-032）
+   只放本页需要的布局类；组件与全局令牌都在 globals.css，不在这里复制色值。
+   注意：FilterBar 的 .toolbar/.filters/.filter 是设计原型里的类名（assets/app.css），
+   console 的 globals.css 还没收录 —— 按「不许改 globals.css」的约定，本页用 CSS Module 作用域补上，
+   只影响本页。 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.toolbar > :global(.toolbar) {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.toolbar :global(.filters) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.toolbar :global(.filter) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.toolbar :global(.filter:hover) {
+  border-color: var(--border-hi);
+  background: var(--bg-hover);
+}
+.toolbar :global(.filter.on) {
+  background: var(--primary-dim);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  font-weight: 600;
+}
+.toolbar :global(.filter .n) {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.toolbar :global(.filter.on .n) {
+  color: var(--primary);
+}
+.toolbar :global(.spacer) {
+  flex: 1;
+}
+.search {
+  height: 28px;
+  width: 300px;
+  max-width: 100%;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+.search::placeholder {
+  color: var(--text-muted);
+}
+.search:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.subToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.sortSelect {
+  height: 28px;
+}
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+.entryBand {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.entryLink {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  text-decoration: none;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+.entryLink:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.rowLink {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--fs-md);
+}
+.rowLink:hover {
+  color: var(--primary);
+}
+.clickable :global(tbody tr) {
+  cursor: pointer;
+}
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: var(--sp-2);
+}

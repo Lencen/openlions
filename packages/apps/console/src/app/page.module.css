@@ -1,0 +1,299 @@
+/* / · P1 试点页呈现层（ord-20261104-032）
+   只放本页需要的布局类；颜色/字号/间距一律走 globals.css 的令牌，不在这里复制色值。
+   规则来源：docs/design/uiux-bento-2026-11/TEMPLATES.md §3（看板）——
+   页头 → 指标带（≤4 KpiCard）→ Bento 域格（4–6）→ 明细表（≤10 行）→ 页脚口径。
+   断点：≥1440 / 1280–1439 用 12 列；1024–1279 用 6 列；≤1024 用 2 列。 */
+
+.headRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--gap-block);
+  flex-wrap: wrap;
+}
+
+.headChips {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--gap-block);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  padding: var(--sp-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+  color: inherit;
+  text-decoration: none;
+  transition: var(--transition);
+}
+
+a.cell:hover {
+  border-color: var(--border-hi);
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+.s6 { grid-column: span 6; }
+.s4 { grid-column: span 4; }
+
+.cellHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.cellName {
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cellKicker {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.cellGo {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--primary);
+  white-space: nowrap;
+}
+
+.cellValue {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.cellHint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.meterRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.meter {
+  display: block;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--bg-surface2);
+  overflow: hidden;
+}
+
+.meterFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.meterFill[data-tone="ok"] { background: var(--status-ok); }
+.meterFill[data-tone="warn"] { background: var(--status-warn); }
+.meterFill[data-tone="crit"] { background: var(--status-crit); }
+.meterFill[data-tone="idle"] { background: var(--text-muted); }
+
+
+/* 覆盖率/健康度条的宽度档位（10% 一档）—— 避免页面里写内联 style */
+.w0 { width: 0%; }
+.w10 { width: 10%; }
+.w20 { width: 20%; }
+.w30 { width: 30%; }
+.w40 { width: 40%; }
+.w50 { width: 50%; }
+.w60 { width: 60%; }
+.w70 { width: 70%; }
+.w80 { width: 80%; }
+.w90 { width: 90%; }
+.w100 { width: 100%; }
+
+.skel {
+  display: block;
+  width: 100%;
+  height: 14px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface2);
+}
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.taskLink {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.taskLink:hover { color: var(--primary); }
+
+.rowGo {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.rowGo:hover { color: var(--primary); }
+
+@media (max-width: 1279px) {
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .s6 { grid-column: span 3; }
+  .s4 { grid-column: span 3; }
+}
+
+@media (max-width: 1023px) {
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s6, .s4 { grid-column: span 2; }
+}
+/* ==========================================================================
+   首页子组件的呈现类（2026-11-04 ord-032：内联 style 清零，只换承载方式）
+   规则：所有值与原内联样式逐项一致；动态值走 data-* 属性或宽度档位类。
+   ========================================================================== */
+
+/* —— OverviewDailyCard —— */
+.dcWrap { margin-bottom: var(--sp-4); }
+.dcExtra { display: inline-flex; gap: var(--sp-2-5); align-items: center; }
+.dcBody { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(0, 1fr); gap: var(--sp-4); }
+.dcCol { min-width: 0; }
+.dcHead { display: flex; gap: var(--sp-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--sp-2-5); }
+.dcSection { margin-bottom: var(--sp-3); }
+.dcH { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-1); }
+.dcHOk { color: var(--status-ok); }
+.dcHCrit { color: var(--status-crit); }
+.dcText { font-size: var(--fs-base); white-space: pre-wrap; line-height: 1.75; color: var(--text-dim); }
+.dcItem { font-size: var(--fs-base); margin-bottom: var(--sp-0-5); }
+.dcDim { color: var(--text-muted); }
+.dcTwo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--sp-4); }
+.dcFocus { margin-top: var(--sp-3); }
+.dcFocusList { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); }
+.dcSide { min-width: 0; border-left: 1px solid var(--border); padding-left: var(--sp-4); }
+.dcSideH { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-2); }
+.dcHistory { max-height: 300px; overflow-y: auto; }
+.dcExpand { padding-left: 0; }
+.dcCrit { color: var(--status-crit); }
+.histRow { display: flex; align-items: center; gap: var(--sp-2); width: 100%; text-align: left; padding: var(--sp-1-5) var(--sp-2); border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-surface); cursor: pointer; margin-bottom: var(--sp-1-5); }
+.histRow[data-active="true"] { border-color: var(--primary); background: var(--primary-dim); }
+.histDay { flex: 1; font-size: var(--fs-base); font-weight: 400; }
+.histRow[data-active="true"] .histDay { font-weight: 600; }
+
+/* —— OverviewQualityPanels —— */
+.qpCol { display: flex; flex-direction: column; gap: var(--sp-3-5); }
+.qpRow { display: flex; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-1); }
+.qpName { font-weight: 600; font-size: var(--fs-base); }
+.qpScore { margin-left: auto; font-family: var(--font-mono); font-size: var(--fs-md); }
+.qpFoot { margin-top: var(--sp-0-5); }
+.blCol { display: flex; flex-direction: column; gap: var(--sp-2-5); }
+.blStrip { gap: var(--sp-5); }
+.blNum { font-size: var(--fs-2xl); font-weight: 600; }
+.blNumWarn { color: var(--status-warn); }
+.blNumCrit { color: var(--status-crit); }
+.blNumPlain { color: var(--text); }
+.blNote { line-height: 1.7; }
+.blLink { margin: 0 var(--sp-1); }
+
+/* —— OverviewRecentPanels —— */
+.rcName { font-size: var(--fs-base); }
+.rcScope { font-weight: 600; margin-right: var(--sp-1-5); color: var(--primary); }
+/* 任务范围色（与 config/taskScopes 的 color 同值；OTHER 的 #64748b 用中性令牌替代表达） */
+.rcScope[data-scope="MECHANISM"] { color: var(--status-warn); }
+.rcScope[data-scope="VERIFY"] { color: var(--table-knowledge); }
+.rcScope[data-scope="DISCUSSION"] { color: var(--table-memory); }
+.rcScope[data-scope="OTHER"] { color: var(--text-muted); }
+.rcList { display: flex; flex-direction: column; gap: var(--sp-2); }
+.rcRow { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-base); border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1-5); }
+.rcTitle { flex: 1; color: var(--text-dim); }
+
+/* —— OverviewOneScreen —— */
+.osSection { margin-bottom: var(--sp-4); }
+
+/* —— OverviewHero（页头已改由页面直出，此件保留兼容） —— */
+.heroRefresh { margin-top: var(--sp-1-5); }
+
+/* —— OverviewMetrics —— */
+.inkStrong { font-weight: 600; }
+/* 与 lib/ink.ts 的 inkOf(token) 同值：color-mix(in srgb, token 55%, text) */
+.inkMemory { color: color-mix(in srgb, var(--table-memory) 55%, var(--text)); }
+.inkKnowledge { color: color-mix(in srgb, var(--table-knowledge) 55%, var(--text)); }
+.inkPractice { color: color-mix(in srgb, var(--table-practice) 55%, var(--text)); }
+.inkSkill { color: color-mix(in srgb, var(--table-skill) 55%, var(--text)); }
+/* qualityTone().color 的四档（STATUS_COLOR 同值） */
+.toneOk { color: var(--status-ok); }
+.toneWarn { color: var(--status-warn); }
+.toneCrit { color: var(--status-crit); }
+.toneMute { color: var(--text-muted); }
+.warnText { color: var(--status-warn); }
+
+/* —— LoopRing —— */
+.lrEdge { transition: stroke-width .16s, opacity .16s; }
+
+/* —— LoopFlow —— */
+.lfStopBorderHi { stop-color: var(--border-hi); stop-opacity: 1; }
+.lfStopBorderHiSoft { stop-color: var(--border-hi); stop-opacity: 0.75; }
+.lfStopWarm { stop-color: var(--flow-warm); stop-opacity: 0.9; }
+.lfStopFlow3 { stop-color: var(--flow-3); stop-opacity: 0.9; }
+
+/* LoopRing：节点/胶囊的静态定位（角度是常量，位置因此也是常量） */
+.lrNodePos1 { left: 50%; top: 9.41%; }
+.lrNodePos2 { left: 82.95%; top: 37.46%; }
+.lrNodePos3 { left: 70.36%; top: 82.84%; }
+.lrNodePos4 { left: 29.64%; top: 82.84%; }
+.lrNodePos5 { left: 17.05%; top: 37.46%; }
+.lrPillPos1 { left: 62.91%; top: 27.4%; }
+.lrPillPos2 { left: 70.89%; top: 58.63%; }
+.lrPillPos3 { left: 50%; top: 77.94%; }
+.lrPillPos4 { left: 29.11%; top: 58.63%; }
+.lrPillPos5 { left: 37.09%; top: 27.4%; }
+
+/* 进度条/堆叠条的宽度档位（5% 一档）—— 页面内不写内联 style */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

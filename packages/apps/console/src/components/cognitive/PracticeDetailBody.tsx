@@ -9,6 +9,7 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { DetailFields, DetailProse } from "@/components/detail";
+import styles from "./PracticeDetailBody.module.css";
 
 
 export default function PracticeDetailBody({
@@ -24,12 +25,12 @@ export default function PracticeDetailBody({
     return (<div>{renderHeader ? renderHeader(p, true) : null}<StateBlock loading rows={4} /></div>);
   }
   if (error) {
-    return (<div>{renderHeader ? renderHeader(p, false) : null}<div className="panel" style={{ padding: "var(--sp-5)" }}><Alert type="error" message="实践详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
+    return (<div>{renderHeader ? renderHeader(p, false) : null}<div className={"panel " + styles.pad}><Alert type="error" message="实践详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
   }
   return (
     <div>
       {renderHeader ? renderHeader(p, loading) : null}
-      {!p.id && <div className="panel"><div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>未找到这条实践（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
+      {!p.id && <div className="panel"><div className={styles.empty}>未找到这条实践（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
       {p.id && <><div className="dt-stack">
         {/* 2026-10-26：统一详情解剖（单列，因为字段少；两列会显得空） */}
         <DetailFields title="基础信息" cols={1} items={[

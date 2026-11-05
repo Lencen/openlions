@@ -1,0 +1,9 @@
+/* DataMomentBadge 组件样式（P2 呈现层改造：内联 style 清零） */
+
+/* 「本页数据取自 HH:MM:SS」（原来内联 color + whiteSpace，小字原靠 .tiny；
+   这里字号一起提进来，类自包含，不依赖全局类与 module 的加载顺序） */
+.badge {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  white-space: nowrap;
+}

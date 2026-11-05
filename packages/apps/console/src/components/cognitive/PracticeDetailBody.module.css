@@ -1,0 +1,11 @@
+/* PracticeDetailBody · P2 批2 呈现层（2026-11-05）
+   详情正文的两处内边距/弱文本色下沉到类；排版仍由 .panel / .dt-stack 与 DetailFields 负责。 */
+
+.pad {
+  padding: var(--sp-5);
+}
+
+.empty {
+  padding: var(--sp-5);
+  color: var(--text-muted);
+}

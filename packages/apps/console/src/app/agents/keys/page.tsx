@@ -9,6 +9,7 @@ import { Pill, StateBlock } from "@/components/ui";
 import { StateChip } from "@/components/DataTable";
 import { humanError } from "@/lib/humanError";
 import { fmtNum, fmtStamp, relTime } from "@/lib/format";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface KeyPerm { id: string; label: string; risk?: string; why?: string; dailyRequired?: boolean }
 interface KeyReq {
@@ -104,14 +105,14 @@ export default function AgentKeysPage() {
   return (
     <div className="layout-with-sidebar"><main className="main">
       <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>智能体</span><span className="sep">/</span><span className="current">钥匙审批</span></div>
-      <div className="page-header">
-        <div className="page-title">钥匙审批{items.length ? <StateChip state="warn" text={`${items.length} 条待处理`} /> : null}</div>
+      <PageHeader>
+        <PageTitle>钥匙审批{items.length ? <StateChip state="warn" text={`${items.length} 条待处理`} /> : null}</PageTitle>
         <div className="page-subtitle">
           批准这把钥匙 = 允许它「开线、发凭证、改归属、看全局、代发通知」；日常收发消息不需要这把。
           与「接入审批」（服务授权）是两件事：这里管的是 key 本身的生命周期。
           {data?.contractVersion ? <span className="tiny" style={{ marginLeft: "var(--gap-label)" }}>契约 {data.contractVersion}</span> : null}
         </div>
-      </div>
+      </PageHeader>
 
       {warn ? <div className="data-health" data-state="warn"><span className="dh-text">{warn}</span></div> : null}
       {err ? <div className="data-health" data-state="crit"><span className="dh-text">{err}</span></div> : null}

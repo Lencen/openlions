@@ -42,6 +42,35 @@ const U = require("./lib/lions-units.cjs");
 const I = require("./lions-install.cjs");
 const { RUNTIME_TABLES } = require("./lib/lions-runtime-tables.cjs");
 
+
+// 2026-11-05（副本漂移）：env 用户执行的是 /usr/local/lib/lions-tools 下的世界可读副本。
+// 副本旧 = 装的时候跑的不是你以为的代码（实测：新加的 step indexes 没生效，日志里也看不出来）。
+// 这里在脚本入口做一次一致性检查：DIFF 就先同步再继续；同步失败则直接退出，绝不在旧副本上装。
+// 从 /usr/local/lib/lions-tools 副本执行时，__dirname 的 .. 是 /usr/local/lib（不是仓库）。
+// 仓库固定取 ~/lions（世界可读，env 用户也可读）；其它情况按脚本位置推断。
+const REPO_ROOT = __dirname.startsWith("/usr/local/lib/lions-tools")
+  ? "~/lions"
+  : path.resolve(__dirname, "..");
+function ensureToolsReplica(quiet) {
+  // 2026-11-05：env 用户（dev/test/prod）读不到 ~（750），无法与仓库比对；
+  // 这种情况改对 /usr/local/lib/lions-tools/MANIFEST.sha256 自检副本完整性（--staged-only），
+  // 仓库↔副本的一致性由 devops 侧在装前用不带参数的同一判据把关。
+  let canReadRepo = true;
+  try { fs.accessSync(path.join(REPO_ROOT, "scripts", "lions-upgrade.cjs"), fs.constants.R_OK); } catch { canReadRepo = false; }
+  const chkArgs = [canReadRepo
+    ? path.join(REPO_ROOT, "scripts", "check-lions-tools-drift.cjs")
+    : "/usr/local/lib/lions-tools/check-lions-tools-drift.cjs"];
+  if (!canReadRepo) chkArgs.push("--staged-only");
+  const chk = spawnSync(process.execPath, chkArgs, { encoding: "utf8" });
+  if (chk.status === 0) { if (!quiet) console.log("[tools] 副本与仓库一致"); return; }
+  console.log("[tools] lions-tools 副本与仓库不一致，先同步：");
+  console.log(String(chk.stdout || "").trim());
+  if (!canReadRepo) throw new Error("lions-tools 副本自检失败且当前用户无法同步（需 devops 侧跑 stage-lions-tools.sh）");
+  const st = spawnSync("bash", [path.join(REPO_ROOT, "scripts", "stage-lions-tools.sh")], { encoding: "utf8", cwd: REPO_ROOT });
+  if (st.status !== 0) throw new Error("lions-tools 副本同步失败，拒绝在旧副本上安装：" + String(st.stderr || "").slice(0, 300));
+  console.log("[tools] 已同步副本");
+}
+
 const SCHEMA = "lions-upgrade/1";
 const DB_APPS = START_ORDER.filter((a) => APPS[a].hasDatabase);
 const RAW_SQL = { session: ["v2_fts5.sql", "v3_multi_source_sync.sql"] };
@@ -158,7 +187,10 @@ async function resolveSource(args) {
   }
   throw new Error("不支持的 --source 协议（支持 file:// 与 http(s)://）: " + source);
 }
-const CLOSED_PACKAGES = ["packages/apps/mcp-agent-chat-server", "packages/apps/portal"];
+// 2026-11-04：portal 已开源（open-source-line 的 29cf57bb2/cbe4fecef 起，open 包合法包含 portal），
+//   若仍把 portal 当闭源标记，"open 版产物"会被误判成 sales 并触发 editionGuard 拒绝升级（dev 实测）。
+//   现在只以 mcp-agent-chat-server 作为闭源标记；与 lions-pack 的 man.closed 口径一致。
+const CLOSED_PACKAGES = ["packages/apps/mcp-agent-chat-server"];
 function detectEdition(dir) { const present = CLOSED_PACKAGES.filter((x) => fs.existsSync(path.join(dir, x))); return present.length > 0 ? "sales" : "open"; }
 /** 返回错误串或 null（fail-closed：edition 变更需显式放行）。 */
 function editionGuard(fromEdition, toEdition, allow) { if (!fromEdition || !toEdition || fromEdition === toEdition || allow) return null; return "edition 不一致: 已装 " + fromEdition + " -> 新包 " + toEdition; }
@@ -175,7 +207,27 @@ function evidence(home, obj) {
   fs.appendFileSync(path.join(dir, "upgrade-evidence.jsonl"), JSON.stringify(obj) + "\n");
 }
 function unitDir(args, rec) { return typeof args["systemd-dir"] === "string" ? path.resolve(args["systemd-dir"]) : (rec.systemdDir || path.join(os.homedir(), ".config", "systemd", "user")); }
-function unitNameFor(args, rec, app) { return rec.apps && rec.apps[app] ? rec.apps[app].unit : U.unitName(app, args["unit-prefix"]); }
+function unitNameFor(args, rec, app) {
+  // 2026-11-05 P0（两次生产停服）：旧实现在 install.json 缺 apps[app] 时回退到 unitName(app, prefix)，
+  // prefix 为空就得到 lions-<app>（= selfonline 的单元名），于是装 env 时把生产停了。
+  // 现在改为 fail-closed：必须能从 install.json 或显式 --unit-prefix 得到带 env 的名字；
+  // 只有显式 --allow-unprefixed 才允许 lions-<app>（仅 selfonline 自身维护时用）。
+  // 2026-11-05 修正：若 install.json 有 apps 但**没有这个 app**（如 dev 没有 portal），
+  // 说明该 env 本就不部署这个单元 -> 返回 null 让调用方跳过，而不是 fail-closed。
+  // 只有"apps 整个缺失"或"unit 名无 env 前缀"才是危险情形，继续抛错。
+  if (rec.apps && !rec.apps[app] && !args["unit-prefix"]) return null;
+  const fromRec = rec.apps && rec.apps[app] && rec.apps[app].unit;
+  if (fromRec) return fromRec;
+  const prefix = args["unit-prefix"];
+  if (!prefix) {
+    throw new Error("无法确定 unit 名：install.json 缺 apps." + app + ".unit，且未传 --unit-prefix（拒绝回退到无前缀 lions-<app>，会误停生产）");
+  }
+  const u = U.unitName(app, prefix);
+  if (!args["allow-unprefixed"] && !/^lions-[A-Za-z0-9-]+-(mind|session|console|selfimproving|portal)\.service$/.test(u)) {
+    throw new Error("unit 名不含 env 前缀：" + u + "（若确为 selfonline 自身维护，加 --allow-unprefixed）");
+  }
+  return u;
+}
 
 function dbFiles(home, app) {
   const p = path.join(H.appDataDir(home, app), "dev.db");
@@ -313,14 +365,40 @@ function snapshotPids(args, rec) {
   for (const app of START_ORDER) { const x = unitRuntime(args, rec, app); if (x.pid) o[app] = x.pid; }
   return o;
 }
+// 2026-11-05 P0（两次生产停服）：env 的 install.json 里 unit 名若没带 env 前缀（如 sales 写成 lions-mind），
+// stopUnits 会照着它停，直接停到 selfonline。停之前必须确认该 unit 真的属于这个 home。
+function unitBelongsToHome(args, home, unit) {
+  const h = path.resolve(home);
+  // 2026-11-05：必须走 sysctl()（它会补 XDG_RUNTIME_DIR/DBUS），否则 sudo -u <env> 下 systemctl --user 读不到单元，
+  // 会把"读不到"误判成"不属于该 home"，从而拒绝一切 env 升级（实测 dev/prod 都被挡）。
+  const r = sysctl(args, ["show", unit, "-p", "ExecStart", "-p", "FragmentPath"]);
+  const out = String((r && (r.stdout || r.stdoutText)) || "");
+  if (!out.trim()) {
+    // 读不到时用单元文件路径兜底（/home/<env>/.config/systemd/user/<unit> 存在即视为属于该 env）
+    const m = home.match(/^\/home\/([a-z0-9]+)\/lions$/);
+    if (m) { try { return fs.existsSync("/home/" + m[1] + "/.config/systemd/user/" + unit); } catch (_e) { return false; } }
+    return false;
+  }
+  return out.includes(h);
+}
+
 function stopUnits(args, rec) {
   // 升级前记录 MainPID：升级后要能证明 PID 变了（否则就是"假升级"）
   if (!args["no-systemctl"]) rec.oldPids = snapshotPids(args, rec);
   const ud = unitDir(args, rec);
   for (const app of START_ORDER) writeDropIn(ud, unitNameFor(args, rec, app), true);
   if (!args["no-systemctl"]) {
+    const list = START_ORDER.map((a) => unitNameFor(args, rec, a));
+    console.log("[units] home=" + args.home + " env-prefix=" + (args["unit-prefix"] || "(from install.json)") + " 将停止: " + list.join(","));
     sysctl(args, ["daemon-reload"]);
-    for (const app of START_ORDER) sysctl(args, ["stop", unitNameFor(args, rec, app)]);
+    for (const app of START_ORDER) {
+      const u = unitNameFor(args, rec, app);
+      if (!u) continue;
+      if (!unitBelongsToHome(args, args.home, u)) {
+        throw new Error("拒绝停服：单元 " + u + " 不属于 " + args.home + "（install.json 的 unit 名可能没带 env 前缀）");
+      }
+      sysctl(args, ["stop", u]);
+    }
   }
 }
 function startUnits(args, rec) {
@@ -328,7 +406,7 @@ function startUnits(args, rec) {
   for (const app of START_ORDER) writeDropIn(ud, unitNameFor(args, rec, app), false);
   if (!args["no-systemctl"]) {
     sysctl(args, ["daemon-reload"]);
-    for (const app of START_ORDER) sysctl(args, ["start", unitNameFor(args, rec, app)]);
+    for (const app of START_ORDER) { const u0 = unitNameFor(args, rec, app); if (u0) sysctl(args, ["start", u0]); }
     // 复核：PID 必须变（旧进程还在 -> 抛错，别让"假升级"记成成功）
     rec.newPids = snapshotPids(args, rec);
     const oldP = rec.oldPids || {};
@@ -467,6 +545,8 @@ async function migrate(args, home, oldRelease, newRelease, rec) {
         pgPushGuard(gap);
         done.push(app + ":pg-noop(drop=" + gap.drops + ",gap=" + gap.executable.length + ")");
       } else {
+        // 2026-11-05：双保险——只有确认空库才允许 db push（空库没有可删的索引/结构）
+        if (await I.pgTableCount(url, newRelease) > 0) throw new Error("拒绝 db push：目标库非空（" + app + "）");
         I.run(bin, ["db", "push", "--schema=" + schema, "--skip-generate"], { cwd: newRelease, env });
         done.push(app + ":dbpush-empty");
       }
@@ -543,6 +623,7 @@ async function doUpgrade(args) {
   const ports = rec.ports || {};
   // skip-units 安装没有自己的 systemdDir；升级/回滚不应去拉全局单元或等 5 个 app 健康。
   const noServices = !rec.systemdDir || !!args["skip-start"] || !!args["no-systemctl"];
+  try { ensureToolsReplica(false); } catch (e) { fail("preflight", String(e.message)); }
   mark("preflight", fromVersion + " -> " + toVersion + "（" + (args["dry-run"] ? "dry-run" : "real") + "）");
   if (args["dry-run"]) { cleanupStaging(staging); return { ok: true, dryRun: true, from: fromVersion, to: toVersion, steps }; }
 
@@ -598,6 +679,18 @@ async function doUpgrade(args) {
     const healthy = health.skipped || Object.values(health).every((h) => h.ok);
     if (!healthy) fail("health", "上线后健康检查未通过");
     mark("health", health.skipped ? "skipped" : "全部通过");
+
+    // 2026-11-05（P0 索引消失）：env 装完后补建会话首页的两个 perf 索引（幂等；缺才建）。
+    // 为什么放这里：这两条索引是裸 SQL 建的、不在 schema 里，任何 db push/migrate 都可能把它清掉；
+    // 装完立刻补一次，装完就是可用状态，不依赖人记得跑脚本。
+    if (!args["skip-migrate"] && rec.dbMode === "pg") {
+      const ensure = path.join(path.resolve(__dirname, ".."), "scripts", "apply-session-perf-indexes.cjs");
+      if (fs.existsSync(ensure)) {
+        const r = I.run(process.execPath, [ensure], { allowFail: true, cwd: path.resolve(__dirname, "..") });
+        const tail = String((r.stdout || r.stdoutText || "")).trim().split("\n").slice(-1)[0] || "";
+        mark("indexes", tail || "已尝试补建");
+      }
+    }
 
     rec.version = toVersion;
     rec.updatedAt = new Date().toISOString();
@@ -765,8 +858,11 @@ function runSelftest() {
   const fx = fs.mkdtempSync(path.join(os.tmpdir(), "lions-ug-ed-"));
   fs.mkdirSync(path.join(fx, "packages/apps/mind"), { recursive: true });
   assert("detectEdition=open", detectEdition(fx) === "open");
+  // 2026-11-04：portal 已开源，不再作为闭源标记（open 包合法含 portal）
   fs.mkdirSync(path.join(fx, "packages/apps/portal"), { recursive: true });
-  assert("detectEdition=sales", detectEdition(fx) === "sales");
+  assert("detectEdition: 仅 portal 仍判 open（portal 已开源）", detectEdition(fx) === "open");
+  fs.mkdirSync(path.join(fx, "packages/apps/mcp-agent-chat-server"), { recursive: true });
+  assert("detectEdition=sales（mcp-agent-chat-server 为闭源标记）", detectEdition(fx) === "sales");
   assert("editionGuard 一致放行", editionGuard("open", "open", false) === null && editionGuard("sales", "sales", false) === null);
   assert("editionGuard 不一致拦截", (editionGuard("open", "sales", false) || "").indexOf("不一致") >= 0);
   assert("editionGuard 显式放行", editionGuard("open", "sales", true) === null);

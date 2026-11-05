@@ -1,0 +1,6 @@
+/* RadarChart · P2 批2 呈现层（2026-11-05）
+   图表容器高度从内联 style 下沉到类；其余配色仍在 ECharts option 里（画布内，不是 DOM 内联样式）。 */
+
+.chart {
+  height: 280px;
+}

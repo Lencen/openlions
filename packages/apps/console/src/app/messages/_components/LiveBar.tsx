@@ -2,6 +2,7 @@
 // 2026-10-21 实时状态条：连 MACS 的 SSE（经 console 服务端代理）。
 // 交接要求：断线必须可见（黄条 + 重连计数），不能让用户以为"没新消息"。
 import { useEffect, useRef, useState } from "react";
+import styles from "../page.module.css";
 
 export default function LiveBar({ agentId = "agent-operator" }: { agentId?: string }) {
   const [state, setState] = useState<"connecting" | "live" | "down">("connecting");
@@ -35,11 +36,10 @@ export default function LiveBar({ agentId = "agent-operator" }: { agentId?: stri
     return () => { closed = true; es.close(); esRef.current = null; };
   }, [agentId]);
 
-  const tone = state === "live" ? "var(--status-ok)" : state === "down" ? "var(--status-warn)" : "var(--text-dim)";
   const label = state === "live" ? "实时已连接" : state === "down" ? "实时连接已断开，正在自动重连（第 " + retries + " 次）" : "正在连接实时通道…";
   return (
     <div className={"msg-live" + (state === "down" ? " down" : "")} role="status" aria-live="polite">
-      <span className="msg-live-dot" style={{ background: tone }} aria-hidden="true" />
+      <span className={"msg-live-dot " + styles.dot} data-tone={state} aria-hidden="true" />
       <span>{label}</span>
       <span className="msg-live-meta">订阅 {agentId} · 已收到 {events} 条信号</span>
     </div>

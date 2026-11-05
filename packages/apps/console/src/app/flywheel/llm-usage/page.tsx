@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useGlobalFilter } from '@/components/GlobalFilter';
 import { useApi } from '@/lib/api';
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface Row { h: string; calls: number; tokens: number }
 interface BucketResp { totalCalls: number; totalTokens: number; byEntry: Array<[string, { calls: number; tokens: number }]>; byModel: Array<[string, { calls: number; tokens: number }]>; byHour: Row[] }
@@ -27,8 +28,8 @@ export default function LlmUsagePage() {
   const maxC = lastByHour.reduce((m, r) => Math.max(m, r.calls), 1);
   return (
     <main className='page'>
-      <div className='page-header'><div className='page-title'>语言模型用量</div>
-        <div className='page-subtitle'>实时观测量化引擎消耗与飞轮活跃度；第一张卡随顶栏"时间范围"变化，后两张固定 24 小时 / 7 天</div></div>
+      <PageHeader><PageTitle>语言模型用量</PageTitle>
+        <div className='page-subtitle'>实时观测量化引擎消耗与飞轮活跃度；第一张卡随顶栏"时间范围"变化，后两张固定 24 小时 / 7 天</div></PageHeader>
       <div style={{ display: 'grid', gap: "var(--sp-3)", gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginBottom: "var(--sp-4)" }}>
         {data.window && <div className='panel'><div className='panel-header'><span className='panel-title'>所选范围（{data.rangeLabel || data.range}）</span></div>
           <div style={{ fontSize: "var(--fs-3xl)", fontWeight: 700, color: 'var(--primary)' }}>{data.window.totalCalls}</div>

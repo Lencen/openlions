@@ -1,0 +1,6 @@
+/* app/cognitive/practice/detail · P2 批2 呈现层（2026-11-05）
+   面包屑首段（分组名）用弱化色；中间段的链接色由 globals.css 的 .breadcrumb a 统一给。 */
+
+.crumbDim {
+  color: var(--text-dim);
+}

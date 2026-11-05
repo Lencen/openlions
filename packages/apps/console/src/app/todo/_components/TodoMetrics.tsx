@@ -1,7 +1,9 @@
 "use client";
-// todo 页 · 指标卡行 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
-import { MetricCard } from "@/components/ui";
-import { t as tr } from "@/i18n";
+// /todo · 指标卡行（P1 试点页 ord-20261104-032）
+// 改前：MetricCard（已 deprecated，且带 tone/unit 的旧口径）。
+// 改后：统一 KpiCard（白名单 ≤4 张）。原第 5 张「智能体未完成」并入「今日完成」的说明，
+//       数字与口径不变，只是不再单独占一张卡。
+import { KpiCard } from "@/components/ui";
 import { fmtNum, fmtState } from "@/lib/format";
 
 export default function TodoMetrics({
@@ -27,18 +29,26 @@ export default function TodoMetrics({
    *  分层判据：**整包缺失** -> 未知；**包在、只是没有这个字段/键** -> 真的 0。 */
   errorAll?: boolean;
 }) {
+  const v = (n: number | undefined) => fmtState(data ? n : undefined, { loading: loadingAll, error: errorAll });
   return (
-    <div className="metric-row">
-      <MetricCard label="未完成待办" size="hero" tone="info" value={fmtState(data ? openCount : undefined, { loading: loadingAll, error: errorAll })} unit="条"
-        hint={`全部未完成 · 当前视图 ${fmtNum(openInView ?? 0)} 条`} />
-      <MetricCard label="需要人决策" tone={(data?.humanOpen ?? 0) > 0 ? "warn" : "ok"} value={fmtState(data ? (data.humanOpen ?? 0) : undefined, { loading: loadingAll, error: errorAll })} unit="条"
-        hint="人类负责的未完成项" />
-      <MetricCard label="逾期" tone={overdueCount ? "crit" : "ok"} value={fmtState(data ? overdueCount : undefined, { loading: loadingAll, error: errorAll })} unit="条"
-        hint={overdueCount ? "已过截止时间, 建议优先处理" : "没有逾期待办"} />
-      <MetricCard label="今日完成" tone="ok" value={fmtState(data ? doneTodayCount : undefined, { loading: loadingAll, error: errorAll })} unit="条"
-        hint={`累计完成 ${fmtNum(counts.DONE || 0)} 条`} />
-      <MetricCard label={tr('todo.agentCard.label')} tone="mute" value={fmtState(data ? agentOpenCount : undefined, { loading: loadingAll, error: errorAll })} unit="条"
-        hint={tr('todo.agentCard.hint')} />
+    <div className="kpi-grid">
+      <KpiCard
+        label="未完成待办"
+        size="hero"
+        value={v(openCount)}
+        hint={`全部未完成 · 当前视图 ${fmtNum(openInView ?? 0)} 条`}
+      />
+      <KpiCard label="需要人决策" value={v(data?.humanOpen ?? 0)} hint="人类负责的未完成项" />
+      <KpiCard
+        label="逾期"
+        value={v(overdueCount)}
+        hint={overdueCount ? "已过截止时间, 建议优先处理" : "没有逾期待办"}
+      />
+      <KpiCard
+        label="今日完成"
+        value={v(doneTodayCount)}
+        hint={`累计完成 ${fmtNum(counts.DONE || 0)} 条 · 智能体未完成 ${fmtNum(data ? agentOpenCount : 0)} 条`}
+      />
     </div>
   );
 }

@@ -1,0 +1,9 @@
+/* /flywheel/business 页内样式（P2 呈现层改造：内联 style 清零）
+   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
+   能复用 .card-grid / .panel / .tiny 的一律复用；_components/ui.tsx 的 Panel/SimpleTable 自带类保持不动。 */
+
+/* 趋势图容器最低高度（原来是内联 min-height: 280） */
+.chartBox { min-height: 280px; }
+
+/* 动作表里的括注说明（原来是内联 color: var(--text-muted)） */
+.noteMuted { color: var(--text-muted); }

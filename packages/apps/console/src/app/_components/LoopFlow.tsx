@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useApi } from "@/lib/api";
 import { fmtNum } from "@/lib/format";
+import styles from "../page.module.css";
 
 const CX = 500, CY = 218, RX = 372, RY = 152;
 const BOX_W = 150, BOX_H = 74; // 2026-10-22：加高 8px，容纳「数字 + 说明」两行，避免说明压在大数字上
@@ -127,12 +128,12 @@ export default function LoopFlow() {
           {/* 2026-10-22 calm-tech：外环从「青→绿高饱和渐变」改为中性边线渐变——
               飞轮要表达"业务闭环"，不是霓虹灯带。保留 id，引用处无需改。 */}
           <linearGradient id="lfGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" style={{ stopColor: "var(--border-hi)", stopOpacity: 1 }} />
-            <stop offset="100%" style={{ stopColor: "var(--border-hi)", stopOpacity: 0.75 }} />
+            <stop offset="0%" className={styles.lfStopBorderHi} />
+            <stop offset="100%" className={styles.lfStopBorderHiSoft} />
           </linearGradient>
           <linearGradient id="lfGradAct" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" style={{ stopColor: "var(--flow-warm)", stopOpacity: 0.9 }} />
-            <stop offset="100%" style={{ stopColor: "var(--flow-3)", stopOpacity: 0.9 }} />
+            <stop offset="0%" className={styles.lfStopWarm} />
+            <stop offset="100%" className={styles.lfStopFlow3} />
           </linearGradient>
           <filter id="lfGlow" x="-80%" y="-80%" width="260%" height="260%">
             <feGaussianBlur stdDeviation="4" result="blur" />
@@ -154,7 +155,7 @@ export default function LoopFlow() {
                 //   hover 时整条边高亮，方便在环上定位"哪一段在跑量"。
                 className={"lf-path" + (e.v > 0 && e.v >= hotMin ? " hot" : "")}
                 stroke={e.v > 0 && e.v >= hotMin ? "var(--primary)" : "url(#lfGrad)"}
-                style={{ strokeWidth: edgeW(e.v) }}
+                strokeWidth={edgeW(e.v)}
               >
                 {mounted ? <title>{e.label} · 24h {fmtNum(e.v)}</title> : null}
               </path>

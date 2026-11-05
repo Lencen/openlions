@@ -1,0 +1,11 @@
+/* 应用外壳（app/layout.tsx）页内样式（P2 呈现层改造：内联 style 清零）
+   layout 不属于某个 app/<route>/ 目录，故用同名 module（与 components/ 的约定一致）；
+   不动 app/page.module.css —— 那是 / 路由（app/page.tsx）的批次，避免两条线改同一文件。 */
+
+/* 主题切换浮层：右上角固定（原来是内联 position/top/right/zIndex；8px = --sp-2，12px = --sp-3） */
+.themeFab {
+  position: fixed;
+  top: var(--sp-2);
+  right: var(--sp-3);
+  z-index: 9999;
+}

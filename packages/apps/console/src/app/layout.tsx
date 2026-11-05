@@ -9,6 +9,7 @@ import GlobalSidebar from "@/components/GlobalSidebar";
 import { GlobalFilterBar, GlobalFilterProvider } from "@/components/GlobalFilter";
 import { UI_V2_ENABLED } from "@/lib/ui-flag"; // Phase2 灰度开关 (2026-09-19 todo_d520eef2e516468da105)
 import type { ReactNode } from "react";
+import styles from "./layout.module.css";
 
 // 2026-09-10 商业化改版: 统一外壳 = 品牌栏 + 全局筛选栏 + 分组侧边导航
 // 主题: antd 与既有 CSS 变量共用同一套色板 (主色 #2563eb / 圆角 8 / 字号 13)
@@ -40,7 +41,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             必须是**内联脚本**: chunk 挂了时连 layout 的 JS 都拿不到, React 组件永远不会挂载(实测验证)。 */}
         <script dangerouslySetInnerHTML={{ __html: CHUNK_GUARD_SCRIPT }} />
         {/* 主题切换(右上角浮动; 不侵入 TopNav, 待 Phase2 壳层替换时并入导航) */}
-        <div style={{ position: "fixed", top: 8, right: 12, zIndex: 9999 }}>
+        <div className={styles.themeFab}>
           <ThemeToggle />
         </div>
         {/* 2026-10-13 round 76-CG: 这里原来挂着一大块 antd 风格的 theme={{token,components}}(33 行, 含 ~15 个旧调色板 hex)。

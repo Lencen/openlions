@@ -1,0 +1,15 @@
+/* ConvertToTodoButton 组件样式（P2 呈现层改造：内联 style 清零） */
+
+/* 已建单后的链接（原来是内联 fontSize/color/textDecoration） */
+.doneLink {
+  font-size: var(--fs-sm);
+  color: var(--status-ok);
+  text-decoration: none;
+}
+
+/* link 形态按钮：去掉按钮水平内边距（原来是内联 padding: 0 + fontSize）。
+   双写类名是为了压过 globals.css 的 .ui-btn-link（同为单类，靠特异性而非样式加载顺序取胜）。 */
+.linkBtn.linkBtn {
+  padding: 0;
+  font-size: var(--fs-sm);
+}

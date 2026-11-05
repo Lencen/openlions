@@ -1,0 +1,15 @@
+/* DataMoment 组件样式（P2 呈现层改造：内联 style 清零）
+   原来内联写了 marginLeft / color，再由调用方的 style 覆盖；
+   现在改成类 + flush 属性（间距语义不变，覆盖方式由内联改成属性）。 */
+
+/* 与所在文案留 8px 间距 + 淡字色 + 小字；不定 .tiny，避免与全局类同权重抢样式加载顺序 */
+.moment {
+  margin-left: var(--sp-2);
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+}
+
+/* 贴边（原调用点用内联 marginLeft: 0 表达） */
+.moment[data-flush="1"] {
+  margin-left: 0;
+}

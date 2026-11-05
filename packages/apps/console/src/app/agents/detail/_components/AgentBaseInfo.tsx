@@ -1,6 +1,6 @@
 "use client"
 // agents/detail 页 · 基础信息面板 (从 page.tsx 抽出)
-// 2026-10-26：与其它详情页统一解剖 —— 原来是 <table class="tbl"> 当定义表（表头重、首列宽度不可控），
+// 2026-10-26：与其它详情页统一解剖 —— 原先用 table.tbl 当定义表（表头重、首列宽度不可控），
 // 改成 DetailFields（label 96px + 值），状态用文字而不是彩色 badge（颜色只表"异常"，这里不等于异常）。
 import { t as tr } from "@/i18n";
 import { DetailFields } from "@/components/detail";

@@ -1,0 +1,26 @@
+/* LoadingBlock · P2 批2 呈现层（2026-11-05）
+   骨架行：底色/微光动画沿用 globals.css 的 .lb-line，这里只补行高与最后一行宽度。
+   行高按档位给（调用方只用过 14/60），未知值回落 14px；宽度 62%（末行）/100%（其余）。 */
+
+.line {
+  width: 100%;
+  height: 14px;
+}
+
+.line[data-last="1"] {
+  width: 62%;
+}
+
+.line[data-h="8"] { height: 8px; }
+.line[data-h="10"] { height: 10px; }
+.line[data-h="12"] { height: 12px; }
+.line[data-h="14"] { height: 14px; }
+.line[data-h="16"] { height: 16px; }
+.line[data-h="20"] { height: 20px; }
+.line[data-h="24"] { height: 24px; }
+.line[data-h="32"] { height: 32px; }
+.line[data-h="40"] { height: 40px; }
+.line[data-h="48"] { height: 48px; }
+.line[data-h="60"] { height: 60px; }
+.line[data-h="80"] { height: 80px; }
+.line[data-h="100"] { height: 100px; }

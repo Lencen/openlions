@@ -12,6 +12,7 @@
  */
 import Link from "next/link";
 import { useApi } from "@/lib/api";
+import styles from "../page.module.css";
 
 const ORDER = ["IN_PROGRESS", "PENDING", "BLOCKED", "FAILED", "DONE"] as const;
 const LABEL: Record<string, string> = {
@@ -36,12 +37,12 @@ export default function FlywheelImprovementPanel() {
   const deprecated = (byStatus.DEPRECATED || 0) + (byStatus.DROPPED || 0);
 
   return (
-    <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
-      <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
-        <span className="panel-title" style={{ "--tab-color": "var(--status-warn)" } as React.CSSProperties}>
+    <section className={"panel " + styles.fiPanel}>
+      <div className={"panel-header " + styles.fiHead}>
+        <span className={"panel-title " + styles.fiTitle}>
           ⑥ 改进行动 · 执行明细
         </span>
-        <Link href="/flywheel/executions" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none" }}>
+        <Link href="/flywheel/executions" className={styles.fiLink}>
           全部执行记录 →
         </Link>
       </div>
@@ -49,7 +50,7 @@ export default function FlywheelImprovementPanel() {
       {error ? (
         <div className="msg-error" role="alert"><span>改进任务读取失败：{String((error as any)?.message || error).slice(0, 60)}</span></div>
       ) : loading && !data ? (
-        <div className="tiny" style={{ color: "var(--text-muted)" }}>正在读取改进任务…</div>
+        <div className={"tiny " + styles.fiMuted}>正在读取改进任务…</div>
       ) : (
         <>
           <div className="fi-chips">
@@ -66,7 +67,7 @@ export default function FlywheelImprovementPanel() {
           </div>
 
           {items.length === 0 ? (
-            <div className="tiny" style={{ color: "var(--text-muted)" }}>当前没有改进任务。</div>
+            <div className={"tiny " + styles.fiMuted}>当前没有改进任务。</div>
           ) : (
             <ul className="fi-list">
               {items.map((t) => {
@@ -82,7 +83,7 @@ export default function FlywheelImprovementPanel() {
             </ul>
           )}
 
-          <div className="tiny" style={{ color: "var(--text-muted)", marginTop: "var(--sp-2)" }}>
+          <div className={"tiny " + styles.fiNote}>
             口径：任务表 improvementType ∈ 机制修复（GOAL_GAP / THEME_IMPROVE / PLATFORM_REVIEW）· 数据时刻 {fmt(data?.asOf)}
           </div>
         </>

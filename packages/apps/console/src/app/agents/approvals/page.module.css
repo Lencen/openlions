@@ -1,0 +1,11 @@
+/* /agents/approvals · P2 批2 呈现层（2026-11-05）
+   页头面包屑的弱化色 + 行内错误提示；其余沿用 globals.css 的 .breadcrumb/.page-subtitle。 */
+
+.crumbDim {
+  color: var(--text-dim);
+}
+
+.err {
+  color: var(--status-crit);
+  margin-bottom: var(--sp-3);
+}

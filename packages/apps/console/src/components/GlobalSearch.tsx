@@ -14,6 +14,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { Modal } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import Icon from "@/components/Icon";
+import styles from "./GlobalSearch.module.css";
 import { t } from '@/i18n';
 import { SearchPage, searchPages, pagesByGroup } from '@/config/searchIndex';
 
@@ -43,6 +44,14 @@ interface Section {
   color: string;
   rows: Row[];
 }
+
+/** 分组点颜色只来自导航配置的三个设计令牌；其它一律按最淡处理。 */
+const DOT_TONE: Record<string, string> = {
+  "var(--primary)": "primary",
+  "var(--table-memory)": "memory",
+  "var(--text-dim)": "dim",
+};
+const dotTone = (color: string) => DOT_TONE[color] ?? "dim";
 
 function toRow(p: SearchPage): Row {
   return {
@@ -262,10 +271,7 @@ export default function GlobalSearch() {
         centered
         width={660}
         maskClosable
-        styles={{
-          container: { padding: 0, overflow: 'hidden', borderRadius: "var(--radius-lg)" },
-          body: { padding: 0 },
-        }}
+        className={styles.modal}
       >
         <div className="gs-modal" role="dialog" aria-modal="true" aria-label={t('search.trigger')}>
           <div className="gs-search">
@@ -300,7 +306,7 @@ export default function GlobalSearch() {
                 {sections.map((sec) => (
                   <div className="gs-group" key={sec.key}>
                     <div className="gs-group-title">
-                      <span className="gs-group-dot" style={{ background: sec.color }} />
+                      <span className={"gs-group-dot " + styles.dot} data-tone={dotTone(sec.color)} />
                       {sec.label}
                     </div>
                     {sec.rows.map((row) => {

@@ -9,6 +9,7 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { DetailFields, DetailProse } from "@/components/detail";
+import styles from "./SkillDetailBody.module.css";
 
 
 export default function SkillDetailBody({
@@ -25,12 +26,12 @@ export default function SkillDetailBody({
     return (<div>{renderHeader ? renderHeader(s, true) : null}<StateBlock loading rows={4} /></div>);
   }
   if (error) {
-    return (<div>{renderHeader ? renderHeader(s, false) : null}<div className="panel" style={{ padding: "var(--sp-5)" }}><Alert type="error" message="技能详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
+    return (<div>{renderHeader ? renderHeader(s, false) : null}<div className={"panel " + styles.panelPad}><Alert type="error" message="技能详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
   }
   return (
     <div>
       {renderHeader ? renderHeader(s, loading) : null}
-      {!s.id && <div className="panel"><div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>未找到这条技能（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
+      {!s.id && <div className="panel"><div className={styles.emptyBox}>未找到这条技能（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
       {s.id && <><div className="dt-stack">
         <div className="dt-grid-2">
           {/* 2026-10-26：统一详情解剖（与记忆/知识详情同一套组件） */}

@@ -12,6 +12,7 @@ import { bjToday } from "./_components/shared";
 import type { DailyReport } from "./_components/shared";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import { useRouter } from "next/navigation";
+import styles from "./page.module.css";
 
 export default function DailySummaryPage() {
   const [date, setDate] = useState(bjToday());
@@ -82,11 +83,11 @@ export default function DailySummaryPage() {
       <main className="main">
         <DailyHeader date={date} setDate={changeDate} />
 
-        {loading && <div style={{ padding: "var(--sp-7)", color: "var(--text-dim)" }}>加载中...</div>}
-        {error && <div className="data-health" data-state="warn" style={{ margin: "var(--sp-4)", maxWidth: 720 }}><span className="dh-text">{error}</span></div>}
+        {loading && <div className={styles.loading}>加载中...</div>}
+        {error && <div className={"data-health " + styles.errorBox} data-state="warn"><span className="dh-text">{error}</span></div>}
 
         {!loading && !error && !d && (
-          <div className="panel" style={{ padding: "var(--sp-6)", color: "var(--text-muted)" }}>当日无日结数据。</div>
+          <div className={"panel " + styles.emptyPanel}>当日无日结数据。</div>
         )}
 
         {!loading && !error && d && (

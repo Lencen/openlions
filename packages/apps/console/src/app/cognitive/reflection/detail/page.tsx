@@ -5,6 +5,7 @@ import { inkOf } from "@/lib/ink";
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import ReflectionDetailBody from "@/components/cognitive/ReflectionDetailBody";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 function Inner() {
   const params = useSearchParams();
@@ -16,10 +17,10 @@ function Inner() {
         id={id}
         renderHeader={(ctx: any) => (
           <>
-            <div className="page-header">
-              <div className="page-title">{ctx.fw ? `主题反思 · ${ctx.fw.theme}` : ctx.legacy?.title || "反思详情"}</div>
+            <PageHeader>
+              <PageTitle>{ctx.fw ? `主题反思 · ${ctx.fw.theme}` : ctx.legacy?.title || "反思详情"}</PageTitle>
               <div className="page-subtitle">{ctx.loading ? "（加载中...）" : `ID: ${ctx.discEntityId || "(样例)"}`}</div>
-            </div>
+            </PageHeader>
             {!ctx.loading && id ? (
               <div style={{ marginTop: "var(--sp-1-5)", fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>
                 讨论挂载：<b style={{ color: ctx.fw ? inkOf("var(--table-knowledge)") : inkOf("var(--table-memory)") }}>{ctx.fw ? "主题反思" : ctx.legacy?.id ? "反思记录" : "未识别"}</b>
