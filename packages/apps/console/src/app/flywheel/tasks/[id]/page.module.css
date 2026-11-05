@@ -1,0 +1,18 @@
+/* /flywheel/tasks/[id] · 数据卡 7 行级下钻（2026-11-05）
+   只放本页布局类；令牌全部来自 globals.css（不复制色值）。
+   子组件（_components/*）不在本批三文件范围内，保持原样。 */
+
+.alertGap { margin-bottom: var(--sp-4); }
+
+.center { text-align: center; }
+
+.foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  text-align: left;
+}

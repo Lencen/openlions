@@ -1,0 +1,37 @@
+/* /messages/failed 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   两张表换成白名单 DataTable 后，原来挂在 td 上的 .td-mono / .td-clip（globals 里并不存在，
+   实际没生效）改为本页显式的 .mono / .clip；其余内联间距/配色逐项落类。 */
+
+/* 面板内边距（原来是内联 padding: var(--sp-3)） */
+.panelPad { padding: var(--sp-3); }
+
+/* 列头行去掉边框与内边距（原来是内联 border: none / padding: 0） */
+.colHeadPlain { border: none; padding: 0; }
+/* 右上角返回入口（原来是内联 marginLeft: auto） */
+.ghostEnd { margin-left: auto; }
+
+/* 横向滚动容器（原来是内联 overflowX） */
+.tableScroll { overflow-x: auto; }
+
+/* 摘要 / 最后错误：限宽 + 省略号（对应原来 td-clip 的意图） */
+.clip {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* 二次确认的两个按钮（原来是内联 inline-flex + gap: 6） */
+.inlineBtns { display: inline-flex; gap: 6px; }
+/* 危险动作「确认重试/确认重放」的字色（原来是内联 color） */
+.ghostDanger { color: var(--status-crit); }
+
+/* 未送达队列区块（原来是内联 marginTop: var(--sp-4)） */
+.queueBlock { margin-top: var(--sp-4); }
+.colTitleGap { margin-bottom: var(--sp-2); }
+
+/* 底部脚注（原来是内联 borderTop + marginTop；告警态多一个颜色） */
+.footNote { border-top: 1px dashed var(--border); margin-top: var(--sp-3); }
+.footWarn { color: var(--status-warn); }

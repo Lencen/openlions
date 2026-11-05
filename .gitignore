@@ -15,6 +15,8 @@ node_modules
 # logs / caches
 **/*.log
 logs/
+# 2026-11-05：console 有一个页面目录叫 flywheel/logs，被上面的 logs/ 规则误伤（git add -A 报 ignored）
+!packages/apps/console/src/app/flywheel/logs/
 .eslintcache
 **/.next/cache/
 

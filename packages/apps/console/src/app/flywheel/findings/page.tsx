@@ -1,17 +1,23 @@
 "use client";
-import { interactiveProps } from "@/components/a11y";
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 手写 .tbl 表 → 白名单 DataTable。
+//   列/字段/文案/DiscussionPanel 全保留；展开详情从「表内一行 colSpan=4」改成表格下方一块面板，
+//   触发器从整行可点改成「问题」列里的展开/收起按钮（键盘可达）。
+//   取数（/api/flywheel-findings、/api/flywheel-stats）、按 id 去重、类别映射一字未改。
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import KPICard from "@/components/KPICard";
 import BarChart from "@/components/BarChart";
 import { useApi } from "@/lib/api";
 import DataMoment from "@/components/DataMoment";
 import { useGlobalFilter } from "@/components/GlobalFilter";
-import { Alert, Empty, Skeleton } from "@/components/primitives";
+import { Empty, Skeleton } from "@/components/primitives";
 import DiscussionPanel from "@/components/DiscussionPanel";
 import ErrorAlert from "@/components/ErrorAlert";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 interface F { success?:boolean; data?:Array<{id:string;category:string;what:string;why?:string;background?:string;recommendation?:string;severity?:string}>; meta?:any; /** 77-S: BFF 顶层新增的数据时刻 */ asOf?:string }
 interface S { data?:{findings?:{total:number;byCategory?:any;byActionType?:any;byStatus?:any};structuredFindings?:{covered:number;total:number;rate:number}}; /** 77-S: BFF 顶层新增的数据时刻 */ asOf?:string }
@@ -42,8 +48,43 @@ export default function FindingsPage() {
   const catColors: Record<string,string> = {COVERAGE_GAP:"var(--brand)",MISSED_TOPIC:"var(--danger)",STALE_INFO:"var(--warn)",DUPLICATE:"var(--info)",INCONSISTENCY:"var(--ok)",OTHER:"var(--text-3)"};
   // 类别是后端枚举 (数据)，界面上换成业务说法，不直接露出 COVERAGE_GAP 这类代码。
   const catLabels: Record<string,string> = {COVERAGE_GAP:"覆盖缺口",MISSED_TOPIC:"遗漏主题",STALE_INFO:"信息过期",DUPLICATE:"重复",INCONSISTENCY:"前后不一致",OTHER:"其他"};
+
+  const expanded = items.find((x) => x.id === expandedId) || null;
+  const columns: DataColumn<(typeof items)[number]>[] = [
+    { key: "id", title: "编号", width: 140, render: (r) => <span className={styles.monoSm + " nowrap"}>{r.id}</span> },
+    {
+      key: "category",
+      title: "类别",
+      render: (r) => <span className="badge badge-blue nowrap">{catLabels[r.category] || r.category}</span>,
+    },
+    {
+      key: "what",
+      title: "问题",
+      width: 300,
+      render: (r) => (
+        <>
+          <span className={styles.clip} data-active={expandedId === r.id ? "true" : undefined}>{r.what?.slice(0, 80)}</span>
+          <button
+            type="button"
+            className={styles.rowToggle}
+            aria-expanded={expandedId === r.id}
+            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+          >
+            {expandedId === r.id ? "收起" : "展开"}
+          </button>
+        </>
+      ),
+    },
+    {
+      key: "why",
+      title: "原因",
+      width: 300,
+      render: (r) => <span className={styles.clip + " " + styles.dimSm}>{r.why?.slice(0, 80) ?? "-"}</span>,
+    },
+  ];
+
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">结构化发现</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>飞轮引擎</span><span className="sep">/</span><span className="current">结构化发现</span></div>
     <PageHeader><PageTitle>结构化发现</PageTitle><div className="page-subtitle">{st?`${st.findings?.total??0} 条 · 覆盖率 ${((st.structuredFindings?.rate??0)*100).toFixed(1)}%`:"加载中..."}</div></PageHeader>
     <div className="kpi-grid">
       <KPICard label="发现总量" value={st?.findings?.total?.toString()??"..."} />
@@ -58,42 +99,37 @@ export default function FindingsPage() {
         此前本页**完全没有**时刻 -> 两组数字都无法判断新旧。
         本轮先给 /api/flywheel-findings 补了顶层 asOf（统计侧 77-P 已有）, 故这里是纯页面改动。
         注意: /api/flywheel-stats 的 asOf 是**顶层**键, 不是 st(=stats.data) 里的字段 ✓。 */}
-    <div className="tiny" style={{ textAlign: "right", color: "var(--text-dim)", marginBottom: "var(--sp-3)" }}>
-      <DataMoment items={[{ label: "发现", at: data?.asOf }, { label: "统计", at: stats?.asOf }]} style={{ marginLeft: 0 }} />
+    {/* 2026-11-05 P2: 原来用内联 marginLeft 贴边，改走 DataMoment 自带的 flush 属性。 */}
+    <div className={"tiny " + styles.momentRow}>
+      <DataMoment items={[{ label: "发现", at: data?.asOf }, { label: "统计", at: stats?.asOf }]} flush />
     </div>
     {Object.keys(byCat).length>0 && <div className="panel"><div className="panel-header"><span className="panel-title">按类别分布</span></div>
       <BarChart bars={Object.entries(byCat).map(([k,v]:[string,any])=>({label:catLabels[k]||k,value:Number(v),color:catColors[k]||"var(--text-muted)"}))} /></div>}
-    <div className="panel"><div className="panel-header"><span className="panel-title">发现列表{!loading && !error ? ` (${items.length})` : ""}{!loading && !error && data?.meta?.total != null ? <span className="tiny" style={{ color: "var(--text-dim)", fontWeight: 400 }}>　所选范围（{data.meta.rangeLabel || "近 24 小时"}）· 已扫描 {data.meta.reflectionsScanned ?? "-"} 期反思</span> : null}</span></div>
+    <div className="panel"><div className="panel-header"><span className="panel-title">发现列表{!loading && !error ? ` (${items.length})` : ""}{!loading && !error && data?.meta?.total != null ? <span className={"tiny " + styles.headNote}>　所选范围（{data.meta.rangeLabel || "近 24 小时"}）· 已扫描 {data.meta.reflectionsScanned ?? "-"} 期反思</span> : null}</span></div>
       {/* 2026-10-13 (round 74-C): 补三态。原来只有"（加载中...）"文案, 失败与空结果都没有出口。 */}
       {error ? <ErrorAlert title="发现列表加载失败" message={String((error as Error)?.message || error)} onRetry={() => { mutate(); }} /> : null}
-      {loading && !data && <div style={{padding: "var(--sp-3)"}}><Skeleton active title={false} paragraph={{rows:5}} /></div>}
+      {loading && !data && <div className={styles.pad3}><Skeleton active title={false} paragraph={{rows:5}} /></div>}
       {!loading && !error && items.length === 0 && <Empty description="暂无结构化发现" />}
             {items.length > 0 && <><TableCopyButton />
-        <table className="tbl"><thead><tr><th>编号</th><th>类别</th><th>问题</th><th>原因</th></tr></thead><tbody>
-        {items.map((f,i)=>(
-          // 2026-10-13 round 76-AX: 原来 key={f.id} —— 若个别条目缺 id 会出现多个 undefined 同名 key(React 报重复 key)。
-          <Fragment key={String(f.id ?? i)}><tr {...interactiveProps(expandedId===f.id)} style={{cursor:"pointer"}} onClick={()=>setExpandedId(expandedId===f.id?null:f.id)}>
-            <td className="nowrap mono" style={{fontSize: "var(--fs-sm)"}}>{f.id}</td>
-            <td className="nowrap"><span className="badge badge-blue">{catLabels[f.category]||f.category}</span></td>
-            <td style={{color:expandedId===f.id?"var(--primary)":"inherit",maxWidth:"300px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.what?.slice(0,80)}</td>
-            <td style={{maxWidth:"300px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize: "var(--fs-base)",color:"var(--text-dim)"}}>{f.why?.slice(0,80)??"-"}</td>
-          </tr>
-          {expandedId===f.id && (
-            <tr><td colSpan={4} style={{background:"var(--bg-hover)",padding: "var(--sp-3)"}}>
-              <div style={{marginBottom: "var(--sp-2)"}}><strong>问题：</strong> <span style={{fontSize: "var(--fs-base)"}}>{f.what}</span></div>
-              <div style={{marginBottom: "var(--sp-2)"}}><strong>原因：</strong> <span style={{fontSize: "var(--fs-base)"}}>{f.why||"-"}</span></div>
-              {f.background && <div style={{marginBottom: "var(--sp-2)"}}><strong>背景：</strong> <span style={{fontSize: "var(--fs-base)",whiteSpace:"pre-wrap"}}>{f.background}</span></div>}
-              {f.recommendation && <div><strong>建议：</strong> <span style={{fontSize: "var(--fs-base)"}}>{f.recommendation}</span></div>}
-              {f.severity && <div style={{marginTop: "var(--sp-1)"}}><span className="badge badge-yellow">严重度：{f.severity}</span></div>}
-              {/* 2026-09-10: 通用讨论模块 (finding 实体) */}
-              <div style={{marginTop: "var(--sp-3)"}}><DiscussionPanel entityType="finding" entityId={f.id} title="发现讨论与协作" /></div>
-            </td></tr>
-          )}
-          </Fragment>
-        ))}
-      </tbody></table></>}</div>
+        <DataTable
+          columns={columns}
+          rows={items}
+          rowKey={(r, i) => String(r.id ?? i)}
+        />
+        {expanded && (
+          <div className={styles.detailPanel}>
+            <div className={styles.detailRow}><strong>问题：</strong> <span className={styles.detailBody}>{expanded.what}</span></div>
+            <div className={styles.detailRow}><strong>原因：</strong> <span className={styles.detailBody}>{expanded.why||"-"}</span></div>
+            {expanded.background && <div className={styles.detailRow}><strong>背景：</strong> <span className={styles.detailPre}>{expanded.background}</span></div>}
+            {expanded.recommendation && <div><strong>建议：</strong> <span className={styles.detailBody}>{expanded.recommendation}</span></div>}
+            {expanded.severity && <div className={styles.detailFoot}><span className="badge badge-yellow">严重度：{expanded.severity}</span></div>}
+            {/* 2026-09-10: 通用讨论模块 (finding 实体) */}
+            <div className={styles.detailDiscuss}><DiscussionPanel entityType="finding" entityId={expanded.id} title="发现讨论与协作" /></div>
+          </div>
+        )}
+        </>}</div>
     {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-    <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+    <div className={"tiny " + styles.related}>
       <span>相关视图：</span>
       <Link href="/cognitive/knowledge">知识库 →</Link>
       <Link href="/flywheel/coverage">覆盖率 →</Link>

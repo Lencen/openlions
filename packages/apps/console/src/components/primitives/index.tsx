@@ -17,8 +17,70 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { Fragment, cloneElement, createContext, isValidElement, useContext, useEffect, useRef, useState } from "react";
+import ui from "./index.module.css";
 
 type Style = CSSProperties;
+
+/* ── P2 呈现层（2026-11-05）：本组件内的内联样式清零，统一走下面两条口径 ──────────
+   1) 色彩：调用方传的是 globals 令牌字符串（或 antd 预设色名）-> data-tone + 属性选择器，
+      映射表见 TONES、样式见 index.module.css；未登记的颜色回退主色（与 BarChart.tsx 同口径）。
+   2) 尺寸：动态 width / height / maxHeight / minWidth -> 档位类（.w* / .p* / .h* / .mh* / .mnw*）。
+   注：组件对外仍接受 style prop（antd 同形状 API，调用点透传），那是调用方的样式，不在此清零。 */
+
+/** 令牌 / 预设色名 -> 语气键（与 index.module.css 的 [data-tone] 一一对应） */
+const TONES: Record<string, string> = {
+  "var(--primary)": "primary", "var(--brand)": "brand", "var(--info)": "info",
+  "var(--text-muted)": "muted", "var(--text-dim)": "dim", "var(--text-3)": "text3",
+  "var(--status-ok)": "ok", "var(--status-warn)": "warn", "var(--status-crit)": "crit",
+  "var(--table-memory)": "memory", "var(--table-knowledge)": "knowledge",
+  "var(--table-practice)": "practice", "var(--table-skill)": "skill", "var(--table-reflection)": "reflection",
+};
+/** 颜色（令牌或预设名）-> 语气键；空串 = 未登记，由调用处回退 */
+function toneOf(color?: string): string {
+  if (!color) return "";
+  return TONES[color] || TONES[TAG_PRESET[color] || ""] || "";
+}
+
+/** 宽度 -> 档位类：百分比 1% 一档（.p*），像素 10px 一档、>380px 后 20px 一档（.w*） */
+function widthClass(w?: number | string | null): string {
+  if (w === undefined || w === null || w === "") return "";
+  const s = String(w).trim();
+  const pct = /^([0-9.]+)%$/.exec(s);
+  if (pct) {
+    const n = Number(pct[1]);
+    return Number.isFinite(n) ? ui["p" + Math.min(100, Math.max(0, Math.round(n)))] || "" : "";
+  }
+  const n = Number(s.replace(/px$/, ""));
+  if (!Number.isFinite(n) || n <= 0) return "";
+  const step = n > 380 ? Math.min(1400, Math.round(n / 20) * 20) : Math.max(40, Math.round(n / 10) * 10);
+  return ui["w" + step] || "";
+}
+
+/** 高度 -> 2px 一档的类（Progress 轨道；默认 8px，与改前一致） */
+function heightClass(h?: number | string): string {
+  const n = Number(h);
+  if (!Number.isFinite(n) || n <= 0) return ui.h8 || "";
+  return ui["h" + Math.min(40, Math.max(2, Math.round(n / 2) * 2))] || "";
+}
+
+/** max-height -> 20px 一档的类（Table scroll.y；非像素值不套类，交给浏览器自适应） */
+function maxHeightClass(v?: number | string): string {
+  const n = Number(String(v ?? "").replace(/px$/, ""));
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return ui["mh" + Math.min(1000, Math.max(40, Math.round(n / 20) * 20))] || "";
+}
+
+/** min-width -> 100px 一档的类（Table scroll.x） */
+function minWidthClass(v?: number | string): string {
+  const n = Number(String(v ?? "").replace(/px$/, ""));
+  if (!Number.isFinite(n) || n <= 0) return "";
+  return ui["mnw" + Math.min(1600, Math.max(400, Math.round(n / 100) * 100))] || "";
+}
+
+/** Table 单元格对齐 -> 类名（原来内联 textAlign） */
+function cellAlignClass(align?: "left" | "center" | "right"): string {
+  return align === "right" ? ui.alignRight : align === "center" ? ui.alignCenter : align === "left" ? ui.alignLeft : "";
+}
 
 /* ────────────────────────── Tooltip ────────────────────────── */
 export function Tooltip({ title, children, className }: { title?: ReactNode; children: ReactNode; className?: string }) {
@@ -41,16 +103,19 @@ const TAG_PRESET: Record<string, string> = {
   gold: "var(--status-warn)", orange: "var(--status-warn)", warning: "var(--status-warn)",
   red: "var(--status-crit)", volcano: "var(--status-crit)", error: "var(--status-crit)",
   magenta: "var(--table-reflection)", purple: "var(--table-knowledge)", processing: "var(--primary)",
+  // P2: 实测有 1 处传 yellow（antd 预设里没有 yellow，原来当 CSS 关键字用 = #FF0，深色下不可读）-> 归到警告档
+  yellow: "var(--status-warn)",
 };
 
 export function Tag({
   children, className, style, color, variant, onClick,
 }: { children?: ReactNode; className?: string; style?: Style; color?: string; variant?: "filled" | "outlined"; onClick?: () => void }) {
-  const tagColor = color ? (TAG_PRESET[color] || color) : undefined;
+  const tagTone = toneOf(color);
   return (
     <span
-      className={"ui-tag " + (variant === "outlined" ? "ui-tag-outlined" : "ui-tag-filled") + (className ? " " + className : "")}
-      style={tagColor ? { ...style, borderColor: tagColor, color: tagColor } : style}
+      className={"ui-tag " + (variant === "outlined" ? "ui-tag-outlined" : "ui-tag-filled") + (tagTone ? " " + ui.tagTone : "") + (className ? " " + className : "")}
+      data-tone={tagTone || undefined}
+      style={style}
       onClick={onClick}
     >
       {children}
@@ -130,9 +195,9 @@ export function Skeleton({
   const titleWidth = title && typeof title === "object" ? title.width : "40%";
   return (
     <div className={"ui-skel" + (active ? " ui-skel-active" : "") + (className ? " " + className : "")} style={style}>
-      {title ? <div className="ui-skel-bar" style={{ width: titleWidth }} /> : null}
+      {title ? <div className={"ui-skel-bar " + widthClass(titleWidth)} /> : null}
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="ui-skel-bar" style={{ width: i === rows - 1 ? "60%" : "100%" }} />
+        <div key={i} className={"ui-skel-bar " + (i === rows - 1 ? ui.p60 : ui.p100)} />
       ))}
     </div>
   );
@@ -163,6 +228,10 @@ export function Card({
   styles?: { body?: Style; header?: Style };
 }) {
   const cls = ["ui-card", size === "small" ? "ui-card-sm" : "", bordered === false ? "ui-card-plain" : "", hoverable ? "ui-card-hover" : "", className || ""].filter(Boolean).join(" ");
+  // bodyStyle / styles.body 是调用方透传（antd 同形状 API），按原顺序合并后一次交给 DOM
+  const bodyMerged: Style | undefined = bodyStyle || (styles && styles.body)
+    ? { ...bodyStyle, ...(styles && styles.body ? styles.body : {}) }
+    : undefined;
   return (
     <div className={cls} style={style} onClick={onClick}>
       {title || extra ? (
@@ -171,7 +240,7 @@ export function Card({
           {extra ? <div className="ui-card-extra">{extra}</div> : null}
         </div>
       ) : null}
-      <div className="ui-card-body" style={{ ...bodyStyle, ...(styles && styles.body ? styles.body : {}) }}>{children}</div>
+      <div className="ui-card-body" style={bodyMerged}>{children}</div>
     </div>
   );
 }
@@ -267,7 +336,7 @@ export function Timeline({ items, children, className, style, mode, reverse, pen
     <div className={"ui-tl" + (className ? " " + className : "")} style={style}>
       {list.map((it, i) => (
         <div className="ui-tl-item" key={it.key || String(i)}>
-          <span className="ui-tl-dot" style={it.color ? { background: it.color, borderColor: it.color } : undefined}>{it.dot}</span>
+          <span className={"ui-tl-dot" + (it.color ? " " + ui.tlDot : "")} data-tone={it.color ? (toneOf(it.color) || "primary") : undefined}>{it.dot}</span>
           <div className="ui-tl-body">
             {it.label ? <div className="ui-tl-label">{it.label}</div> : null}
             {it.children ?? it.content}
@@ -289,11 +358,13 @@ export function Progress({ percent = 0, status, strokeColor, railColor, showInfo
   const p = Math.max(0, Math.min(100, Number(percent) || 0));
   const sizeObj = size && typeof size === "object" ? size.height : undefined;
   const h = size === "small" ? 4 : typeof size === "number" ? size : typeof sizeObj === "number" ? sizeObj : 8;
-  const color = strokeColor || (status === "exception" ? "var(--status-crit)" : status === "success" ? "var(--status-ok)" : "var(--primary)");
+  // 颜色改走语气键（原来内联 background）；轨道底色只登记调用方实际在用的两个令牌
+  const tone = toneOf(strokeColor) || (status === "exception" ? "crit" : status === "success" ? "ok" : "primary");
+  const rail = railColor === "var(--bg-surface2)" ? "surface2" : railColor === "var(--bg-surface)" ? "surface" : undefined;
   return (
     <div className={"ui-prog" + (className ? " " + className : "")} style={style}>
-      <div className="ui-prog-track" style={{ height: h, background: railColor || undefined }}>
-        <div className="ui-prog-fill" style={{ width: p + "%", background: color }} />
+      <div className={"ui-prog-track" + (rail ? " " + ui.progTrack : "") + " " + heightClass(h)} data-rail={rail}>
+        <div className={"ui-prog-fill " + ui.progFill + " " + (ui["p" + Math.round(p)] || "")} data-tone={tone} />
       </div>
       {showInfo ? <span className="ui-prog-text">{format ? format(p) : p + "%"}</span> : null}
     </div>
@@ -374,15 +445,16 @@ export function Descriptions({ items, children, column, bordered, size, title, c
   title?: ReactNode; className?: string; style?: Style; layout?: "horizontal" | "vertical";
 }) {
   const cols = column || 3;
-  const grid: Style = { display: "grid", gridTemplateColumns: "repeat(" + cols + ", minmax(0, 1fr))", gap: "var(--sp-2) var(--sp-4)" };
+  // 列数/跨列改走档位（.descGrid[data-cols] / .descCell[data-span]），1~6 列；超出按 6 列
+  const colsKey = String(Math.min(6, Math.max(1, Math.round(cols))));
   return (
     <div className={"ui-desc" + (bordered ? " ui-desc-bordered" : "") + (layout === "vertical" ? " ui-desc-v" : "") + (className ? " " + className : "")} style={style}>
-      {title ? <div className="ui-card-title" style={{ marginBottom: "var(--sp-2)" }}>{title}</div> : null}
-      <div style={grid}>
+      {title ? <div className={"ui-card-title " + ui.descTitle}>{title}</div> : null}
+      <div className={ui.descGrid} data-cols={colsKey}>
         {items
           ? items.map((it, i) => (
               // span: antd 的跨列; 单列布局下无意义, 多列时按 gridColumn 展开
-              <div key={it.key ?? i} style={it.span && it.span > 1 ? { gridColumn: "span " + Math.min(it.span, cols) } : undefined}>
+              <div key={it.key ?? i} className={ui.descCell} data-span={it.span && it.span > 1 ? String(Math.min(it.span, cols, 6)) : undefined}>
                 <DescriptionsItem label={it.label}>{it.children}</DescriptionsItem>
               </div>
             ))
@@ -454,12 +526,14 @@ export function Drawer({ open, onClose, title, width, children, footer, placemen
   const ref = useRef<HTMLElement | null>(null);
   useScrollLock(open);
   useDialogA11y(open, onClose, ref);
+  // 宽度改走档位类（原来内联 width）：左右抽屉与未指定位置用调用方宽度/默认 520，上下抽屉占满
+  const drawerW = placement === "left" || placement === "right" || !placement ? (width || (typeof size === "number" ? size : 520)) : "100%";
   if (!open) return null;
   return (
     <div className="ui-drawer-mask" onClick={() => maskClosable !== false && onClose?.()}>
       <aside ref={ref} tabIndex={-1}
-             className={"ui-drawer ui-drawer-" + (placement || "right") + (className ? " " + className : "")}
-             style={{ width: placement === "left" || placement === "right" || !placement ? (width || (typeof size === "number" ? size : 520)) : "100%", ...(styles && styles.container) }}
+             className={"ui-drawer ui-drawer-" + (placement || "right") + " " + widthClass(drawerW) + (className ? " " + className : "")}
+             style={styles && styles.container ? styles.container : undefined}
              onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true"
              aria-label={typeof title === "string" ? title : undefined}>
         <div className="ui-drawer-head" style={styles && styles.header}>
@@ -600,7 +674,7 @@ export function Modal({ open, title, onCancel, onOk, footer, width, children, ma
   if (!open) return null;
   return (
     <div className={"ui-modal-mask" + (centered ? " ui-modal-centered" : "")} onClick={() => maskClosable !== false && onCancel?.()}>
-      <div ref={ref} tabIndex={-1} className={"ui-modal" + (className ? " " + className : "")} style={{ width: width || 520, ...(styles && styles.container) }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
+      <div ref={ref} tabIndex={-1} className={"ui-modal " + widthClass(width || 520) + (className ? " " + className : "")} style={styles && styles.container ? styles.container : undefined} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={typeof title === "string" ? title : undefined}>
         <div className="ui-drawer-head">
           <div className="ui-card-title">{title}</div>
           {closable === false ? null : <button type="button" className="ui-drawer-x" onClick={onCancel} aria-label="关闭">✕</button>}
@@ -746,14 +820,13 @@ export function Table<T extends object>({
   return (
     <div className={"ui-table-wrap" + (className ? " " + className : "")} style={style}>
       {title ? <div className="ui-table-title">{title()}</div> : null}
-      <div className="ui-table-scroll" style={scroll && scroll.y ? { maxHeight: scroll.y } : undefined}>
-        <table className={"ui-table" + (size === "small" ? " ui-table-sm" : "") + (bordered ? " ui-table-bordered" : "")}
-               style={scroll && scroll.x ? { minWidth: scroll.x } : undefined}>
+      <div className={"ui-table-scroll" + (scroll && scroll.y ? " " + maxHeightClass(scroll.y) : "")}>
+        <table className={"ui-table" + (size === "small" ? " ui-table-sm" : "") + (bordered ? " ui-table-bordered" : "") + (scroll && scroll.x ? " " + minWidthClass(scroll.x) : "")}>
           {showHeader ? (
             <thead>
               <tr>
-                {expandable?.expandedRowRender ? <th style={{ width: 32 }} /> : null}
-                {(columns || []).map((c, i) => <th key={c.key ?? i} style={{ width: c.width, textAlign: c.align }} className={c.className}>{c.title}</th>)}
+                {expandable?.expandedRowRender ? <th className={ui.colExpand} /> : null}
+                {(columns || []).map((c, i) => <th key={c.key ?? i} className={[widthClass(c.width), cellAlignClass(c.align), c.className || ""].filter(Boolean).join(" ")}>{c.title}</th>)}
               </tr>
             </thead>
           ) : null}
@@ -771,7 +844,7 @@ export function Table<T extends object>({
                 <Fragment key={k}>
                   <tr className={[rc, rowProps.className || ""].filter(Boolean).join(" ")} style={rowProps.style} onClick={rowProps.onClick}>
                     {expandable?.expandedRowRender ? (
-                      <td style={{ width: 32 }}>
+                      <td className={ui.colExpand}>
                         {canExpand ? (
                           expandable.expandIcon
                             ? expandable.expandIcon({ expanded: isOpen, onExpand: () => toggleRow(k, r) })
@@ -781,7 +854,7 @@ export function Table<T extends object>({
                       </td>
                     ) : null}
                     {(columns || []).map((c, ci) => (
-                      <td key={c.key ?? ci} style={{ textAlign: c.align }} className={(c.className || "") + (c.ellipsis ? " ui-table-ellipsis" : "")}>
+                      <td key={c.key ?? ci} className={[cellAlignClass(c.align), c.className || "", c.ellipsis ? "ui-table-ellipsis" : ""].filter(Boolean).join(" ")}>
                         {c.render ? c.render(pickCell(r, c.dataIndex), r, ci === 0 ? i : i) : (pickCell(r, c.dataIndex) as ReactNode)}
                       </td>
                     ))}

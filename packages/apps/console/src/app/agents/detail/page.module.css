@@ -5,3 +5,28 @@
 .crumbDim {
   color: var(--text-dim);
 }
+/* ── AgentServiceMatrix（批4/5 呈现层，asm* 前缀）──────────────────────────
+   原来整张表是内联样式：操作结果提示色 / 权限单元格小字与换行 / 保存与授权按钮的紧凑尺寸。
+   按钮仍走 globals 的 .btn，这里只补尺寸与危险色（原内联 fontSize/padding/color）。 */
+.asmOpMsg { font-size: var(--fs-base); margin-bottom: var(--sp-2); }
+.asmOpMsg[data-tone="ok"] { color: var(--status-ok); }
+.asmOpMsg[data-tone="crit"] { color: var(--status-crit); }
+
+/* 权限单元格：原来内联 font-size/color/maxWidth */
+.asmPermCell { font-size: var(--fs-sm); color: var(--text-dim); max-width: 300px; }
+
+/* 已授权权限的勾选组（原来内联 flex + wrap + gap） */
+.asmPerms { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.asmPermLabel { display: inline-flex; align-items: center; gap: var(--sp-0-5); cursor: pointer; }
+
+/* 保存权限行（原来内联 marginTop） */
+.asmSaveRow { margin-top: var(--sp-1); }
+.asmUnsaved { margin-left: var(--sp-1-5); color: var(--status-warn, #d48806); }
+
+/* 紧凑按钮（原来内联 fontSize: fs-sm + padding） */
+.asmBtnSm { font-size: var(--fs-sm); padding: var(--sp-0-5) var(--sp-2); }
+/* 「取消授权」的危险色（原来内联 color） */
+.asmBtnDanger { color: var(--status-crit); }
+
+/* 表下口径说明（原来内联 fontSize/color/marginTop） */
+.asmLegend { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1-5); }

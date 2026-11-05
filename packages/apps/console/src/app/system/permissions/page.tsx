@@ -1,9 +1,17 @@
 "use client";
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联 style 清零 + 手写 .tbl 表换成白名单 DataTable。
+//   取数（/api/agent-permissions、/api/agent-services、20s 轮询）、字段、路由与文案未动；
+//   业务授权矩阵的列仍按原表头：智能体 / 各业务服务（动态列）/ 操作。
 import { useEffect, useState } from "react";
 import KPICard from "@/components/KPICard";
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
+
+interface PermRow { agent_id: string; display_name?: string; status?: string; permissions?: { service_name: string; status: string }[] }
 
 export default function PermissionsPage() {
   const [agents, setAgents] = useState<any[]>([]);
@@ -29,12 +37,42 @@ export default function PermissionsPage() {
   const svcNames = services.length > 0 ? services.map((s: any) => s.name) : ["lions_mind","lions_memory","lions_knowledge","lions_session","lions_flywheel","mcp_agent_chat"];
   const authOf = (a: any, svc: string) => { const p = (a.permissions || []).find((x: any) => x.service_name === svc); return p ? p.status : "NONE"; };
   const totalAuth = agents.reduce((s: number, a: any) => s + (a.permissions || []).filter((p: any) => p.status === "ACTIVE").length, 0);
-  const badge = (st: string) => st === "ACTIVE" ? (<span className="badge badge-green">✓</span>) : st === "REVOKED" ? (<span className="badge badge-red">✕</span>) : (<span style={{color:"var(--text-muted)"}}>—</span>);
+  // 三个状态的呈现：✓ / ✕ / —（原来是内联 color 的 span，改成类；中心对齐用块级 span 承担）
+  const badge = (st: string) => st === "ACTIVE" ? (<span className="badge badge-green">✓</span>) : st === "REVOKED" ? (<span className="badge badge-red">✕</span>) : (<span className={styles.dash}>—</span>);
+
+  // 列定义：与原 <thead> 逐列对应（智能体 / 动态服务列 / 操作）
+  const columns: DataColumn<PermRow>[] = [
+    {
+      key: "agent",
+      title: t('permissions.col.agent'),
+      render: (a: any) => (
+        <span className="nowrap">
+          <b className={styles.agentId}>{a.agent_id}</b>
+          <div className={styles.agentSub}>{a.display_name || ""} · {a.status}</div>
+        </span>
+      ),
+    },
+    ...svcNames.map((s: string) => ({
+      key: "svc-" + s,
+      title: s.replace("lions_","").replace("_"," "),
+      render: (a: any) => <span className={styles.center}>{badge(authOf(a, s))}</span>,
+    })),
+    {
+      key: "op",
+      title: "操作",
+      width: 100,
+      render: (a: any) => (
+        <span className={"nowrap " + styles.opCell}>
+          <a href={"/agents/detail?agentId=" + a.agent_id} className={styles.link}>管理 →</a>
+        </span>
+      ),
+    },
+  ];
 
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">权限管理</span></div>
+    <div className="breadcrumb"><span className={styles.bcDim}>业务与系统</span><span className="sep">/</span><span className="current">权限管理</span></div>
     <PageHeader><PageTitle>{t('permissions.title')}</PageTitle><div className="page-subtitle">{t('permissions.subtitle')}</div></PageHeader>
-    {error && <div style={{ color: "var(--status-crit)", marginBottom: "var(--sp-3)" }}>⚠ {error}</div>}
+    {error && <div className={styles.errorRow}>⚠ {error}</div>}
     <div className="kpi-grid">
       <KPICard label={t('permissions.kpi.agents')} value={String(agents.length)} />
       <KPICard label="业务服务" value={String(svcNames.length)} />
@@ -42,17 +80,17 @@ export default function PermissionsPage() {
       <KPICard label="授权点" value={String(agents.length * svcNames.length)} />
     </div>
     <div className="panel"><div className="panel-header"><span className="panel-title">业务授权矩阵 {loading && "(加载中...)"}</span></div>
-      <div style={{overflowX:"auto"}}><TableCopyButton />
-      <table className="tbl"><thead><tr><th>{t('permissions.col.agent')}</th>{svcNames.map((s: string) => (<th key={s} style={{fontSize: "var(--fs-xs)"}}>{s.replace("lions_","").replace("_"," ")}</th>))}<th style={{width:100}}>操作</th></tr></thead><tbody>
-        {agents.map((a: any) => (<tr key={a.agent_id}>
-          <td className="nowrap"><b style={{fontSize: "var(--fs-base)"}}>{a.agent_id}</b><div style={{fontSize: "var(--fs-xs)",color:"var(--text-dim)"}}>{a.display_name || ""} · {a.status}</div></td>
-          {svcNames.map((s: string) => (<td key={s} style={{textAlign:"center"}}>{badge(authOf(a, s))}</td>))}
-          <td className="nowrap" style={{fontSize: "var(--fs-sm)"}}><a href={"/agents/detail?agentId=" + a.agent_id} style={{color:"var(--primary)"}}>管理 →</a></td>
-        </tr>))}
-        {agents.length === 0 && !loading && <tr><td colSpan={svcNames.length + 2} style={{padding: "var(--sp-5)",color:"var(--text-muted)",textAlign:"center"}}>{t('permissions.empty')}</td></tr>}
-      </tbody></table></div>
-      <div style={{fontSize: "var(--fs-sm)",color:"var(--text-dim)",marginTop: "var(--sp-2)"}}>{t('permissions.legend')}</div>
+      <div className={styles.tableScroll}><TableCopyButton />
+        <DataTable
+          columns={columns}
+          rows={agents}
+          rowKey={(a) => a.agent_id}
+          loading={loading}
+          empty={{ title: t('permissions.empty') }}
+        />
+      </div>
+      <div className={styles.legend}>{t('permissions.legend')}</div>
     </div>
-    <div className="panel"><div className="panel-header"><span className="panel-title">角色 / 多租户（架构预留）</span></div><div style={{fontSize: "var(--fs-sm)",color:"var(--text-muted)"}}>{t('permissions.rbac')}</div></div>
+    <div className="panel"><div className="panel-header"><span className="panel-title">角色 / 多租户（架构预留）</span></div><div className={styles.rbac}>{t('permissions.rbac')}</div></div>
   </main></div>);
 }

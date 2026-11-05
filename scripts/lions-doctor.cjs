@@ -122,11 +122,16 @@ function systemdActive(unit) {
 function selectApps(declaredApps, present) {
   const declared = Array.isArray(declaredApps) ? declaredApps.filter((a) => START_ORDER.indexOf(a) >= 0) : null;
   if (!declared) return { check: START_ORDER.slice(), skip: [] }; // 旧记录没有 apps 字段：保持原行为
+  // 2026-11-05 回归：0.4.27 的 open 产物里带 portal 目录（同一 sales 制品），但 install record
+  //   只声明 4 个 app、也没有 portal unit。旧逻辑"未声明但产物存在 -> 也检查"会把这种
+  //   "带了但没装"判成 svc-portal fail（三环境 1 异常）。install record 是唯一准：
+  //   未声明 = 不检查（声明了但目录缺失仍会检查并 fail）。
+  //   present 参数保留给调用方/断言兼容，不再参与决策。
+  void present;
   const check = [];
   const skip = [];
   for (const app of START_ORDER) {
     if (declared.indexOf(app) >= 0) check.push(app);
-    else if (present(app)) check.push(app);
     else skip.push(app);
   }
   return { check, skip };
@@ -157,7 +162,7 @@ async function diagnose(args) {
   for (const app of sel.check) {
     if (APPS[app].hasDatabase) { const q = (rec && rec.dbMode === "pg") ? await pgCheck(releaseDir, home, app, rec) : quickCheck(releaseDir, home, app); add("db-" + app, "数据库 " + app, q.level, q.detail, q.ok ? "" : (q.advice || "从 backups/ 恢复或跑 lions doctor --bundle 求助")); }
   }
-  for (const app of sel.skip) add("svc-" + app, "服务 " + app, "skip", "未安装（本版产物无 " + APPS[app].dir + "），跳过", "");
+  for (const app of sel.skip) add("svc-" + app, "服务 " + app, "skip", "未安装（install record 未声明 " + APPS[app].dir + "），跳过", "");
 
   const unitInfo = [];
   for (const app of sel.check) {
@@ -246,6 +251,8 @@ function runSelftest() {
   const noPortal = (app) => app !== "portal";
   const selOpen = selectApps(["mind", "selfimproving", "session", "console"], noPortal);
   assert("open 版跳过 portal", selOpen.check.indexOf("portal") < 0 && selOpen.skip.join(",") === "portal", JSON.stringify(selOpen));
+  const selBundled = selectApps(["mind"], () => true); // 产物里有 portal，但 record 未声明
+  assert("未声明但产物存在 -> 仍跳过（install record 唯一准）", selBundled.check.join(",") === "mind" && selBundled.skip.indexOf("portal") >= 0, JSON.stringify(selBundled));
   const selSales = selectApps(["mind", "selfimproving", "session", "console", "portal"], noPortal);
   assert("sales 版检查 portal", selSales.check.indexOf("portal") >= 0 && selSales.skip.length === 0, JSON.stringify(selSales));
   const selLegacy = selectApps(null, () => true);

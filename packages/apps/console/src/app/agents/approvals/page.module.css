@@ -9,3 +9,49 @@
   color: var(--status-crit);
   margin-bottom: var(--sp-3);
 }
+/* ── PendingApprovalsTable（批4/5 呈现层，pat* 前缀）────────────────────────
+   原来整张表是内联样式：显示名小字 / 终端 code / 档案省略 / 授权勾选区（maxHeight 64 滚动）/
+   审批通过（成功色实心）与拒绝（危险色字）。按钮仍走 globals 的 .btn，这里只补配色。 */
+.patSub { font-size: var(--fs-xs); color: var(--text-dim); }
+.patSm { font-size: var(--fs-sm); }
+.patMuted { color: var(--text-muted); }
+
+/* 档案列：限宽省略（原来是内联 maxWidth/overflow/textOverflow/whiteSpace） */
+.patProfile {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* 授权业务 + 操作单元格 */
+.patAuthCell { max-width: 320px; }
+.patAuthBlock { margin-bottom: var(--sp-2); font-size: var(--fs-sm); }
+.patAuthHint { color: var(--text-dim); margin-bottom: var(--sp-1); }
+.patSvcList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-2-5);
+  max-height: 64px;
+  overflow-y: auto;
+}
+.patSvcItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-0-5);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 审批/拒绝按钮行 */
+.patActRow { display: flex; gap: var(--sp-1-5); flex-wrap: wrap; }
+.patApprove { background: var(--status-ok); color: var(--on-accent); border-color: transparent; }
+.patReject { color: var(--status-crit); }
+
+/* 空态（原来是内联 padding sp-7 + 居中 + 提示行） */
+.patEmpty { padding: var(--sp-7); text-align: center; color: var(--text-muted); }
+.patEmptyHint { margin-top: var(--sp-2); font-size: var(--fs-base); }

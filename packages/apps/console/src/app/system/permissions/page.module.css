@@ -1,0 +1,26 @@
+/* /system/permissions 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   授权矩阵由裸 .tbl 换成白名单 DataTable：动态服务列的「居中」不能靠列属性，
+   改用块级 span（.center）承担；表头小字也由外层 DataTable 的 th 承担 + .svcHead。 */
+
+.bcDim { color: var(--text-dim); }
+.errorRow { color: var(--status-crit); margin-bottom: var(--sp-3); }
+
+/* 表格横向滚动容器（原来是内联 overflowX） */
+.tableScroll { overflow-x: auto; }
+
+/* 智能体列：编号加粗 + 一行小字（名称 · 状态） */
+.agentId { font-size: var(--fs-base); }
+.agentSub { font-size: var(--fs-xs); color: var(--text-dim); }
+
+/* 动态服务列：单元格居中（DataTable 只有左右对齐，居中用块级 span；表头小字由 .dt th 自带） */
+.center { display: block; text-align: center; }
+
+/* 无授权（NONE）的破折号 */
+.dash { color: var(--text-muted); }
+
+/* 操作列 */
+.opCell { font-size: var(--fs-sm); }
+.link { color: var(--primary); }
+
+.legend { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-2); }
+.rbac { font-size: var(--fs-sm); color: var(--text-muted); }

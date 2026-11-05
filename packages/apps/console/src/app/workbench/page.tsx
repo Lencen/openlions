@@ -12,6 +12,9 @@
 //
 // antd 绞杀 (Phase2 验收 ① antd-zero): 本文件所有控件均来自 @/components/primitives 或 @/components/ui 自研层,
 //   无 antd 直接引用 (grep from ['"]antd["'] 本文件 = 0 行)。
+//
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 workbench/page.module.css 的类承载）。
+//   灰度开关、/api/overview 取数、全部文案与组件属性一字未改。
 import Link from "next/link";
 import { useMemo } from "react";
 import { Alert } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
@@ -20,6 +23,7 @@ import { useGlobalFilter } from "@/components/GlobalFilter";
 import { ErrorBlock, MetricCard, PageHero, PanelCard, Pill, StateBlock } from "@/components/ui";
 import { fmtCompact, fmtNum } from "@/lib/format";
 import { uiV2Enabled } from "@/lib/ui-flag";
+import styles from "./page.module.css";
 
 /** 灰度 OFF 时显示的施工中占位 (含一行简短说明 + 跳既有 / 总览) */
 function WorkbenchPlaceholder() {
@@ -34,10 +38,10 @@ function WorkbenchPlaceholder() {
            改写原则: ① 说清"现在是什么状态"（诚实）；② 给一个**用户能做的下一步**（规范 §2）；
                      ③ 内部启用方式移到本文件注释里（见文件顶部），知识不丢、但不再给用户看。 */}
         <div className="state-block">
-          <div style={{ fontSize: "var(--fs-md)", color: "var(--text)", marginBottom: "var(--sp-2)" }}>
+          <div className={styles.placeholderLead}>
             这个新工作台还在小范围试用中，你当前看到的版本尚未开启它。
           </div>
-          <div className="tiny" style={{ marginBottom: "var(--sp-3)" }}>
+          <div className={"tiny " + styles.placeholderHint}>
             先继续用现有视图即可，功能没有减少：请去 <Link href="/" className="link">总览首页</Link>。
           </div>
           <Pill tone="mute">当前未启用 · 现有功能不受影响</Pill>
@@ -75,7 +79,9 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
       />
 
       {data?.warnings?.length ? (
-        <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-4)" }} title="部分指标降级" description={data.warnings.join("；")} />
+        <div className={styles.alertRow}>
+          <Alert type="warning" showIcon title="部分指标降级" description={data.warnings.join("；")} />
+        </div>
       ) : null}
 
       {/* 4 指标 (与 demo 一致) */}
@@ -120,7 +126,7 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
           {loadingCards ? (
             <StateBlock loading rows={3} />
           ) : (
-            <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap" }}>
+            <div className={"tiny " + styles.metricRowInline}>
               <span>今日会话 {fmtNum(s?.newSessions)}</span>
               <span>消息 {fmtNum(s?.inflowMessages)}</span>
               <span>已提炼 {fmtNum(s?.extractedSessions)}</span>
@@ -133,14 +139,14 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
           {loadingCards ? (
             <StateBlock loading rows={4} />
           ) : (
-            <ul className="tiny" style={{ paddingLeft: "var(--sp-4)", margin: 0 }}>
+            <ul className={"tiny " + styles.activityList}>
               {(data?.recent ?? []).slice(0, 6).map((e: any, i: number) => (
-                <li key={i} style={{ marginBottom: "var(--sp-1)" }}>
-                  <span style={{ color: "var(--text-3)" }}>{e.time || ""}</span>{" "}
+                <li key={i} className={styles.activityItem}>
+                  <span className={styles.dim3}>{e.time || ""}</span>{" "}
                   <span>{e.title || e.kind || "事件"}</span>
                 </li>
               ))}
-              {!(data?.recent ?? []).length ? <li style={{ color: "var(--text-3)" }}>暂无最近事件</li> : null}
+              {!(data?.recent ?? []).length ? <li className={styles.dim3}>暂无最近事件</li> : null}
             </ul>
           )}
         </PanelCard>
@@ -154,11 +160,11 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
         {loadingCards ? (
           <StateBlock loading rows={2} />
         ) : topAgents.length ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "var(--sp-3)" }}>
+          <div className={styles.agentGrid}>
             {topAgents.map((a) => (
-              <div key={a.id} style={{ padding: "var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
-                <div className="tiny" style={{ color: "var(--text-3)" }}>{a.id}</div>
-                <div style={{ fontSize: "var(--fs-2xl)", fontWeight: 600, marginTop: "var(--sp-1)" }}>{fmtNum(a.n)}</div>
+              <div key={a.id} className={styles.agentCell}>
+                <div className={"tiny " + styles.dim3}>{a.id}</div>
+                <div className={styles.agentNum}>{fmtNum(a.n)}</div>
               </div>
             ))}
           </div>

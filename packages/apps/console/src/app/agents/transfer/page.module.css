@@ -1,0 +1,171 @@
+/* /agents/transfer · 数据卡 8 呈现层（2026-11-05）
+   只放本页布局类；颜色/字号/间距一律走 globals.css 的令牌（--sp-* / --fs-* / --border / --bg-surface …）。
+   规则来源：docs/design/uiux-bento-2026-11/TEMPLATES.md + data-cards/card-8-agents-transfer.md。
+   约定：页面里不再写内联 style；动态色（dry-run vs 执行）走 data-tone。 */
+
+.crumbDim { color: var(--text-dim); }
+
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+
+.search {
+  height: 28px;
+  width: 280px;
+  max-width: 100%;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+
+.search::placeholder { color: var(--text-muted); }
+
+.search:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+
+.count {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  margin-top: var(--sp-2);
+}
+
+.toolbar .count { margin-top: 0; }
+
+.agentLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.agentLink:hover .agentName { color: var(--primary); }
+
+.agentName {
+  font-weight: 600;
+  font-size: var(--fs-base);
+}
+
+.agentId {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+.na {
+  color: var(--text-muted);
+  border-bottom: 1px dotted var(--border);
+  cursor: help;
+}
+
+.countLink {
+  color: var(--primary);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.countLink:hover { text-decoration: underline; }
+
+.formRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+
+.input {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  min-width: 180px;
+}
+
+.arrow {
+  align-self: center;
+  color: var(--text-dim);
+}
+
+.checkRow {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+}
+
+.submit {
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--radius-sm);
+  border: none;
+  color: var(--on-primary);
+  cursor: pointer;
+}
+
+.submit[data-tone="preview"] { background: var(--primary); }
+.submit[data-tone="exec"] { background: var(--status-crit); }
+
+.submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.formError {
+  color: var(--status-crit);
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-2);
+}
+
+.result {
+  font-size: var(--fs-md);
+}
+
+.resultHead {
+  color: var(--text-dim);
+  margin-bottom: var(--sp-1-5);
+}
+
+.resultStrong { color: var(--text); }
+.resultStrong[data-tone="ok"] { color: var(--status-ok); }
+.resultStrong[data-tone="preview"] { color: var(--primary); }
+
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-5);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.related {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}

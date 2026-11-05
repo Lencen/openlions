@@ -1,0 +1,46 @@
+/* components/common/QueueBoundary · P2 呈现层（2026-11-05）：内联 style 清零
+   原来高亮色由 cardStyle()/nameStyle() 按 current 计算 -> 改为 data-current + 属性选择器；
+   其余声明值逐项照搬（flex-basis / min-width / 圆角 / 间距）。 */
+
+.wrap { margin-bottom: var(--sp-3); }
+
+.summary { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; cursor: pointer; }
+.lead { font-size: var(--fs-sm); color: var(--text-muted); }
+.toggle { margin-left: auto; font-size: var(--fs-sm); color: var(--primary); white-space: nowrap; }
+
+.body { padding: var(--sp-2-5) var(--sp-3-5); }
+.cards { display: flex; gap: var(--sp-3); flex-wrap: wrap; align-items: stretch; }
+
+/* 对照卡：默认中性边框；当前队列那条由 .wrap[data-current] 高亮 */
+.card {
+  flex: 1 1 300px;
+  min-width: 280px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: var(--sp-3) var(--sp-3-5);
+}
+.wrap[data-current="task"] .card[data-q="task"],
+.wrap[data-current="todo"] .card[data-q="todo"] {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.cardHead { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-1-5); }
+.cardName { font-weight: 700; font-size: var(--fs-lg); color: inherit; }
+.wrap[data-current="task"] .card[data-q="task"] .cardName,
+.wrap[data-current="todo"] .card[data-q="todo"] .cardName { color: var(--primary); }
+
+.badge {
+  font-size: var(--fs-sm);
+  padding: var(--sp-0-5) var(--sp-2);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.lines { font-size: var(--fs-base); line-height: 1.9; }
+.metric { color: var(--text-muted); }
+
+.flow { margin-top: var(--sp-2-5); font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.9; }
+.flowTip { margin-top: var(--sp-1); }

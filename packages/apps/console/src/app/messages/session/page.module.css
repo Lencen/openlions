@@ -1,0 +1,25 @@
+/* /messages/session · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；三张手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   「两态」小药丸的动态色改为 data-tone 属性选择器（原内联 TONE 表的 var(--status-*)）。
+   列表限高（原内联 maxHeight 180 / 200）走 .stream180 / .stream200 两档。 */
+
+/* 面板内边距（原内联 padding: var(--sp-3) + marginBottom: var(--sp-4)） */
+.panelPad { padding: var(--sp-3); margin-bottom: var(--sp-4); }
+
+/* 列标题下间距（原内联 marginBottom: var(--sp-2)） */
+.colTitle { margin-bottom: var(--sp-2); }
+
+/* 消息流限高两档（可滚动区域仍保留 tabIndex=0，axe: scrollable-region-focusable） */
+.stream180 { max-height: 180px; }
+.stream200 { max-height: 200px; }
+
+/* 指标卡数值的告警色（原内联三元：待处理 > 0 → crit） */
+.metricValue[data-tone="crit"] { color: var(--status-crit); }
+
+/* 「两态」药丸的动态色（原内联 TONE 表：ok / warn / crit） */
+.pillTone[data-tone="ok"] { color: var(--status-ok); }
+.pillTone[data-tone="warn"] { color: var(--status-warn); }
+.pillTone[data-tone="crit"] { color: var(--status-crit); }
+
+/* 表格里的编号/时间等宽（globals 的 .mono 只给字体，这里补断行策略） */
+.monoCell { font-family: var(--font-mono); word-break: break-all; }

@@ -19,6 +19,20 @@
   flex-wrap: wrap;
 }
 
+/* 指标带四张卡整卡可点（卡片 1 §10：红项卡 -> /system/health；待办卡 -> /todo）。
+   注意 grid 子项是 <a>，要让里面的 .kpi-card 撑满，否则卡高不齐。 */
+.kpiLink {
+  display: block;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.kpiLink :global(.kpi-card) { height: 100%; }
+.kpiLink:hover :global(.kpi-card) { border-color: var(--border-hi); }
+
+.bandNote { margin-top: var(--sp-2); }
+
 .bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));

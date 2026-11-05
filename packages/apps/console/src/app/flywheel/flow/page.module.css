@@ -31,3 +31,24 @@
   flex-wrap: wrap;
   margin-top: var(--sp-4);
 }
+/* —— 批4（FlowSourcesSessions）追加；按本文件约定带 flow 前缀 —— */
+
+/* 无表头的两列键值表（改前是手写 .tbl 表、只有 tbody 没有 thead）。
+   白名单 DataTable 一定会渲染 thead，这里把空的表头行藏掉，保持改前「没有表头」的观感。 */
+.flowSrcHeadless thead { display: none; }
+
+/* 来源名（<code>）与数值列字号，值来自原内联 fontSize */
+.flowSrcCode { font-size: var(--fs-base); }
+
+/* 动态色：已提炼=ok / 失败>3=crit 否则弱化（原内联三元表达式） */
+.flowSrcTone[data-tone="ok"] { color: var(--status-ok); }
+.flowSrcTone[data-tone="crit"] { color: var(--status-crit); }
+.flowSrcTone[data-tone="mute"] { color: var(--text-dim); }
+
+/* 「最近已提炼」尾注块（原内联 marginTop/fontSize/color） */
+.flowSrcRecent {
+  margin-top: var(--sp-2-5);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.flowSrcRecentAgent { color: var(--text); }

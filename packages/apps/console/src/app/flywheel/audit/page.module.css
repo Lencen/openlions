@@ -1,0 +1,63 @@
+/* /flywheel/audit · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；两张手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   阶段徽标的底色原来是 STAGE_COLORS 内联映射，改成 [data-stage] 属性选择器
+   （表里没列到的阶段自动落到 .stageBadge 的默认底 --text-3，与改前的 `|| "var(--text-3)"` 同效）。
+   取数（/api/flywheel-audit?limit=50&stage=…）与 15s 轮询/AbortController 一字未改。 */
+
+.crumbDim { color: var(--text-dim); }
+.panelMb3 { margin-bottom: var(--sp-3); }
+
+/* 取数失败提示（原内联 color: crit + marginBottom） */
+.errLine { color: var(--status-crit); margin-bottom: var(--sp-2); }
+
+/* 今日各阶段分布（原内联 flex + gap + wrap；每项字号 fs-md） */
+.stageRow { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.stageItem { font-size: var(--fs-md); }
+.dimText { color: var(--text-dim); }
+
+/* 阶段徽标：默认底 = 未列到的阶段（改前 `|| var(--text-3)`），逐阶段覆盖 */
+.stageBadge {
+  background: var(--text-3);
+  color: var(--on-accent);
+}
+.stageBadge[data-stage="MEMORIZE"] { background: var(--table-memory); }
+.stageBadge[data-stage="KNOWLEDGE"] { background: var(--brand); }
+.stageBadge[data-stage="REFLECT"] { background: var(--status-crit); }
+.stageBadge[data-stage="PRACTICE"] { background: var(--warn); }
+.stageBadge[data-stage="EVALUATE"] { background: var(--info); }
+.stageBadge[data-stage="LEARN"] { background: var(--info); }
+.stageBadge[data-stage="CALL_LLM"] { background: var(--text-3); }
+.stageBadge[data-stage="OUTCOME"] { background: var(--status-ok); }
+.stageBadge[data-stage="REFLECTION_TO_TASK"] { background: var(--warn); }
+/* 表格里的阶段徽标字号小一档（原内联 fontSize: var(--fs-sm)） */
+.stageBadgeSm { font-size: var(--fs-sm); }
+
+/* 阶段筛选按钮（原内联一长串：padding/圆角/描边 + 选中主色底/反白字/加粗） */
+.filterRow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+.filterBtn {
+  padding: var(--sp-1) var(--sp-2-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-weight: 400;
+  cursor: pointer;
+  font-size: var(--fs-base);
+}
+.filterBtn[data-active="true"] {
+  background: var(--primary);
+  color: var(--on-primary);
+  font-weight: 600;
+}
+/* 「错误记录」开关：描边/底色用 crit 族 */
+.filterBtnCrit { border-color: var(--status-crit); color: var(--status-crit); }
+.filterBtnCrit[data-active="true"] { background: var(--status-crit); color: var(--on-accent); }
+.pushRight { margin-left: auto; }
+
+/* 单元格字号档位 */
+.cellSm { font-size: var(--fs-sm); }
+.cellBase { font-size: var(--fs-base); }
+.cellDim { font-size: var(--fs-base); color: var(--text-dim); }
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

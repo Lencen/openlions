@@ -12,3 +12,90 @@
   flex-wrap: wrap;
   margin-top: var(--sp-4);
 }
+
+/* ── StepConfirm（批4/5 呈现层，sc* 前缀避免与其它 _components 的类撞名）──────
+   原来全部是内联 style；这里声明值逐项照搬（含 loading 时的 0.6 透明度 -> [disabled]）。 */
+.scSection { max-width: 500px; }
+.scTitle { font-size: var(--fs-xl); margin-bottom: var(--sp-4); }
+.scCard {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  margin-bottom: var(--sp-4);
+}
+.scGrid { display: grid; grid-template-columns: 100px 1fr; gap: var(--sp-2) var(--sp-4); font-size: var(--fs-md); }
+.scK { color: var(--text-muted); }
+.scVStrong { font-weight: 600; }
+.scError {
+  padding: var(--sp-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--status-crit) 10%, transparent);
+  color: var(--status-crit);
+  font-size: var(--fs-md);
+  margin-bottom: var(--sp-3);
+}
+.scActions { display: flex; gap: var(--sp-2); }
+.scBtn {
+  padding: var(--sp-2-5) var(--sp-5);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.scBtnPrimary {
+  padding: var(--sp-2-5) var(--sp-6);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+}
+/* 原来内联 opacity: loading ? 0.6 : 1 */
+.scBtnPrimary[disabled] { opacity: 0.6; }
+/* ── StepSelectServices（批4/5 呈现层，ss* 前缀）────────────────────────────
+   选中态原来是内联三元（2px 主色边 + --bg-hover 底）-> data-checked + 属性选择器。 */
+.ssTitle { font-size: var(--fs-xl); margin-bottom: var(--sp-4); }
+.ssCount { font-size: var(--fs-base); color: var(--text-muted); margin-left: var(--sp-2); }
+.ssGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.ssCard {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+.ssCard[data-checked="true"] { border: 2px solid var(--primary); background: var(--bg-hover); }
+.ssCardHead { display: flex; justify-content: space-between; align-items: center; }
+.ssName { font-weight: 600; font-size: var(--fs-lg); }
+.ssMark { font-size: var(--fs-xl); }
+.ssDesc { font-size: var(--fs-base); color: var(--text-muted); margin-top: var(--sp-1); }
+.ssPerms { display: flex; gap: var(--sp-1); margin-top: var(--sp-2); flex-wrap: wrap; }
+.ssPerm {
+  font-size: var(--fs-xs);
+  padding: var(--sp-0-5) var(--sp-1-5);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--text-muted);
+}
+.ssEmpty { padding: var(--sp-4); color: var(--text-muted); }
+.ssActions { display: flex; gap: var(--sp-2); }
+/* 原来内联 opacity: selected.size === 0 ? 0.4 : 1（与 StepConfirm 的按钮同形，仅禁用态透明度不同） */
+.ssBtnNext {
+  padding: var(--sp-2-5) var(--sp-6);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+}
+.ssBtnNext[disabled] { opacity: 0.4; }

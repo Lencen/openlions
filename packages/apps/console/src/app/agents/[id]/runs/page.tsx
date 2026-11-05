@@ -4,6 +4,9 @@
 //   行 = 近 30 天 (2026-09-18 注: 实测 pending24h=0, 最近会话在 8 月, 7 天窗口无数据;
 //   故窗口扩到 30 天保证密度图能呈现, 否则只有空态文字), 列 = 会话状态, 单元格 = 当天该状态归档数。
 //   语义色 = --brand 单色 ramp, 三主题跟随 (规范 §7)。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 五张手写 .tbl 表 → 白名单 DataTable。
+//   四张「标签 → 值」表用 .kvTable 藏掉 DataTable 的空表头行；取数与字段一字未改。
+import type { ReactNode } from "react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
 import AgentShell from "../_components/AgentShell";
@@ -13,6 +16,9 @@ import DensityHeatmap, { type DensityHeatmapCell } from "@/components/DensityHea
 import { fmtAgo, fmtTime, loadAgent, loadLive, loadSessions } from "../_data";
 import { Alert } from "@/components/primitives";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +36,13 @@ function badgeClass(status?: string | null): string {
   if (status === "PENDING" || status === "IN_PROGRESS") return "badge badge-yellow";
   return "badge badge-blue";
 }
+
+/** 「标签 → 值」两列（改前是 手写表格<tbody> 里逐行 <th>/<td>） */
+type KvRow = { label: string; value: ReactNode };
+const KV_COLUMNS: DataColumn<KvRow>[] = [
+  { key: "label", title: "", render: (r) => r.label },
+  { key: "value", title: "", render: (r) => r.value },
+];
 
 export default async function AgentRunsPage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params.id || "");
@@ -49,9 +62,54 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
   const scopes = live?.doneByScope ?? {};
   const scopeKeys = Object.keys(scopes);
 
+  const liveRows: KvRow[] = [
+    { label: "状态", value: live?.stateLabel || "-" },
+    { label: "卡住原因", value: live?.stuckReason || "无" },
+    { label: "近 24 小时消息", value: <span className={styles.numCell}>{(live?.macsMessages24h ?? 0).toLocaleString()}</span> },
+    { label: "最近露面", value: <>{fmtTime(live?.lastSeenAt)}（{fmtAgo(live?.lastSeenAt)}）</> },
+    { label: "最近执行时间", value: <span className={styles.monoSm}>{fmtTime(exec.lastAt)}</span> },
+  ];
+  const scopeRows: KvRow[] = scopeKeys.map((k) => ({
+    label: SCOPE_LABELS[k] || k,
+    value: <span className={styles.numCell}>{(scopes[k] ?? 0).toLocaleString()}</span>,
+  }));
+  const lastExecRows: KvRow[] = [
+    { label: "任务", value: lastExec?.taskTitle || lastExec?.id || "-" },
+    { label: "状态", value: <span className={badgeClass(lastExec?.status)}>{lastExec?.status || "-"}</span> },
+    { label: "质量通过", value: lastExec?.qualityPassed ? "是" : "否" },
+    { label: "完成时间", value: <span className={styles.monoSm}>{fmtTime(lastExec?.completedAt)}</span> },
+  ];
+  const lastOutRows: KvRow[] = [
+    { label: "产出时间", value: <span className={styles.monoSm}>{fmtTime(lastOut?.at)}</span> },
+    { label: "产出质量", value: lastOut?.quality != null ? `${Math.round(Number(lastOut.quality) * 100)}%` : "-" },
+    { label: "累计产出", value: (lastOut as any)?.n != null ? String((lastOut as any).n) : "-" },
+  ];
+  const sessionColumns: DataColumn<any>[] = [
+    {
+      key: "title",
+      title: "标题",
+      render: (s) => (
+        <Link className={styles.sessionLink} href={`/sessions/detail?id=${encodeURIComponent(s.session_uid)}`}>{s.title || s.session_uid}</Link>
+      ),
+    },
+    { key: "source", title: "来源", width: 130, render: (s) => <span className={styles.monoSm}>{s.source || "-"}</span> },
+    { key: "message_count", title: "消息", width: 60, align: "right", render: (s) => <>{s.message_count ?? 0}</> },
+    { key: "status", title: "状态", width: 100, render: (s) => <span className={badgeClass(s.status)}>{s.status || "-"}</span> },
+    {
+      key: "updated_at",
+      title: "更新时间",
+      width: 120,
+      render: (s) => <span className={styles.monoSm}>{fmtTime(s.updated_at || s.uploaded_at)}</span>,
+    },
+  ];
+
   return (
     <AgentShell id={id} active="runs" agent={agent} live={live}>
-      {degraded.length ? <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-4)" }} title="部分数据源降级" description={degraded.join("；")} /> : null}
+      {degraded.length ? (
+        <div className={styles.alertRow}>
+          <Alert type="warning" showIcon title="部分数据源降级" description={degraded.join("；")} />
+        </div>
+      ) : null}
       <div className="kpi-grid">
         <KPICard label="在办任务" value={(live?.taskStats?.running ?? 0).toLocaleString()} />
         <KPICard label="待开始任务" value={(live?.assignedPendingCount ?? 0).toLocaleString()} />
@@ -61,57 +119,49 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
         <KPICard label="产出质量" value={live?.outputQuality != null ? `${Math.round(Number(live.outputQuality) * 100)}%` : "-"} />
       </div>
 
-      <div className="grid-2" style={{ marginBottom: "var(--sp-4)" }}>
+      <div className="grid-2">
         <div className="panel">
           <div className="panel-header"><span className="panel-title">实时状态</span></div>
           <TableCopyButton />
-          <table className="tbl"><tbody>
-            <tr><th style={{ width: 120 }}>状态</th><td>{live?.stateLabel || "-"}</td></tr>
-            <tr><th>卡住原因</th><td>{live?.stuckReason || "无"}</td></tr>
-            <tr><th>近 24 小时消息</th><td className="num">{(live?.macsMessages24h ?? 0).toLocaleString()}</td></tr>
-            <tr><th>最近露面</th><td>{fmtTime(live?.lastSeenAt)}（{fmtAgo(live?.lastSeenAt)}）</td></tr>
-            <tr><th>最近执行时间</th><td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(exec.lastAt)}</td></tr>
-          </tbody></table>
+          <div className={styles.kvTable + " " + styles.kvW120}>
+            <DataTable columns={KV_COLUMNS} rows={liveRows} rowKey={(r) => r.label} />
+          </div>
         </div>
 
         <div className="panel">
           <div className="panel-header"><span className="panel-title">按统计范围拆分（已办）</span></div>
           <TableCopyButton />
-          <table className="tbl"><tbody>
-            {scopeKeys.length === 0 ? (
-              <tr><td style={{ padding: "var(--sp-4)", color: "var(--text-dim)" }}>暂无已办记录</td></tr>
-            ) : scopeKeys.map((k) => (
-              <tr key={k}><th style={{ width: 180 }}>{SCOPE_LABELS[k] || k}</th><td className="num">{(scopes[k] ?? 0).toLocaleString()}</td></tr>
-            ))}
-          </tbody></table>
+          <div className={styles.kvTable + " " + styles.kvW180}>
+            <DataTable
+              columns={KV_COLUMNS}
+              rows={scopeRows}
+              rowKey={(r) => r.label}
+              empty={{ title: "暂无已办记录" }}
+            />
+          </div>
         </div>
       </div>
 
-      <div className="grid-2" style={{ marginBottom: "var(--sp-4)" }}>
+      <div className="grid-2">
         <div className="panel">
           <div className="panel-header"><span className="panel-title">最近一次执行</span></div>
           {lastExec ? (
-            <table className="tbl"><tbody>
-              <tr><th style={{ width: 110 }}>任务</th><td>{lastExec.taskTitle || lastExec.id || "-"}</td></tr>
-              <tr><th>状态</th><td><span className={badgeClass(lastExec.status)}>{lastExec.status || "-"}</span></td></tr>
-              <tr><th>质量通过</th><td>{lastExec.qualityPassed ? "是" : "否"}</td></tr>
-              <tr><th>完成时间</th><td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(lastExec.completedAt)}</td></tr>
-            </tbody></table>
+            <div className={styles.kvTable + " " + styles.kvW110}>
+              <DataTable columns={KV_COLUMNS} rows={lastExecRows} rowKey={(r) => r.label} />
+            </div>
           ) : (
-            <div style={{ padding: "var(--sp-4)", color: "var(--text-dim)" }}>暂无执行记录</div>
+            <div className={styles.emptyBlock}>暂无执行记录</div>
           )}
         </div>
 
         <div className="panel">
           <div className="panel-header"><span className="panel-title">最近一次产出</span></div>
           {lastOut ? (
-            <table className="tbl"><tbody>
-              <tr><th style={{ width: 110 }}>产出时间</th><td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(lastOut.at)}</td></tr>
-              <tr><th>产出质量</th><td>{lastOut.quality != null ? `${Math.round(Number(lastOut.quality) * 100)}%` : "-"}</td></tr>
-              <tr><th>累计产出</th><td>{(lastOut as any).n != null ? String((lastOut as any).n) : "-"}</td></tr>
-            </tbody></table>
+            <div className={styles.kvTable + " " + styles.kvW110}>
+              <DataTable columns={KV_COLUMNS} rows={lastOutRows} rowKey={(r) => r.label} />
+            </div>
           ) : (
-            <div style={{ padding: "var(--sp-4)", color: "var(--text-dim)" }}>暂无产出记录</div>
+            <div className={styles.emptyBlock}>暂无产出记录</div>
           )}
         </div>
       </div>
@@ -119,38 +169,24 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
       <div className="panel">
         <div className="panel-header">
           <span className="panel-title">最近会话（{sessions.total.toLocaleString()} 条档案中最近 {sess.length} 条）</span>
-          <Link href={`/sessions?agent=${encodeURIComponent(agent?.agent_id || id)}`} style={{ color: "var(--primary)", fontSize: "var(--fs-base)", textDecoration: "none" }}>
+          <Link href={`/sessions?agent=${encodeURIComponent(agent?.agent_id || id)}`} className={styles.adjustLink}>
             会话中心
           </Link>
         </div>
         <TableCopyButton />
-        <table className="tbl">
-          <thead><tr><th>标题</th><th style={{ width: 130 }}>来源</th><th style={{ width: 60 }}>消息</th><th style={{ width: 100 }}>状态</th><th style={{ width: 120 }}>更新时间</th></tr></thead>
-          <tbody>
-            {sess.map((s) => {
-              const href = `/sessions/detail?id=${encodeURIComponent(s.session_uid)}`;
-              return (
-                <tr key={s.session_uid}>
-                  <td><Link href={href} style={{ color: "var(--text)" }}>{s.title || s.session_uid}</Link></td>
-                  <td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{s.source || "-"}</td>
-                  <td>{s.message_count ?? 0}</td>
-                  <td><span className={badgeClass(s.status)}>{s.status || "-"}</span></td>
-                  <td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(s.updated_at || s.uploaded_at)}</td>
-                </tr>
-              );
-            })}
-            {sess.length === 0 && (
-              <tr><td colSpan={5} style={{ padding: "var(--sp-4)", color: "var(--text-dim)", textAlign: "center" }}>暂无会话档案</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          columns={sessionColumns}
+          rows={sess}
+          rowKey={(s) => s.session_uid}
+          empty={{ title: "暂无会话档案" }}
+        />
       </div>
 
       {/* Phase3 屏06 D 型密度热力图 (近 90 天 × 状态) */}
-      <div className="panel" style={{ marginTop: "var(--sp-4)" }}>
+      <div className={"panel " + styles.panelTop}>
         <div className="panel-header">
           <span className="panel-title">会话密度热力（近 90 天 × 状态）</span>
-          <span style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)" }}>色深 = 该状态当天归档数</span>
+          <span className={styles.metaSm}>色深 = 该状态当天归档数</span>
         </div>
         {(() => {
           // 行: 近 90 天 (按近到远), 列: 4 个状态
@@ -187,11 +223,11 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
           }
           const totalCount = cells.reduce((s, c) => s + c.value, 0);
           return totalCount === 0 ? (
-            <div style={{ padding: "var(--sp-4)", color: "var(--text-dim)", fontSize: "var(--fs-md)" }}>
+            <div className={styles.emptyBlockMd}>
               近 90 天该智能体在最近 {sess.length} 条会话中没有命中, 无法绘制密度图。
             </div>
           ) : (
-            <div style={{ padding: "var(--sp-4) var(--sp-3)", overflowX: "auto" }}>
+            <div className={styles.heatWrap}>
               <DensityHeatmap
                 rows={dayLabels}
                 cols={statuses}

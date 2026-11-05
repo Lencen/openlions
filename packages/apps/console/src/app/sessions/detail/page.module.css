@@ -1,0 +1,58 @@
+/* /sessions/detail · P2 呈现层（2026-11-05 批 4/5）
+   内联样式 → 类。本页没有表格（改前 2026-10-26 已把定义表换成 DetailFields，本次只清内联样式）。
+   角色色（user/assistant/system/tool）从内联 style 改成 data-tone 属性选择器；
+   assistant 那档沿用 lib/ink 的配方（color-mix(… 55%, var(--text))）逐字写进 CSS，观感与改前一致。
+   取数（/api/session-detail/<uid>）与路由语义一字未改。 */
+
+/* 空/错误态面板（原内联 padding: var(--sp-6)） */
+.panelPad6 { padding: var(--sp-6); }
+.emptyTitle { font-weight: 600; margin-bottom: var(--sp-2); }
+.emptyDesc { color: var(--text-dim); font-size: var(--fs-md); }
+.primaryLink { color: var(--primary); }
+
+/* 正文两栏：左（会话信息 + 消息列表）/ 右（InspectorPanel 320px） */
+.detailGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* 消息列表 */
+.msgEmpty { padding: var(--sp-4); color: var(--text-dim); }
+.msgList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+.msgCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5) var(--sp-3);
+  background: var(--bg-surface);
+}
+.msgHead {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  margin-bottom: var(--sp-1-5);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.msgRole { font-weight: 600; }
+.msgRole[data-tone="user"] { color: var(--info); }
+/* 与 lib/ink 的 inkOf("var(--brand)") 同配方：填充色向当前主题文字色混合，保对比度 */
+.msgRole[data-tone="assistant"] { color: color-mix(in srgb, var(--brand) 55%, var(--text)); }
+.msgRole[data-tone="system"] { color: var(--text-3); }
+.msgRole[data-tone="tool"] { color: var(--warn); }
+.msgUid {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+}
+.msgBody {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: var(--fs-md);
+}

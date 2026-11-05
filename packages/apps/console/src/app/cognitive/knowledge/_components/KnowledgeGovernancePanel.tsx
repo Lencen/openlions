@@ -8,10 +8,19 @@
 //   - 人工审核: 按人类决定(todo_land_jp7xab44pb6g)「审核项=待办」, 统一在 console 待办中心 /todo 处理,
 //     本组件不再承载审核 UI (专属 /governance/dedupe 页面已删除)。
 //   - 自动治理(cron) vs 人工审核的分工见 docs/platform-logic/knowledge-base-reorg-2026-09-22.md §七
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零。
+//   动态色走 data-tone 属性选择器；领域分布条宽度走 5% 一档的 .pXX 档位类。取数与文案未改。
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
 import { useGlobalNonce } from "@/components/GlobalFilter";
+import styles from "./KnowledgeGovernancePanel.module.css";
+
+/** 百分比 → 5% 一档的档位类 */
+function pctClass(p: number): string {
+  const step = Math.min(100, Math.max(0, Math.round(p / 5) * 5));
+  return styles["p" + step] || styles["p0"];
+}
 
 export default function KnowledgeGovernancePanel() {
   const [gov, setGov] = useState<any>(null);
@@ -39,13 +48,13 @@ export default function KnowledgeGovernancePanel() {
 
   return (
     <>
-      <div className="page-subtitle" style={{ marginBottom: "var(--sp-3)" }}>
+      <div className={"page-subtitle " + styles.subtitle}>
         知识库结构化整理与长期维护。自动治理由定时任务（每周）执行；涉及取代链改动或数据删除的操作需人工审核。
       </div>
 
       <div className="kpi-grid">
         {loading ? (
-          <div className="panel" style={{ padding: "var(--sp-4)" }}>加载中…</div>
+          <div className={"panel " + styles.padPanel}>加载中…</div>
         ) : gov ? (
           <>
             <KPICard label="知识总量" value={(gov.total || 0).toLocaleString()} />
@@ -58,25 +67,26 @@ export default function KnowledgeGovernancePanel() {
             <KPICard label="待合并 cluster" value={clusterCount.toLocaleString()} />
           </>
         ) : (
-          <div className="panel" style={{ padding: "var(--sp-4)", color: "var(--status-crit)" }}>治理接口不可用</div>
+          <div className={"panel " + styles.padPanel + " " + styles.crit}>治理接口不可用</div>
         )}
       </div>
 
       {gov?.byDomain && (
-        <div className="panel" style={{ marginBottom: "var(--sp-5)" }}>
+        <div className={"panel " + styles.panelMb5}>
           <div className="panel-header"><span className="panel-title">领域分布</span></div>
-          <div style={{ padding: "var(--sp-3) var(--sp-4)" }}>
+          <div className={styles.pad34}>
             {Object.entries(gov.byDomain)
               .sort((a: any, b: any) => b[1] - a[1])
               .map(([d, c]: any) => {
                 const pct = gov.total ? Math.round((100 * c) / gov.total) : 0;
+                const tone = d === "(null)" ? "warn" : "ok";
                 return (
-                  <div key={d} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2-5)", marginBottom: "var(--sp-1-5)", fontSize: "var(--fs-base)" }}>
-                    <span style={{ width: 90, color: d === "(null)" ? "var(--status-warn)" : "var(--text)" }}>{d}</span>
-                    <div style={{ flex: 1, height: 6, background: "var(--bg-surface)", borderRadius: "var(--radius-xs)", overflow: "hidden" }}>
-                      <div style={{ width: pct + "%", height: "100%", background: d === "(null)" ? "var(--status-warn)" : "var(--primary)" }} />
+                  <div key={d} className={styles.domainRow}>
+                    <span className={styles.domainName} data-tone={tone}>{d}</span>
+                    <div className={styles.domainTrack}>
+                      <div className={styles.domainFill + " " + pctClass(pct)} data-tone={tone} />
                     </div>
-                    <span style={{ width: 90, textAlign: "right", color: "var(--text-dim)" }}>
+                    <span className={styles.domainCount}>
                       {c.toLocaleString()} ({pct}%)
                     </span>
                   </div>
@@ -88,26 +98,26 @@ export default function KnowledgeGovernancePanel() {
 
       <div className="panel">
         <div className="panel-header"><span className="panel-title">人工审核</span></div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2-5)", padding: "var(--sp-3) var(--sp-4)" }}>
+        <div className={styles.reviewList}>
           {/* 2026-09-23 审核项=待办 (todo_land_jp7xab44pb6g): 不再做专属审核页, 审核项统一进待办中心 /todo */}
-          <Link href="/todo" style={{ textDecoration: "none", color: "inherit" }}>
-            <div style={{ padding: "var(--sp-3) var(--sp-3-5)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", display: "flex", alignItems: "center", gap: "var(--sp-3)", cursor: "pointer" }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: "var(--fs-md)", marginBottom: "var(--sp-1)" }}>近似重复合并审核（在待办中心处理）</div>
-                <div style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>
+          <Link href="/todo" className={styles.plainLink}>
+            <div className={styles.reviewCard} data-clickable="true">
+              <div className={styles.grow}>
+                <div className={styles.cardTitle}>近似重复合并审核（在待办中心处理）</div>
+                <div className={styles.cardDesc}>
                   检出 {clusterCount} 个待合并分组（将影响 {totalDrops} 条取代链）。审核项已按「审核项=待办」统一落到待办中心，
                   点「通过并执行」即自动执行合并并结单；点「提交我的决定」可写驳回意见。
                 </div>
               </div>
-              <span className="badge" style={{ background: clusterCount > 0 ? "var(--status-warn)" : "var(--bg-surface)", color: clusterCount > 0 ? "var(--on-accent)" : "var(--text-dim)" }}>
+              <span className={"badge " + styles.waitBadge} data-tone={clusterCount > 0 ? "warn" : "none"}>
                 {clusterCount > 0 ? "去待办中心" : "无待办"}
               </span>
             </div>
           </Link>
 
-          <div style={{ padding: "var(--sp-3) var(--sp-3-5)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", opacity: 0.7 }}>
-            <div style={{ fontWeight: 600, fontSize: "var(--fs-md)", marginBottom: "var(--sp-1)" }}>自动治理（每周日 03:00 定时任务）</div>
-            <div style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>
+          <div className={styles.reviewCardStack}>
+            <div className={styles.cardTitle}>自动治理（每周日 03:00 定时任务）</div>
+            <div className={styles.cardDesc}>
               domain/tags 启发式回填 · 孤儿链清理 · pending 词评审入词表 · 治理报告。这些操作幂等且仅追加，无需人工确认。
             </div>
           </div>

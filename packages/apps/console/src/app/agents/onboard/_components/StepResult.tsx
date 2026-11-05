@@ -6,8 +6,11 @@
 // 2026-10-15 文案业务化: 给用户看的说明一律走 i18n 业务语言(一次性领取券 / 正式钥匙 / 领取后有效 /
 //   换过作废), 端点与命令**原文**收进"查看命令"折叠区(<details>+<pre>, 与 flywheel/lineage 页既有做法一致)
 //   —— 既不把内部术语写在正文, 也不删掉装机人需要的可执行细节(仍可原样复制)。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 StepResult.module.css 的类承载）。
+//   文案、i18n key、命令原文与回调一字未改。
 import { t } from "@/i18n";
 import type { OnboardForm } from "./types";
+import styles from "./StepResult.module.css";
 
 /** 服务条目状态 -> 人读文案(2026-10-15 起 register 的状态集合变了) */
 function statusLabel(s: string | undefined): string {
@@ -38,54 +41,54 @@ export default function StepResult({
   // 券有效期由服务端给(ticket.ttl_seconds), 页面只说"领取后 N 分钟内有效", 不写死 15 分钟。
   const ttlMinutes = Math.max(1, Math.round(Number(ticket?.ttl_seconds || 0) / 60) || 15);
   return (
-    <section style={{ maxWidth: 640 }}>
-      <h2 style={{ fontSize: "var(--fs-xl)", marginBottom: "var(--sp-2)" }}>
+    <section className={styles.wrap}>
+      <h2 className={styles.title}>
         {ticket ? t('onboard.result.title.ticket') : t('onboard.result.title.plain')}
       </h2>
-      <p style={{ fontSize: "var(--fs-md)", color: "var(--text-muted)", marginBottom: "var(--sp-4)" }}>
+      <p className={styles.lead}>
         {ticket
           ? t('onboard.result.note.ticket', { agent: form.agent_id, ttl: ttlMinutes })
           : t('onboard.result.note.plain', { agent: form.agent_id })}
       </p>
 
       {ticket && (
-        <div style={{ padding: "var(--sp-4)", borderRadius: "var(--radius-md)", background: "var(--bg-surface)", border: "1px solid var(--primary)", marginBottom: "var(--sp-4)" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--sp-1-5)" }}>
-            <span style={{ fontWeight: 600, fontSize: "var(--fs-md)" }}>{t('onboard.result.ticket.heading')}</span>
-            <span style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)" }}>
+        <div className={styles.card + " " + styles.cardPrimary}>
+          <div className={styles.rowBetween + " " + styles.mb15}>
+            <span className={styles.strongMd}>{t('onboard.result.ticket.heading')}</span>
+            <span className={styles.metaSm}>
               {t('onboard.result.ticket.meta', { expiresAt: ticket.expires_at, ttl: ttlMinutes, hash8: ticket.hash8 })}
             </span>
           </div>
-          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", marginBottom: "var(--sp-2)" }}>
-            <code style={{ fontSize: "var(--fs-base)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--radius-xs)", background: "var(--bg)", color: "var(--primary)", flex: 1, wordBreak: "break-all" }}>
+          <div className={styles.rowFlex + " " + styles.mb2}>
+            <code className={styles.codeLine}>
               {ticket.value}
             </code>
             <button onClick={() => navigator.clipboard.writeText(ticket.value)}
-              style={{ padding: "var(--sp-1) var(--sp-2)", fontSize: "var(--fs-sm)", borderRadius: "var(--radius-xs)", cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text)" }}>
+              className={styles.copyBtn}>
               {t('onboard.result.ticket.copy')}
             </button>
           </div>
-          <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)", marginBottom: "var(--sp-1-5)" }}>
+          <div className={styles.metaSm + " " + styles.mb15}>
             {t('onboard.result.ticket.coverage', { services: (ticket.services || []).join(", ") || t('common.none') })}
           </div>
-          <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)" }}>
+          <div className={styles.metaSm}>
             {t('onboard.result.ticket.installer')}
           </div>
           {/* 2026-10-15 文案业务化: 两条命令是**给装机人的原文**(可原样复制), 放折叠区; 正文只讲业务语言。 */}
-          <details style={{ marginTop: "var(--sp-1-5)" }}>
-            <summary style={{ cursor: "pointer", fontSize: "var(--fs-sm)" }}>{t('onboard.result.ticket.commandSummary')}</summary>
-            <pre style={{ fontSize: "var(--fs-sm)", padding: "var(--sp-2)", borderRadius: "var(--radius-sm)", background: "var(--bg)", overflowX: "auto", margin: "var(--sp-1-5) 0 0" }}>
+          <details className={styles.details}>
+            <summary className={styles.summary}>{t('onboard.result.ticket.commandSummary')}</summary>
+            <pre className={styles.pre}>
 {`curl -X POST <MIND>/api/v1/agent/claim-service-key \\
   -H 'Content-Type: application/json' \\
   -d '{"agent_id":"${form.agent_id}","ticket":"${ticket.value}"}'`}
             </pre>
           </details>
-          <details style={{ marginTop: "var(--sp-1-5)" }}>
-            <summary style={{ cursor: "pointer", fontSize: "var(--fs-sm)" }}>{t('onboard.result.ticket.installerCommandSummary')}</summary>
-            <pre style={{ fontSize: "var(--fs-sm)", padding: "var(--sp-2)", borderRadius: "var(--radius-sm)", background: "var(--bg)", overflowX: "auto", margin: "var(--sp-1-5) 0 0" }}>
+          <details className={styles.details}>
+            <summary className={styles.summary}>{t('onboard.result.ticket.installerCommandSummary')}</summary>
+            <pre className={styles.pre}>
 {`MCP_API_KEY=${ticket.value} ./install-agent.sh ${form.agent_id}`}
             </pre>
-            <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)", marginTop: "var(--sp-1)" }}>
+            <div className={styles.metaSm + " " + styles.mt1}>
               {t('onboard.result.ticket.commandHint')}
             </div>
           </details>
@@ -93,29 +96,32 @@ export default function StepResult({
       )}
 
       {services.length > 0 && (
-        <div style={{ padding: "var(--sp-4)", borderRadius: "var(--radius-md)", background: "var(--bg-surface)", border: "1px solid var(--border)", marginBottom: "var(--sp-4)" }}>
+        <div className={styles.card}>
           {services.map(([name, s]: [string, any]) => (
-            <div key={name} style={{ marginBottom: "var(--sp-3)", paddingBottom: "var(--sp-3)", borderBottom: "1px solid var(--border)" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "var(--sp-1)" }}>
-                <span style={{ fontWeight: 600, fontSize: "var(--fs-md)" }}>{name}</span>
-                <span style={{ fontSize: "var(--fs-sm)", color: s.status === "idempotent_reused" || s.status === "registered" ? "var(--status-ok)" : "var(--text-muted)" }}>{statusLabel(s.status)}</span>
+            <div key={name} className={styles.serviceRow}>
+              <div className={styles.rowBetween + " " + styles.mb1}>
+                <span className={styles.strongMd}>{name}</span>
+                <span
+                  className={styles.metaSm}
+                  data-tone={s.status === "idempotent_reused" || s.status === "registered" ? "ok" : undefined}
+                >{statusLabel(s.status)}</span>
               </div>
               {s.api_key ? (
-                <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center" }}>
-                  <code style={{ fontSize: "var(--fs-base)", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--radius-xs)", background: "var(--bg)", color: "var(--primary)", flex: 1, wordBreak: "break-all" }}>
+                <div className={styles.rowFlex}>
+                  <code className={styles.codeLine}>
                     {s.api_key}
                   </code>
                   <button onClick={() => navigator.clipboard.writeText(s.api_key)}
-                    style={{ padding: "var(--sp-1) var(--sp-2)", fontSize: "var(--fs-sm)", borderRadius: "var(--radius-xs)", cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text)" }}>
+                    className={styles.copyBtn}>
                     复制
                   </button>
                 </div>
               ) : (
-                <div style={{ fontSize: "var(--fs-base)", color: "var(--text-muted)" }}>
+                <div className={styles.baseMuted}>
                   {s.status === "claim_required" ? t('onboard.result.service.claimRequired') : t('onboard.result.service.noKey')}
                 </div>
               )}
-              <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)", marginTop: "var(--sp-0-5)" }}>
+              <div className={styles.metaSm + " " + styles.mt05}>
                 接口地址：{s.endpoint} · 权限：{(s.permissions || []).join(", ")}
                 {s.expires_at ? ` · 有效期至 ${s.expires_at}` : ""}
               </div>
@@ -124,13 +130,13 @@ export default function StepResult({
         </div>
       )}
 
-      <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+      <div className={styles.actions}>
         <button onClick={onCopyEnv}
-          style={{ padding: "var(--sp-2-5) var(--sp-5)", borderRadius: "var(--radius-md)", fontSize: "var(--fs-lg)", cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text)" }}>
+          className={styles.btnGhost}>
           复制 .env 格式
         </button>
         <button onClick={onRestart}
-          style={{ padding: "var(--sp-2-5) var(--sp-5)", borderRadius: "var(--radius-md)", fontSize: "var(--fs-lg)", cursor: "pointer", background: "var(--primary)", color: "var(--on-primary)", border: "none" }}>
+          className={styles.btnPrimary}>
           注册新智能体
         </button>
       </div>

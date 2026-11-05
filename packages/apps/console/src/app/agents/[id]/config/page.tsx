@@ -1,5 +1,8 @@
 // [UI-S6 / 屏06 智能体详情 · 配置]
 // 只读展示: 能力分级 + 业务服务授权矩阵 + 配额。真正改动权限仍走既有可编辑页(/agents/detail)。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 三张手写 .tbl 表 → 白名单 DataTable。
+//   列/字段/文案不变；两张无表头的「标签 → 值」表用 .kvTable 藏掉 DataTable 的空表头行。
+//   取数（loadAgent / loadLive / loadServices）与只读语义一字未改。
 import type { ReactNode } from "react";
 import Link from "next/link";
 import AgentShell from "../_components/AgentShell";
@@ -8,17 +11,18 @@ import AgentSourceError from "../_components/AgentSourceError";
 import { TIER_LABELS, fmtTime, loadAgent, loadLive, loadServices, parseJson, parseList } from "../_data";
 import { Alert } from "@/components/primitives";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "./page.module.css";
 
 export const dynamic = "force-dynamic";
 
-function kv(label: string, value: ReactNode) {
-  return (
-    <tr key={label}>
-      <th style={{ width: 120 }}>{label}</th>
-      <td>{value}</td>
-    </tr>
-  );
-}
+/** 「标签 → 值」两列表（改前是 手写表格<tbody> 里逐行 kv(...)） */
+type KvRow = { label: string; value: ReactNode };
+const KV_COLUMNS: DataColumn<KvRow>[] = [
+  { key: "label", title: "", render: (r) => r.label },
+  { key: "value", title: "", render: (r) => r.value },
+];
 
 export default async function AgentConfigPage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params.id || "");
@@ -38,33 +42,80 @@ export default async function AgentConfigPage({ params }: { params: { id: string
   const permByService: Record<string, any> = {};
   for (const p of agent?.permissions ?? []) permByService[p.service_name] = p;
 
+  const capabilityRows: KvRow[] = [
+    { label: "当前分级", value: tier != null ? TIER_LABELS[tier] : "-" },
+    { label: "分级理由", value: profile.capabilityReason || "-" },
+    { label: "设置来源", value: profile.capabilitySetBy || "-" },
+    { label: "设置时间", value: <span className={"mono " + styles.sm}>{fmtTime(profile.capabilitySetAt)}</span> },
+    { label: "工具能力", value: profile.toolCapable ? "有工具" : "无工具" },
+    { label: "常驻执行器", value: profile.persistentWorker ? "是" : "否" },
+  ];
+  const quotaRows: KvRow[] = [
+    { label: "每日上限", value: quota.dailyLimit != null ? String(quota.dailyLimit) : "-" },
+    { label: "模式", value: quota.mode || "-" },
+    { label: "设置来源", value: quota.setBy || "-" },
+    { label: "设置时间", value: <span className={"mono " + styles.sm}>{fmtTime(quota.setAt)}</span> },
+    { label: "说明", value: quota.note || "-" },
+  ];
+  const serviceColumns: DataColumn<(typeof services)[number]>[] = [
+    { key: "name", title: "服务", width: 140, render: (s) => <span className={styles.strong}>{s.display_name || s.name}</span> },
+    { key: "desc", title: "说明", render: (s) => <span className={styles.dim}>{s.description || "-"}</span> },
+    { key: "version", title: "版本", width: 70, render: (s) => <span className={"mono " + styles.sm}>{s.version || "-"}</span> },
+    {
+      key: "status",
+      title: "目录状态",
+      width: 90,
+      render: (s) => <span className={s.status === "ACTIVE" ? "badge badge-green" : "badge"}>{s.status || "-"}</span>,
+    },
+    {
+      key: "granted",
+      title: "已授权权限",
+      render: (s) => {
+        const granted = parseList(permByService[s.name]?.permissions);
+        return granted.length ? (
+          <span className={styles.badgeWrap}>
+            {granted.map((g) => <span key={g} className="badge badge-blue">{g}</span>)}
+          </span>
+        ) : (
+          <span className={styles.muted}>未授权</span>
+        );
+      },
+    },
+    {
+      key: "available",
+      title: "可授权权限",
+      render: (s) => <span className={styles.dim}>{parseList(s.available_perms).join(" / ") || "-"}</span>,
+    },
+    {
+      key: "expires",
+      title: "密钥到期",
+      width: 110,
+      render: (s) => <span className={"mono " + styles.sm}>{fmtTime(permByService[s.name]?.expires_at)}</span>,
+    },
+  ];
+
   return (
     <AgentShell id={id} active="config" agent={agent} live={live}>
-      {degraded.length ? <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-4)" }} title="部分数据源降级" description={degraded.join("；")} /> : null}
-      <div className="grid-2" style={{ marginBottom: "var(--sp-4)" }}>
+      {degraded.length ? (
+        <div className={styles.alertRow}>
+          <Alert type="warning" showIcon title="部分数据源降级" description={degraded.join("；")} />
+        </div>
+      ) : null}
+      <div className="grid-2">
         <div className="panel">
           <div className="panel-header"><span className="panel-title">能力分级</span></div>
           <TableCopyButton />
-          <table className="tbl"><tbody>
-            {kv("当前分级", tier != null ? TIER_LABELS[tier] : "-")}
-            {kv("分级理由", profile.capabilityReason || "-")}
-            {kv("设置来源", profile.capabilitySetBy || "-")}
-            {kv("设置时间", <span className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(profile.capabilitySetAt)}</span>)}
-            {kv("工具能力", profile.toolCapable ? "有工具" : "无工具")}
-            {kv("常驻执行器", profile.persistentWorker ? "是" : "否")}
-          </tbody></table>
+          <div className={styles.kvTable}>
+            <DataTable columns={KV_COLUMNS} rows={capabilityRows} rowKey={(r) => r.label} />
+          </div>
         </div>
 
         <div className="panel">
           <div className="panel-header"><span className="panel-title">配额</span></div>
           <TableCopyButton />
-          <table className="tbl"><tbody>
-            {kv("每日上限", quota.dailyLimit != null ? String(quota.dailyLimit) : "-")}
-            {kv("模式", quota.mode || "-")}
-            {kv("设置来源", quota.setBy || "-")}
-            {kv("设置时间", <span className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(quota.setAt)}</span>)}
-            {kv("说明", quota.note || "-")}
-          </tbody></table>
+          <div className={styles.kvTable}>
+            <DataTable columns={KV_COLUMNS} rows={quotaRows} rowKey={(r) => r.label} />
+          </div>
         </div>
       </div>
 
@@ -73,56 +124,18 @@ export default async function AgentConfigPage({ params }: { params: { id: string
           <span className="panel-title">服务授权矩阵（{services.length} 个业务服务）</span>
           <Link
             href={`/agents/detail?id=${encodeURIComponent(agent?.agent_id || id)}`}
-            style={{ color: "var(--primary)", fontSize: "var(--fs-base)", textDecoration: "none" }}
+            className={styles.adjustLink}
           >
             去调整权限
           </Link>
         </div>
         <TableCopyButton />
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>服务</th>
-              <th>说明</th>
-              <th style={{ width: 70 }}>版本</th>
-              <th style={{ width: 90 }}>目录状态</th>
-              <th>已授权权限</th>
-              <th>可授权权限</th>
-              <th style={{ width: 110 }}>密钥到期</th>
-            </tr>
-          </thead>
-          <tbody>
-            {services.map((s) => {
-              const perm = permByService[s.name];
-              const granted = parseList(perm?.permissions);
-              const available = parseList(s.available_perms);
-              return (
-                <tr key={s.name}>
-                  <td style={{ fontWeight: 600 }}>{s.display_name || s.name}</td>
-                  <td style={{ color: "var(--text-dim)" }}>{s.description || "-"}</td>
-                  <td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{s.version || "-"}</td>
-                  <td>
-                    <span className={s.status === "ACTIVE" ? "badge badge-green" : "badge"}>{s.status || "-"}</span>
-                  </td>
-                  <td>
-                    {granted.length ? (
-                      <span style={{ display: "inline-flex", gap: "var(--sp-1-5)", flexWrap: "wrap" }}>
-                        {granted.map((g) => <span key={g} className="badge badge-blue">{g}</span>)}
-                      </span>
-                    ) : (
-                      <span style={{ color: "var(--text-muted)" }}>未授权</span>
-                    )}
-                  </td>
-                  <td style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>{available.join(" / ") || "-"}</td>
-                  <td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(perm?.expires_at)}</td>
-                </tr>
-              );
-            })}
-            {services.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: "var(--sp-4)", color: "var(--text-dim)", textAlign: "center" }}>服务目录暂不可用</td></tr>
-            )}
-          </tbody>
-        </table>
+        <DataTable
+          columns={serviceColumns}
+          rows={services}
+          rowKey={(s) => s.name}
+          empty={{ title: "服务目录暂不可用" }}
+        />
       </div>
     </AgentShell>
   );

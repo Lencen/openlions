@@ -1,0 +1,43 @@
+/* /system/rotation · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   表单里的输入框宽度原来是内联 style（200/100），改成 .w200 / .w100 两个档位类。 */
+
+/* 面包屑首段弱化色 */
+.crumbDim { color: var(--text-dim); }
+
+/* 取数失败提示的上边距（原内联 marginBottom: var(--sp-3)） */
+.alertRow { margin-bottom: var(--sp-3); }
+
+/* 面板头右侧的弱化说明（.tiny 自带 color: text-muted，这里按改前口径改回 text-dim） */
+.dimText { color: var(--text-dim); }
+
+/* 控制面板表单区（原内联 padding: var(--sp-3-5) + flex 换行 + 底部对齐） */
+.controlBody {
+  padding: var(--sp-3-5);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2-5);
+  align-items: flex-end;
+}
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+.btnRow { display: flex; gap: var(--sp-2); }
+
+/* 面板底部的提示/错误块（原内联 padding: 0 var(--sp-3-5) var(--sp-3-5)） */
+.alertPad { padding: 0 var(--sp-3-5) var(--sp-3-5); }
+.pad35 { padding: var(--sp-3-5); }
+
+/* 输入框宽度档位（原内联 width: 200 / width: 100；Input 透传 className） */
+.w200 { width: 200px; }
+.w100 { width: 100px; }
+
+/* 时间/来源列字号（原内联 fontSize fs-sm / fs-base） */
+.cellSm { font-size: var(--fs-sm); }
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

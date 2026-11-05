@@ -1,0 +1,9 @@
+/* /agents/[id]/versions 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   两张表换成白名单 DataTable 后，只剩"面板/提示条的竖向间距"需要落在页内；
+   能复用 .panel / .panel-header / .panel-title 的一律复用。 */
+
+/* 数据源降级提示（原来是内联 marginBottom） */
+.alertRow { margin-bottom: var(--sp-4); }
+
+/* 两个面板之间的间距（原来是内联 marginBottom） */
+.panelGap { margin-bottom: var(--sp-4); }
