@@ -1,0 +1,136 @@
+/* /sessions · P1 试点页呈现层（ord-20261104-032）。
+   全局令牌与 .dt/.pill 等类都在 globals.css；这里只补本页布局 + FilterBar 的类（原型类名尚未进 globals.css）。 */
+.crumbDim { color: var(--text-dim); }
+.headMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+.toolbar > :global(.toolbar) {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+}
+.toolbar :global(.filters) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.toolbar :global(.filter) {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.toolbar :global(.filter:hover) {
+  border-color: var(--border-hi);
+  background: var(--bg-hover);
+}
+.toolbar :global(.filter.on) {
+  background: var(--primary-dim);
+  color: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  font-weight: 600;
+}
+.toolbar :global(.filter .n) {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.toolbar :global(.filter.on .n) {
+  color: var(--primary);
+}
+.toolbar :global(.spacer) {
+  flex: 1;
+}
+.search {
+  height: 28px;
+  width: 280px;
+  max-width: 100%;
+  padding: 0 var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-xs);
+}
+.search::placeholder {
+  color: var(--text-muted);
+}
+.search:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.subToolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.sortSelect {
+  height: 28px;
+}
+.clickable :global(tbody tr) {
+  cursor: pointer;
+}
+.cellLink {
+  color: var(--text);
+  text-decoration: none;
+}
+.cellLink:hover {
+  color: var(--primary);
+}
+.rowLink {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: var(--fs-md);
+}
+.rowLink:hover {
+  color: var(--primary);
+}
+.pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.pagerLinks {
+  display: flex;
+  gap: var(--sp-2);
+}
+.pagerBtn {
+  padding: var(--sp-1) var(--sp-2-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  font-size: var(--fs-base);
+}
+.pagerBtn:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.panelPad {
+  padding: var(--sp-3) var(--sp-4);
+}

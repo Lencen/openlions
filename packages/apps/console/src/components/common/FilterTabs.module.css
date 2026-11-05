@@ -1,0 +1,22 @@
+/* components/common/FilterTabs 样式（P2 呈现层改造：内联 style 清零）
+   药丸式标签筛选条；选中态走 data-active 属性选择器，不再按 active 拼内联样式。 */
+
+.tabs { display: flex; gap: var(--sp-1-5); flex-wrap: wrap; }
+
+.tab {
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-base);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font-weight: 400;
+}
+
+.tab[data-active="true"] {
+  border-color: var(--primary);
+  background: var(--primary-dim);
+  color: var(--primary);
+  font-weight: 600;
+}

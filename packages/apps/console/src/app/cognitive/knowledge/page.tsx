@@ -20,6 +20,7 @@ import { t } from "@/i18n";
 import KnowledgeGovernancePanel from "./_components/KnowledgeGovernancePanel";
 import TableCopyButton from "@/components/TableCopyButton";
 import { ownerLabel, visibilityLabel as visibility } from "@/lib/asset-ownership";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface K { items?: Array<{ id: string; title: string; category?: string; confidence?: number; theme?: string; domain?: string; usageCount?: number; tags?: string; agentSource?: string; sourceType?: string; qualityScore?: number; createdAt?: string; updatedAt?: string }>; total?: number }
 const fmt = (n: number) => n.toLocaleString();
 const linkBtn: CSSProperties = { background: "none", border: 0, padding: 0, cursor: "pointer", color: "var(--primary)", font: "inherit", textAlign: "left" };
@@ -60,7 +61,7 @@ export default function KnowledgePage() {
   const total = data?.total ?? 0;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><span className="current">知识库</span></div>
-    <div className="page-header"><div className="page-title">知识库</div><div className="page-subtitle">知识条目 · 分类 · 来源 · 语义检索 · 点标题用侧边抽屉看详情（不离开列表） {loading && tab === "list" && "（加载中...）"}</div></div>
+    <PageHeader><PageTitle>知识库</PageTitle><div className="page-subtitle">知识条目 · 分类 · 来源 · 语义检索 · 点标题用侧边抽屉看详情（不离开列表） {loading && tab === "list" && "（加载中...）"}</div></PageHeader>
     {/* 2026-09-24 IA 整改: 子页(知识治理)走页内 Tab, 不再单占菜单位; 均可深链 (?tab=governance) */}
     <div style={{ marginBottom: "var(--sp-3)" }}>
       <Segmented options={TABS.map((tb) => ({ label: tb.label, value: tb.key }))} value={tab} onChange={(v) => changeTab(v as TabKey)} />

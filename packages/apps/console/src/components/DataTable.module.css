@@ -1,0 +1,67 @@
+/* components/DataTable 样式（P2 呈现层改造：内联 style 清零）
+   规则：列对齐 / 列宽 / 骨架宽度都走类，组件里不再出现 style={{ … }}。
+   - 列宽：调用方传 width（如 "140px" / 140），按 10px 一档取最近档位 -> .w40 … .w360
+   - 骨架宽度：按 5% 一档 -> .p0 … .p100
+   表格本体样式（.dt / .dt-num / .dt-skel 等）在 app/globals.css，这里只补对齐与档位。 */
+
+/* 列对齐（th/td 共用；右对齐同时保留 .dt-num 的等宽数字） */
+.cellLeft { text-align: left; }
+.cellRight { text-align: right; }
+
+/* 列宽档位（10px 一档） */
+.w40 { width: 40px; }
+.w50 { width: 50px; }
+.w60 { width: 60px; }
+.w70 { width: 70px; }
+.w80 { width: 80px; }
+.w90 { width: 90px; }
+.w100 { width: 100px; }
+.w110 { width: 110px; }
+.w120 { width: 120px; }
+.w130 { width: 130px; }
+.w140 { width: 140px; }
+.w150 { width: 150px; }
+.w160 { width: 160px; }
+.w170 { width: 170px; }
+.w180 { width: 180px; }
+.w190 { width: 190px; }
+.w200 { width: 200px; }
+.w210 { width: 210px; }
+.w220 { width: 220px; }
+.w230 { width: 230px; }
+.w240 { width: 240px; }
+.w250 { width: 250px; }
+.w260 { width: 260px; }
+.w270 { width: 270px; }
+.w280 { width: 280px; }
+.w290 { width: 290px; }
+.w300 { width: 300px; }
+.w310 { width: 310px; }
+.w320 { width: 320px; }
+.w330 { width: 330px; }
+.w340 { width: 340px; }
+.w350 { width: 350px; }
+.w360 { width: 360px; }
+
+/* 骨架行宽度档位（5% 一档） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

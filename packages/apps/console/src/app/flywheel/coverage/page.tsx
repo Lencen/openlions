@@ -8,6 +8,7 @@ import { t } from "@/i18n";
 import { healthDimLabel } from "@/config/systemLabels";
 import TableCopyButton from "@/components/TableCopyButton";
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface S { data?:{
   coverage?:{avg:number;total:number};
@@ -32,7 +33,7 @@ export default function CoveragePage() {
   const byStatus = findings?.byStatus ?? {};
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">{t('biz.coverage.trend')}</span></div>
-    <div className="page-header"><div className="page-title">{t('biz.coverage.trend')}</div><div className="page-subtitle">{cov?t('biz.coverage.subtitle',{n:cov.total,avg:cov.avg.toFixed(4)}):"加载中..."}</div></div>
+    <PageHeader><PageTitle>{t('biz.coverage.trend')}</PageTitle><div className="page-subtitle">{cov?t('biz.coverage.subtitle',{n:cov.total,avg:cov.avg.toFixed(4)}):"加载中..."}</div></PageHeader>
     {/* 2026-10-15（规范 §2）：原来只有一句报错文本, 没有下一步动作 ✗ -> 换成 ErrorAlert(带重试)。 */}
     {error ? (
       <ErrorAlert

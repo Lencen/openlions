@@ -4,6 +4,7 @@ import Link from "next/link";
 import { t } from "@/i18n";
 import FlywheelFlow from "@/components/FlywheelFlow";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 export default function TransferPage() {
   const [fromId, setFromId] = useState("");
   const [toId, setToId] = useState("");
@@ -28,7 +29,7 @@ export default function TransferPage() {
   const counts = result?.counts || result?.moved || {};
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>{t('transfer.crumb')}</span><span className="sep">/</span><span className="current">AI 离开/接手</span></div>
-    <div className="page-header"><div className="page-title">AI 离开/接手</div><div className="page-subtitle">权限转移 + 数据继承 + 无中断切换</div></div>
+    <PageHeader><PageTitle>AI 离开/接手</PageTitle><div className="page-subtitle">权限转移 + 数据继承 + 无中断切换</div></PageHeader>
     <div className="panel"><div className="panel-header"><span className="panel-title">接手流程</span></div>
       <FlywheelFlow steps={[{label:"AI 离开"},{label:"权限转移",active:true},{label:"数据继承",active:true},{label:"新 AI 接手"},{label:"无中断切换",active:true}]}/>
     </div>

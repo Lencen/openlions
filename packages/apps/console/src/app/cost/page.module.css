@@ -1,0 +1,35 @@
+/* /cost 页内样式（P2 呈现层改造：内联 style 清零）
+   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
+   能复用 .panel / .panel-header / .panel-title / .mono / .tiny / .dt-* 的一律复用。 */
+
+/* —— CostTopCallsTable —— */
+
+/* 入口 / 主体单元格（原来是内联 font-size） */
+.entryCell { font-size: var(--fs-base); }
+
+/* 入口名称与前面的类型标签留一点距（原来是内联 margin-left） */
+.entryName { margin-left: var(--sp-1); }
+
+/* 词元数：估算值用告警色，实测值保持正文色（原来是内联三元 color） */
+.tokens[data-estimated="true"] { color: var(--status-warn); }
+
+/* —— CostCaliber（统计口径说明 + 页脚数据时刻；P2 批2 追加） —— */
+
+/* 口径正文：字号/行距/弱化色，原来是一段内联 style */
+.caliberBody {
+  font-size: var(--fs-base);
+  line-height: 1.9;
+  color: var(--text-dim);
+}
+
+/* 页脚"来源 · 数据时刻"右对齐（与全局 .tiny 组合使用） */
+.caliberFoot {
+  text-align: right;
+}
+/* —— 本批（批1）追加 —— */
+
+/* 口径提示条：与下一个区块拉开间距（原来是内联 margin-bottom: var(--sp-4)） */
+.warnAlert { margin-bottom: var(--sp-4); }
+
+/* 按模型归因的口径说明（原来是内联 margin-top + line-height；字号仍由 .tiny 给） */
+.attrNote { margin-top: var(--sp-2); line-height: 1.7; }

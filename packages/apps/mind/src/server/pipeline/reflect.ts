@@ -9,6 +9,7 @@
  * 触发源: 整点 cron / 手动 API
  */
 
+import { extractLlmText } from "@/server/llm/extract-text";
 import { sessionApiKey } from "@/lib/secret";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma"; // V1 原状, Next.js dev alias 解析
@@ -716,7 +717,7 @@ ${products.reflection.slice(0, 20).map(p => `- [${p.id.slice(-6)}] ${(p.title ||
   const usage = (data as any)?.usage;
   const tokenUsed = usage && typeof usage.input_tokens === "number" ? usage.input_tokens + (usage.output_tokens || 0) : undefined;
   recordLlmCall({ entry: "reflect", ok: true, durationMs: Date.now() - t0, promptLength: userPrompt.length, tokenUsed });
-  const rawText: string = data.content?.[0]?.text || "";
+  const rawText: string = extractLlmText(data);
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("LLM 返回非 JSON: " + rawText.slice(0, 200));
 
@@ -1250,7 +1251,7 @@ export async function confirmSemanticPairs(
     }, 60000));
     recordLlmSuccess();
     const data: any = await res.json();
-    const raw = String(data.content?.[0]?.text || "");
+    const raw = String(extractLlmText(data));
     const m = raw.match(/\{[\s\S]*\}/);
     const parsed = m ? JSON.parse(m[0]) : { dups: [] };
     for (const d of parsed.dups || []) {

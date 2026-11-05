@@ -3,6 +3,8 @@
 import KPICard from "@/components/KPICard";
 import { t } from "@/i18n";
 import type { Stats } from "./reflectionsShared";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "../page.module.css";
 
 export default function ReflectionsHeader({
   loading,
@@ -17,9 +19,9 @@ export default function ReflectionsHeader({
 }) {
   return (
     <>
-      <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>飞轮引擎</span><span className="sep">/</span><span className="current">反思</span></div>
-      <div className="page-header"><div className="page-title">反思(主题 / 日结)</div>
-        <div className="page-subtitle">{loading ? "加载中…" : rowsCount + " 条 · 全库 " + t('status.ok') + " " + (st?.ok ?? "?") + " / " + t('status.failed') + " " + (st?.failed ?? "?") + " · 发现覆盖 " + (((stats?.structuredFindings?.rate ?? 0) * 100).toFixed(1)) + "%"}</div></div>
+      <div className="breadcrumb"><span className={styles.reflCrumbDim}>飞轮引擎</span><span className="sep">/</span><span className="current">反思</span></div>
+      <PageHeader><PageTitle>反思(主题 / 日结)</PageTitle>
+        <div className="page-subtitle">{loading ? "加载中…" : rowsCount + " 条 · 全库 " + t('status.ok') + " " + (st?.ok ?? "?") + " / " + t('status.failed') + " " + (st?.failed ?? "?") + " · 发现覆盖 " + (((stats?.structuredFindings?.rate ?? 0) * 100).toFixed(1)) + "%"}</div></PageHeader>
       <div className="kpi-grid">
         <KPICard label="反思总量" value={st ? String(st.total ?? "?") : "…"} />
         <KPICard label={t('status.ok')} value={st ? String(st.ok ?? "?") : "…"} />

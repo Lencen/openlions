@@ -3,16 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import KnowledgeDetailBody from "@/components/cognitive/KnowledgeDetailBody";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 function KnowledgeDetailInner() {
   const params = useSearchParams();
   const id = params.get("id") || "";
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/knowledge" style={{ color: "var(--text-dim)" }}>知识库</a><span className="sep">/</span><span className="current">知识详情</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/knowledge">知识库</a><span className="sep">/</span><span className="current">知识详情</span></div>
     <KnowledgeDetailBody
       id={id}
       renderHeader={(k: any, loading: boolean) => (
-        <div className="page-header"><div className="page-title">{k.title || "知识详情"}</div><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${k.id || id || "(样例)"}`}</div></div>
+        <PageHeader><PageTitle>{k.title || "知识详情"}</PageTitle><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${k.id || id || "(样例)"}`}</div></PageHeader>
       )}
     />
   </main></div>);

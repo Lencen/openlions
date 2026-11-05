@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Button, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { createTodo } from "@/lib/todos";
 import { truncate } from "@/lib/format";
+import styles from "./ConvertToTodoButton.module.css";
 
 export interface ConvertToTodoButtonProps {
   title: string;
@@ -58,7 +59,7 @@ export default function ConvertToTodoButton({
   if (state === "done") {
     return (
       <Tooltip title={`已创建待办 ${id || ""} (人类待办, 不计入改进任务)`}>
-        <a href="/todo" style={{ fontSize: "var(--fs-sm)", color: "var(--status-ok)", textDecoration: "none" }}>✅ 已建单 →</a>
+        <a href="/todo" className={styles.doneLink}>✅ 已建单 →</a>
       </Tooltip>
     );
   }
@@ -70,7 +71,7 @@ export default function ConvertToTodoButton({
         type={type}
         loading={state === "busy"}
         danger={state === "err"}
-        style={type === "link" ? { padding: 0, fontSize: "var(--fs-sm)" } : undefined}
+        className={type === "link" ? styles.linkBtn : undefined}
         onClick={run}
       >
         {state === "err" ? "重试建单" : label}

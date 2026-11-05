@@ -3,16 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import PracticeDetailBody from "@/components/cognitive/PracticeDetailBody";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 function PracticeDetailInner() {
   const params = useSearchParams();
   const id = params.get("id") || "";
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/practice" style={{ color: "var(--text-dim)" }}>实践</a><span className="sep">/</span><span className="current">实践详情</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/practice">实践</a><span className="sep">/</span><span className="current">实践详情</span></div>
     <PracticeDetailBody
       id={id}
       renderHeader={(p: any, loading: boolean) => (
-        <div className="page-header"><div className="page-title">{p.title || "实践详情"}</div><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${p.id || id || "(样例)"}`}</div></div>
+        <PageHeader><PageTitle>{p.title || "实践详情"}</PageTitle><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${p.id || id || "(样例)"}`}</div></PageHeader>
       )}
     />
   </main></div>);

@@ -1,0 +1,16 @@
+/* /system/api 页内样式（P2 呈现层改造：内联 style 清零）
+   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
+   能复用 .panel / .panel-header / .panel-title / .badge / .mono / .nowrap 的一律复用。 */
+
+/* 端点路径 / 路由端点：等宽字体小一号（原来是内联 font-family + font-size） */
+.monoCell { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+/* 方法徽标不换行（原来是 .tbl td 上的 nowrap 类；换表后由本类承担） */
+.nowrapCell { white-space: nowrap; }
+/* —— 本批（批1）追加 —— */
+
+/* 面包屑第一段（当前层级）压暗（原来是内联 color: var(--text-dim)） */
+.crumbDim { color: var(--text-dim); }
+
+/* 页面底部「相关视图」出链行（原来是内联 display/gap/flexWrap/marginTop） */
+.relatedLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

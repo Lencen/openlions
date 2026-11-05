@@ -3,17 +3,19 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import MemoryDetailBody from "@/components/cognitive/MemoryDetailBody";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 function MemoryDetailInner() {
   const params = useSearchParams();
   const id = params.get("id") || "";
   return (<div className="layout-with-sidebar">
       <main className="main">
-        <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/memory" style={{ color: "var(--text-dim)" }}>记忆库</a><span className="sep">/</span><span className="current">记忆详情</span></div>
+        <div className="breadcrumb"><span className={styles.crumbDim}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/memory">记忆库</a><span className="sep">/</span><span className="current">记忆详情</span></div>
         <MemoryDetailBody
           id={id}
           renderHeader={(m: any, loading: boolean) => (
-            <div className="page-header"><div className="page-title">{m.title || "记忆详情"}</div><div className="page-subtitle">{loading ? "（加载中...）" : "编号：" + (m.id || id || "(样例)")}</div></div>
+            <PageHeader><PageTitle>{m.title || "记忆详情"}</PageTitle><div className="page-subtitle">{loading ? "（加载中...）" : "编号：" + (m.id || id || "(样例)")}</div></PageHeader>
           )}
         />
       </main>

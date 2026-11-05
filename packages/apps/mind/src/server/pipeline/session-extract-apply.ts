@@ -44,6 +44,7 @@ import {
   safeCreateKnowledge,
   safeCreatePractice,
   safeCreateSkill,
+  safeCreateReflection,
 } from "./safe-create";
 import { resolveSkillNameForWrite } from "./db-writer";
 // 2026-10-25 撤回流程补漏: 去重判定统一走"活行口径"(未撤回 + 未被取代)
@@ -64,6 +65,7 @@ export interface ApplyCounter {
   knowledge: number;
   practice: number;
   skill: number;
+  reflection: number;
   task: number;
   event: number;
   link: number;
@@ -91,7 +93,7 @@ export interface ApplyBatchResult {
 }
 
 const EMPTY_COUNTER = (): ApplyCounter => ({
-  memory: 0, knowledge: 0, practice: 0, skill: 0, task: 0, event: 0, link: 0, retraction: 0,
+  memory: 0, knowledge: 0, practice: 0, skill: 0, reflection: 0, task: 0, event: 0, link: 0, retraction: 0,
 });
 
 function toDate(v: unknown): Date | undefined {
@@ -139,7 +141,7 @@ type ProductOutcome =
 export function validateSessionExtractBatch(batch: SessionExtractBatch): string[] {
   const issues: string[] = [];
   if (!String(batch?.sessionUid || "").trim()) issues.push("sessionUid required");
-  const kinds: Array<"memory" | "knowledge" | "practice" | "skill"> = ["memory", "knowledge", "practice", "skill"];
+  const kinds: Array<"memory" | "knowledge" | "practice" | "skill" | "reflection"> = ["memory", "knowledge", "practice", "skill", "reflection"];
   for (const kind of kinds) {
     for (const row of batch?.products?.[kind] || []) {
       const expected = productHashForRow(kind, row);
@@ -179,7 +181,7 @@ export async function applySessionExtractBatch(
    * 返回 deduped 时携带已有行 id(供调用方决定是否建关联边 —— 旧脚本命中 dup 即跳过整条, 故**不建边**)。
    */
   async function createProduct(opts: {
-    kind: "memory" | "knowledge" | "practice" | "skill";
+    kind: "memory" | "knowledge" | "practice" | "skill" | "reflection";
     row: ExtractRow;
   }): Promise<ProductOutcome> {
     const { kind, row } = opts;
@@ -210,6 +212,17 @@ export async function applySessionExtractBatch(
       if (dup) return { status: "deduped", id: dup.id };
       const created = await safeCreatePractice(prisma, { data: rowToPracticeData(row, hash, sessionUid) });
       if (!created) return { status: "rejected", reason: "practice_rejected_by_cognitive_gate(store 返回 null)" };
+      return { status: "created", id: created.id };
+    }
+    if (kind === "reflection") {
+      // 2026-11-05 ord-085: 反思持久化。此前提取链路完全不处理 reflections（脚本 0 处引用），
+      //   导致 Reflection 表 11 天零新增 —— 不是模型不产，是没人接。
+      const score = typeof row.score === "number" ? row.score : (typeof row.qualityScore === "number" ? row.qualityScore : null);
+      if (score !== null && score < 0.6) return { status: "rejected", reason: "reflection_below_quality_gate(score=" + score + " < 0.6)" };
+      const dup = await prisma.reflection.findFirst({ where: { contentHash: hash }, select: { id: true } });
+      if (dup) return { status: "deduped", id: dup.id };
+      const created = await safeCreateReflection(prisma, { data: rowToReflectionData(row, hash, sessionUid) });
+      if (!created) return { status: "rejected", reason: "reflection_rejected_by_store(store 返回 null)" };
       return { status: "created", id: created.id };
     }
     // skill: 先做写侧硬上限判据(与 db-writer round74 同一实现), 超长 -> 降级 Knowledge
@@ -243,7 +256,7 @@ export async function applySessionExtractBatch(
   // 关联边依赖产物 id; 脚本已在行对象里带 id(genId, 与旧直写同形 cuid), 这里保留映射
   // (scriptId -> 实际落库 id), 供关联边解析 —— 行被 deduped/rejected 时其边不建(与旧脚本"dup 即 continue"一致)。
   const idByScriptId = new Map<string, string>();
-  const order: Array<"practice" | "memory" | "knowledge" | "skill"> = ["practice", "memory", "knowledge", "skill"];
+  const order: Array<"practice" | "memory" | "knowledge" | "skill" | "reflection"> = ["practice", "memory", "knowledge", "skill", "reflection"];
   for (const kind of order) {
     const rows = batch.products?.[kind] || [];
     for (const row of rows) {
@@ -476,6 +489,26 @@ function rowToMemoryData(row: ExtractRow, contentHash: string, sessionUid: strin
   };
 }
 
+/** 2026-11-05 ord-085: Reflection 行映射（字段与 db-writer 的 reflection.create 对齐） */
+function rowToReflectionData(row: ExtractRow, contentHash: string, sessionUid: string): any {
+  const score = typeof row.score === "number" ? row.score : (typeof row.qualityScore === "number" ? row.qualityScore : undefined);
+  return {
+    id: str(row.id),
+    title: String(row.title ?? "").slice(0, 120),
+    description: String(row.description ?? row.content ?? ""),
+    category: str(row.category) ?? "WORKFLOW",
+    priority: str(row.priority) ?? "P2",
+    lesson: str(row.lesson) ?? null,
+    improvements: typeof row.improvements === "string" ? row.improvements : (row.improvements ? JSON.stringify(row.improvements) : null),
+    score,
+    sourceType: "SESSION_EXTRACT",
+    sourceId: sessionUid,
+    agentSource: "SESSION_EXTRACT",
+    contentHash,
+    theme: str(row.theme) ?? "未分类",
+    processingVersion: "v3",
+  };
+}
 function rowToKnowledgeData(row: ExtractRow, contentHash: string, sessionUid: string): any {
   return {
     id: str(row.id),

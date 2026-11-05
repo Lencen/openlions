@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 // 飞轮执行数据记录 (2026-09-01 重构) — 业务审计
 // 时间线: 什么时间扫描/提炼/反思/改进 + 错误记录
@@ -62,9 +63,9 @@ export default function AuditPage() {
   return (
     <div className="layout-with-sidebar"><main className="main">
       <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">执行数据记录</span></div>
-      <div className="page-header"><div className="page-title">执行数据记录（业务审计）</div>
+      <PageHeader><PageTitle>执行数据记录（业务审计）</PageTitle>
         <div className="page-subtitle">今日事件 {data?.todayEvents ?? "-"} · 错误 {data?.todayErrors ?? "-"} · 15s 刷新</div>
-      </div>
+      </PageHeader>
       {error && <div style={{ color: "var(--status-crit)", marginBottom: "var(--sp-2)" }}>⚠ {error}</div>}
 
       {/* 今日各阶段统计 */}

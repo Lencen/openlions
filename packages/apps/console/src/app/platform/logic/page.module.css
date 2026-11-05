@@ -1,0 +1,41 @@
+/* /platform/logic 页内样式（P1 试点页呈现层改造 ord-20261104-032 · 模板 D 配置）
+   只放本页需要、globals.css 里没有的几条；能复用 .panel / .tiny / .mono / .nowrap 的一律复用。
+   规则：本页 style={{ 计数必须为 0。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 页头权限 / 计数 chip 行 */
+.headerTags { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); align-items: center; }
+
+/* 约束条（三闸门）常驻 */
+.gateBar { margin-bottom: var(--gap-sect); }
+
+/* 模板 D：左列 300px + 右详情 1fr；≤1024 上下堆叠（TEMPLATES §4 断点） */
+.cfgGrid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--gap-block); margin-bottom: var(--gap-sect); align-items: start; }
+@media (max-width: 1023px) { .cfgGrid { grid-template-columns: 1fr; } }
+
+.cfgLeft { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); overflow: hidden; }
+.cfgLeftHead { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); color: var(--text-dim); background: var(--bg-surface2); border-bottom: 1px solid var(--border); }
+.domainList { display: flex; flex-direction: column; }
+.leftSkeleton { padding: var(--sp-3); }
+.domainItem { display: flex; flex-direction: column; gap: 2px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  padding: var(--sp-2-5) var(--sp-3); border: 0; border-bottom: 1px solid var(--border); border-left: 3px solid transparent; background: transparent; }
+.domainItem:hover { background: var(--bg-hover); }
+.domainItemOn, .domainItemOn:hover { border-left-color: var(--primary); background: var(--primary-dim); }
+.domainName { font-size: var(--fs-base); font-weight: 600; }
+.domainFile { font-size: var(--fs-sm); color: var(--text-dim); }
+
+.cfgRight { min-width: 0; }
+.detailHead { display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* 文档段落（原来是内联 font-size / line-height / white-space / monospace） */
+.section { border-bottom: 1px solid var(--border); padding-bottom: var(--sp-3); margin-bottom: var(--sp-3); }
+.section:last-child { border-bottom: 0; }
+.sectionSummary { font-weight: 700; font-size: var(--fs-md); color: var(--primary); cursor: pointer; margin-bottom: var(--sp-1); }
+.sectionCount { font-weight: 400; font-size: var(--fs-sm); color: var(--text-dim); }
+.docLine { font-size: var(--fs-base); line-height: 1.75; white-space: pre-wrap; overflow-x: auto; }
+.docLineQuote { color: var(--text-dim); }
+.docLineTable { font-family: var(--font-mono); }
+
+.panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
+.linkList { font-size: var(--fs-base); line-height: 1.9; }

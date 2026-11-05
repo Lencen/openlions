@@ -5,12 +5,14 @@ import Link from "next/link";
 import { useApi } from "@/lib/api";
 import { t } from "@/i18n";
 import { Alert } from "@/components/primitives";
+import { PageTitle } from "@/components/ui/PageHeader";
 import StepIndicator from "./_components/StepIndicator";
 import StepInfoForm from "./_components/StepInfoForm";
 import StepSelectServices from "./_components/StepSelectServices";
 import StepConfirm from "./_components/StepConfirm";
 import StepResult from "./_components/StepResult";
 import type { OnboardForm } from "./_components/types";
+import styles from "./page.module.css";
 
 export default function OnboardPage() {
   const { data: services, loading: servicesLoading, error: servicesError } = useApi<any[]>("/api/services-list");
@@ -70,9 +72,9 @@ export default function OnboardPage() {
       
       <main className="main">
         <div className="breadcrumb">{t('onboard.crumb')}</div>
-        <h1 className="page-title">AI 接入向导</h1>
+        <PageTitle>AI 接入向导</PageTitle>
 
-        {servicesError && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="业务服务列表加载失败" description="接入向导第 2 步的勾选项来自 /api/services-list, 当前取数失败, 请刷新重试。" /></div>}
+        {servicesError && <div className={styles.alertRow}><Alert type="error" message="业务服务列表加载失败" description="接入向导第 2 步的勾选项来自 /api/services-list, 当前取数失败, 请刷新重试。" /></div>}
 
         {/* 步骤指示器 */}
         <StepIndicator step={step} />
@@ -111,7 +113,7 @@ export default function OnboardPage() {
           <StepResult result={result} form={form} onCopyEnv={copyEnv} onRestart={restart} />
         )}
         {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-        <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+        <div className={"tiny " + styles.relatedLinks}>
           <span>相关视图：</span>
           <Link href="/agents">接入管理 →</Link>
           <Link href="/agents/approvals">审批进度 →</Link>

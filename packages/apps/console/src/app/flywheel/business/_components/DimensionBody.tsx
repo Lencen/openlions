@@ -4,6 +4,7 @@ import { Panel, SimpleTable, Note, Pill } from "./ui";
 import { ProductionFunnel, ConsumptionFunnel } from "./Funnels";
 import { OutputTrend, FlowTrend } from "./TrendChart";
 import { ACTIONS, ci, cp, ct, ch, ctime } from "./caliber";
+import styles from "../page.module.css";
 
 function D1({ s }: { s: any }) {
   const a = (s.business && s.business.assets) || {};
@@ -70,10 +71,10 @@ function D2({ s }: { s: any }) {
   return (
     <>
       <Panel title="产出与结构化（14 天）" extra="UTC 自然日 · R3 阴影区">
-        {series.length ? <div style={{ minHeight: 280 }}><OutputTrend series={series} /></div> : <Note>无 14 天序列。</Note>}
+        {series.length ? <div className={styles.chartBox}><OutputTrend series={series} /></div> : <Note>无 14 天序列。</Note>}
       </Panel>
       <Panel title="认领与交付（14 天）" extra="智能体交付为虚线">
-        {series.length ? <div style={{ minHeight: 280 }}><FlowTrend series={series} /></div> : <Note>无 14 天序列。</Note>}
+        {series.length ? <div className={styles.chartBox}><FlowTrend series={series} /></div> : <Note>无 14 天序列。</Note>}
       </Panel>
       <Panel title="逐日明细" extra="阶段由 UTC 日期切分；跨阶段不可直接比">
         <SimpleTable
@@ -354,7 +355,7 @@ function D8({ s }: { s: any }) {
             a.cur,
             a.threshold,
             a.owner,
-            <span key={"act" + a.key} className="tiny">{a.action}{a.note ? <span style={{ color: "var(--text-muted)" }}>（{a.note}）</span> : null}</span>,
+            <span key={"act" + a.key} className="tiny">{a.action}{a.note ? <span className={styles.noteMuted}>（{a.note}）</span> : null}</span>,
             <code key={"v" + a.key}>{a.verify}</code>,
           ])}
         />

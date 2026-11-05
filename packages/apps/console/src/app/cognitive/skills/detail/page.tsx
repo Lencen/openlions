@@ -3,16 +3,18 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import SkillDetailBody from "@/components/cognitive/SkillDetailBody";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 function SkillDetailInner() {
   const params = useSearchParams();
   const id = params.get("id") || "";
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/skills" style={{ color: "var(--text-dim)" }}>技能</a><span className="sep">/</span><span className="current">技能详情</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>记忆与知识</span><span className="sep">/</span><a href="/cognitive/skills">技能</a><span className="sep">/</span><span className="current">技能详情</span></div>
     <SkillDetailBody
       id={id}
       renderHeader={(s: any, loading: boolean) => (
-        <div className="page-header"><div className="page-title">{s.name || "技能详情"}</div><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${s.id || id || "(样例)"} · v${s.version ?? 1}${s.legacy ? " · 存量(无步骤)" : ""}`}</div></div>
+        <PageHeader><PageTitle>{s.name || "技能详情"}</PageTitle><div className="page-subtitle">{loading ? "（加载中...）" : `ID: ${s.id || id || "(样例)"} · v${s.version ?? 1}${s.legacy ? " · 存量(无步骤)" : ""}`}</div></PageHeader>
       )}
     />
   </main></div>);

@@ -4,8 +4,15 @@ import { Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同
 import { t } from "@/i18n";
 import { MetricCard } from "@/components/ui";
 import { fmtCompact, fmtNum, fmtScore, fmtTokens } from "@/lib/format";
-import { TABLE_COLOR, TABLE_LABEL } from "./constants";
-import { inkOf } from "@/lib/ink";
+import { TABLE_LABEL } from "./constants";
+import styles from "../page.module.css";
+
+const INK: Record<string, string> = {
+  Memory: styles.inkMemory,
+  Knowledge: styles.inkKnowledge,
+  Practice: styles.inkPractice,
+  Skill: styles.inkSkill,
+};
 
 export default function OverviewMetrics({ data, loadingCards }: { data: any; loadingCards: boolean }) {
   const s = data?.sessions;
@@ -42,7 +49,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           <>
             {(["Memory", "Knowledge", "Practice", "Skill"] as const).map((t) => (
               <span key={t} className="tiny">
-                <span style={{ color: inkOf(TABLE_COLOR[t]), fontWeight: 600 }}>{TABLE_LABEL[t]}</span> {fmtNum(prod?.byTable?.[t]?.n)}
+                <span className={styles.inkStrong + " " + (INK[t] || "")}>{TABLE_LABEL[t]}</span> {fmtNum(prod?.byTable?.[t]?.n)}
               </span>
             ))}
           </>
@@ -92,12 +99,12 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
             <span>实测 {fmtTokens(tokens?.measuredTokens)}</span>
             {tokens?.estimatedTokens ? (
               <Tooltip title="tok≈N 估算值, 单列展示, 不计入总量">
-                <span className="tiny" style={{ color: "var(--status-warn)" }}>{t('overview.token.estimated', { v: fmtTokens(tokens.estimatedTokens) })}</span>
+                <span className={"tiny " + styles.warnText}>{t('overview.token.estimated', { v: fmtTokens(tokens.estimatedTokens) })}</span>
               </Tooltip>
             ) : null}
             {tokens?.callsUnmeasured ? (
               <Tooltip title={t('overview.token.unmeasuredTip')}>
-                <span className="tiny" style={{ color: "var(--status-warn)" }}>{t('overview.token.unmeasured', { n: fmtNum(tokens.callsUnmeasured) })}</span>
+                <span className={"tiny " + styles.warnText}>{t('overview.token.unmeasured', { n: fmtNum(tokens.callsUnmeasured) })}</span>
               </Tooltip>
             ) : null}
           </>
@@ -113,7 +120,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           <>
             {(["Memory", "Knowledge", "Practice", "Skill"] as const).map((t) => (
               <span key={t} className="tiny">
-                <span style={{ color: inkOf(TABLE_COLOR[t]), fontWeight: 600 }}>{TABLE_LABEL[t]}</span> {fmtScore(quality?.byTable?.[t]?.avg)}
+                <span className={styles.inkStrong + " " + (INK[t] || "")}>{TABLE_LABEL[t]}</span> {fmtScore(quality?.byTable?.[t]?.avg)}
               </span>
             ))}
           </>

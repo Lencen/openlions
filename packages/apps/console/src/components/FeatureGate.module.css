@@ -1,0 +1,11 @@
+/* components/FeatureGate 样式（P2 呈现层改造：内联 style 清零）
+   面板外壳（.panel / .panel-header / .panel-title）与 .tiny 复用 globals.css。 */
+
+/* 面板正文留白（原来是内联 padding: 0 var(--gap-sect) var(--gap-block)） */
+.body { padding: 0 var(--gap-sect) var(--gap-block); }
+
+/* 首段说明去掉默认上边距（原来是内联 margin-top: 0） */
+.lede { margin-top: 0; }
+
+/* 状态/版本/原因三行（原来是内联 line-height: 1.9） */
+.meta { line-height: 1.9; }

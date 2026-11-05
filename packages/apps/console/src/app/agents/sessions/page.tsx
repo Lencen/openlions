@@ -11,6 +11,7 @@ import { useRef, useState } from "react";
 import TableCopyButton from "@/components/TableCopyButton";
 import ErrorAlert from "@/components/ErrorAlert";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface S {
   /** 76-GB: BFF 顶层新增的"数据时刻" */
   asOf?: string; result?: { data?: { total: number; byStatus: Record<string,number>; bySource: Record<string,number>; byAgent: Array<{agent_id:string;count:number}>; pending24h: number; totalSizeKb: number } } }
@@ -44,7 +45,7 @@ export default function SessionsPage() {
   const pages = Math.max(1, Math.ceil(total / pageSize));
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>智能体与能力</span><span className="sep">/</span><span className="current">会话归档</span></div>
-    <div className="page-header"><div className="page-title">会话归档</div><div className="page-subtitle">会话档案 · {loading && "（加载中...）"}{/* 2026-10-16 round 77-AG（决策③逐源）: 2 个源 —— /api/session-stats(KPI 三张卡) 与 /api/session-list(下方列表); 此前只标前者 ✗。 */}<DataMoment items={[{ label: "会话", at: (data as any)?.asOf }, { label: "列表", at: (listData as any)?.asOf }]} /></div></div>
+    <PageHeader><PageTitle>会话归档</PageTitle><div className="page-subtitle">会话档案 · {loading && "（加载中...）"}{/* 2026-10-16 round 77-AG（决策③逐源）: 2 个源 —— /api/session-stats(KPI 三张卡) 与 /api/session-list(下方列表); 此前只标前者 ✗。 */}<DataMoment items={[{ label: "会话", at: (data as any)?.asOf }, { label: "列表", at: (listData as any)?.asOf }]} /></div></PageHeader>
     <div className="kpi-grid">
       {/* 2026-10-15（round 76-EP，规范铁律 2/§1）：原来 `st?.pending24h ?? 0` 在**取不到时显示 0** ✗，
           与「真的是 0」分不清；改成四态区分（加载中 / 未知 / —）。 */}

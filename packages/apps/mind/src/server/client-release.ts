@@ -30,8 +30,19 @@ import { signBytes } from "./client-release-signing";
  *   日期段按字符串（ISO 日期字符串序等价于日期序），编号段按**整数**。
  * 列表与 latest **必须共用这一处**——两处各写一份排序，本身就是隐患。
  */
-const ORDER_BY_VERSION_DESC = `ORDER BY split_part(version,'.',1) DESC,
-  COALESCE(NULLIF(regexp_replace(split_part(version,'.',2), '\\D', '', 'g'), ''), '0')::int DESC,
+// 2026-11-05（VERSION-SPEC v2）：版本号从 YYYY-MM-DD.N 变为 YYYY.MM.DD.NN。
+// 旧 ORDER BY 按 . 切分：v2 首段是 2026，旧格式首段是 2026-10-30，文本比较下旧格式更大，
+// latest 会返回旧版本（客户端自更新会往回降级，契约明令禁止）。
+// 修法：先把 - 和 . 统一成 .，再按 4 段整数比较，两种格式都能正确排序。
+// 2026-11-05（VERSION-SPEC v2）：版本号从 YYYY-MM-DD.N 变为 YYYY.MM.DD.NN。
+// 旧 ORDER BY 按 . 切分：v2 首段是 2026，旧格式首段是 2026-10-30，文本比较下旧格式更大，
+// latest 会返回旧版本（客户端自更新会往回降级，契约明令禁止）。
+// 修法：先把 - 和 . 统一成 .，再按 4 段整数比较，两种格式都能正确排序。
+const ORDER_BY_VERSION_DESC = `ORDER BY
+  split_part(regexp_replace(version, '[-.]', '.', 'g'), '.', 1)::int DESC,
+  split_part(regexp_replace(version, '[-.]', '.', 'g'), '.', 2)::int DESC,
+  split_part(regexp_replace(version, '[-.]', '.', 'g'), '.', 3)::int DESC,
+  split_part(regexp_replace(version, '[-.]', '.', 'g'), '.', 4)::int DESC,
   "createdAt" DESC`;
 
 export const PLATFORMS = ["linux-deb", "linux-rpm", "windows-msi", "macos-pkg"] as const;
@@ -72,7 +83,10 @@ export function storageRoot(): string {
 
 /** 版本格式校验：与 CLIENT_VERSION 同形（YYYY-MM-DD.N） */
 export function isValidVersion(v: string): boolean {
-  return /^\d{4}-\d{2}-\d{2}\.\d+$/.test(String(v || "").trim());
+  const s = String(v || "").trim();
+  // VERSION-SPEC v2（2026-11-04）：客户端版本改为 YYYY.MM.DD.NN（构建日 + 当日序号）。
+  // 旧格式 YYYY-MM-DD.N 作为历史兼容继续接受（.48 及更早的已发布记录仍要能读）。
+  return /^\d{4}\.\d{2}\.\d{2}\.\d{2}$/.test(s) || /^\d{4}-\d{2}-\d{2}\.\d+$/.test(s);
 }
 
 export function sha256Buf(buf: Buffer): string {
@@ -150,7 +164,7 @@ export function validateReleaseManifest(input: {
   const version = String(man.version ?? "").trim();
   if (!version) return { ok: false, status: 400, error: "INVALID_MANIFEST", detail: "manifest.version 缺失" };
   if (!isValidVersion(version)) {
-    return { ok: false, status: 400, error: "INVALID_MANIFEST", detail: "manifest.version=" + version + " 不是 YYYY-MM-DD.N" };
+    return { ok: false, status: 400, error: "INVALID_MANIFEST", detail: "manifest.version=" + version + " 不是 YYYY.MM.DD.NN（或历史格式 YYYY-MM-DD.N）" };
   }
   const formVersion = String(input.formVersion ?? "").trim();
   if (formVersion && formVersion !== version) {

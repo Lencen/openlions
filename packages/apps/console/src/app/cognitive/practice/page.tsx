@@ -12,6 +12,7 @@ import CognitiveDetailDrawer from "@/components/cognitive/CognitiveDetailDrawer"
 import { useCognitiveListUrlState } from "@/components/cognitive/useCognitiveListUrlState";
 import { getQuickFilters } from "@/config/cognitiveQuickFilters";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface P { items?: Array<{ id: string; title: string; theme?: string; description?: string; type?: string; difficulty?: string; outcome?: string; qualityScore?: number; createdAt?: string; updatedAt?: string }>; total?: number }
 const fmt = (n: number) => n.toLocaleString();
 const linkBtn: CSSProperties = { background: "none", border: 0, padding: 0, cursor: "pointer", color: "var(--primary)", font: "inherit", textAlign: "left" };
@@ -26,7 +27,7 @@ export default function PracticePage() {
   const total = data?.total ?? 0;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><span className="current">实践</span></div>
-    <div className="page-header"><div className="page-title">实践</div><div className="page-subtitle">操作模板 · 流程沉淀 · 点标题用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></div>
+    <PageHeader><PageTitle>实践</PageTitle><div className="page-subtitle">操作模板 · 流程沉淀 · 点标题用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></PageHeader>
     <div className="kpi-grid"><KPICard label="实践总量" value={total > 0 ? fmt(total) : "..."} /></div>
     <div className="panel"><div className="panel-header"><span className="panel-title">实践列表</span></div>
       <ListControls search={search} onSearch={setSearch} sortBy={sortBy} onSortBy={setSortBy} sortOrder={sortOrder} onSortOrder={setSortOrder} total={total} page={page} pageSize={pageSize} onPage={setPage} quickFilters={getQuickFilters("practice")} quick={quick} onQuick={setQuick} loading={loading} />

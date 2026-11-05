@@ -1,16 +1,27 @@
 "use client";
 // 统一 echarts 封装: 关闭 SSR + 统一网格/字体/提示样式, 页面只传 option
 import dynamic from "next/dynamic";
-import { useMemo, type CSSProperties } from "react";
+import { useMemo } from "react";
 import { useThemeColors } from "./useThemeColors";
+import styles from "./EChart.module.css";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
 export interface EChartProps {
   option: any;
-  height?: number | string;
-  style?: CSSProperties;
+  /** 画布高度（px 数值；取整到 10px 档位后由 .h* 类承担）。
+   *  收窄为 number：字符串高度（如 "100%"）无法表达成档位类，全仓库也无字符串调用点。 */
+  height?: number;
+  /** 附加在**外层定高盒子**上（画布本身不接样式，见下方说明） */
   className?: string;
+}
+
+/** 高度档位：echarts-for-react 在画布 div 上硬写内联 height:300，内联样式只能被 !important 覆盖，
+ *  所以高度一律落到外层盒子的 .h* 档位类（10px 一档，100–1500；越界夹到端点）。 */
+function heightClass(height: number): string {
+  const n = isFinite(height) ? height : 240;
+  const v = Math.min(1500, Math.max(100, Math.round(n / 10) * 10));
+  return styles["h" + v] || styles.h240;
 }
 
 /** 平台常见色值 -> 令牌键: canvas 不解析 var(), 由 EChart 在渲染时把这些 hex 解析成当前主题的真实色。 */
@@ -86,18 +97,20 @@ function withTheme(option: any, C: Record<string, string>) {
   return resolveCanvasColors(out, C);
 }
 
-export default function EChart({ option, height = 240, style, className }: EChartProps) {
+export default function EChart({ option, height = 240, className }: EChartProps) {
   const C = useThemeColors();
   const themed = useMemo(() => withTheme(option, C), [option, C]);
+  // 外层盒子定高（.h* 档位）+ 内层画布铺满 —— 组件内不再拼内联 style，说明见 EChart.module.css
   return (
-    <ReactECharts
-      option={themed}
-      className={className}
-      style={{ height, width: "100%", ...style }}
-      opts={{ renderer: "canvas" }}
-      notMerge
-      lazyUpdate
-    />
+    <div className={[styles.box, heightClass(height), className].filter(Boolean).join(" ")}>
+      <ReactECharts
+        option={themed}
+        className={styles.canvas}
+        opts={{ renderer: "canvas" }}
+        notMerge
+        lazyUpdate
+      />
+    </div>
   );
 }
 

@@ -4,6 +4,7 @@ import Icon from "@/components/Icon";
 import { usePathname } from "next/navigation";
 import { getSubmodules, Submodule } from "@/config/submodules";
 import { t } from "@/i18n";
+import styles from "./SubSidebar.module.css";
 
 interface Props {
   module: string;
@@ -30,20 +31,20 @@ export default function SubSidebar({ module, moduleName }: Props) {
             >
               <span className="icon" aria-hidden="true"><Icon name={s.icon} size={16} /></span>
               <span>{s.label}</span>
-              {s.isNew && <span className="badge new" style={{ marginLeft: "auto", fontSize: "var(--fs-xs)" }}>{t('common.new')}</span>}
-              {s.locked && <span style={{ marginLeft: "auto", fontSize: "var(--fs-xs)", color: "var(--status-warn)" }} aria-label="未实现"><Icon name="lock" size={14} /></span>}
+              {s.isNew && <span className={"badge new " + styles.badgeNew}>{t('common.new')}</span>}
+              {s.locked && <span className={styles.locked} aria-label="未实现"><Icon name="lock" size={14} /></span>}
             </Link>
           );
         })}
       </div>
       <div className="sidebar-footer">
         <div className="row">
-          <span className="dot" style={{ background: "var(--status-ok)" }} />
+          <span className={"dot " + styles.dotOk} />
           <span>数据实时</span>
           <span className="num">{t('common.live')}</span>
         </div>
         <div className="row">
-          <span className="dot" style={{ background: "var(--module-core)" }} />
+          <span className={"dot " + styles.dotCore} />
           <span>模块</span>
           <span className="num">{module}</span>
         </div>

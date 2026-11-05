@@ -8,6 +8,7 @@ import ReflectionsHeader from "./_components/ReflectionsHeader";
 import ReflectionsListTable from "./_components/ReflectionsListTable";
 import { useGlobalFilter } from "@/components/GlobalFilter";
 import ErrorAlert from "@/components/ErrorAlert";
+import styles from "./page.module.css";
 
 export default function ReflectionsPage() {
   // 2026-10-13 round 76-CA: 接入顶栏时间范围(③)。
@@ -44,10 +45,10 @@ export default function ReflectionsPage() {
   return (
     <div className="layout-with-sidebar"><main className="main">
       <ReflectionsHeader loading={loading} rowsCount={rows.length} st={st} stats={stats} />
-      {err ? <div style={{ padding: "var(--sp-2) var(--sp-4)" }}><ErrorAlert title="反思列表加载失败" message={err} onRetry={() => { mutate(); }} /></div> : null}
+      {err ? <div className={styles.pageErrWrap}><ErrorAlert title="反思列表加载失败" message={err} onRetry={() => { mutate(); }} /></div> : null}
       <ReflectionsListTable rows={rows} loading={loading} expandedId={expandedId} detail={detail} onOpen={open} onReload={reload} />
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.relatedLinks}>
         <span>相关视图：</span>
         <Link href="/cognitive/reflection">反思资产 →</Link>
         <Link href="/flywheel/tasks">反思→任务 →</Link>

@@ -9,6 +9,7 @@ import { Alert } from "@/components/primitives";
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface P { logs?:Array<{id:string;sourceType:string;status:string;recordsSynced:number;runMode:string;startedAt:string;completedAt?:string}>; summary?:{total:number;completed:number;failed:number} }
 export default function AutomationPage() {
   const [expandedId, setExpandedId] = useState<string|null>(null);
@@ -22,7 +23,7 @@ export default function AutomationPage() {
   ];
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">{t('automation.title')}</span></div>
-    <div className="page-header"><div className="page-title">{t('automation.title')}</div><div className="page-subtitle">{t('automation.subtitle')}</div></div>
+    <PageHeader><PageTitle>{t('automation.title')}</PageTitle><div className="page-subtitle">{t('automation.subtitle')}</div></PageHeader>
     <div className="kpi-grid">
       <KPICard label={t('automation.kpi')} value={crons.length.toString()} />
       <KPICard label="总执行" value={summary?summary.total.toString():"..."} />

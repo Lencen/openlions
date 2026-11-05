@@ -1,5 +1,7 @@
 "use client";
 import { t } from "@/i18n";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "../page.module.css";
 
 /** 面包屑 + 页头 + 错误提示 */
 // 2026-10-13 round 76-CX: 加 loading —— 数据没回来时原来显示"共 0 待处理", 那是**假计数**
@@ -7,12 +9,12 @@ import { t } from "@/i18n";
 export default function ApprovalsHeader({ agentCount, error, loading }: { agentCount: number; error: string; loading?: boolean }) {
   return (
     <>
-      <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>{t('approvals.crumb')}</span><span className="sep">/</span><span className="current">接入审批</span></div>
-      <div className="page-header">
-        <div className="page-title">接入审批</div>
+      <div className="breadcrumb"><span className={styles.crumbDim}>{t('approvals.crumb')}</span><span className="sep">/</span><span className="current">接入审批</span></div>
+      <PageHeader>
+        <PageTitle>接入审批</PageTitle>
         <div className="page-subtitle">{t('approvals.subtitle', { n: loading ? "…" : agentCount })}</div>
-      </div>
-      {error && <div style={{ color: "var(--status-crit)", marginBottom: "var(--sp-3)" }}>⚠ {error}</div>}
+      </PageHeader>
+      {error && <div className={styles.err}>⚠ {error}</div>}
     </>
   );
 }

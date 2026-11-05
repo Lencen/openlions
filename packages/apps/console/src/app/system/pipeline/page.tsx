@@ -9,6 +9,7 @@ import { Alert } from "@/components/primitives";
 import TableCopyButton from "@/components/TableCopyButton";
 import ErrorAlert from "@/components/ErrorAlert";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface P { logs?: Array<{id:string;sourceType:string;sourcePath?:string;status:string;recordsSynced:number;recordsSkipped:number;errorMessage?:string|null;messageCount:number;runMode:string;startedAt:string;completedAt?:string;createdAt:string}>; summary?:{total:number;completed:number;failed:number} }
 export default function PipelinePage() {
   const [expandedId, setExpandedId] = useState<string|null>(null);
@@ -18,7 +19,7 @@ export default function PipelinePage() {
   const summary = data?.summary;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">流水线监控</span></div>
-    <div className="page-header"><div className="page-title">流水线监控</div><div className="page-subtitle">{loading?"（加载中...）":`${logs.length} 条运行记录`}{/* 2026-10-16 round 77-AF: 2 个源各带自己的时刻 —— 本接口(77-AF 补的顶层 asOf) + flywheel-dashboard 的 timestamp。 */}<DataMoment items={[{ label: "管道", at: (data as any)?.asOf }, { label: "定时", at: (dash as any)?.timestamp }]} /></div></div>
+    <PageHeader><PageTitle>流水线监控</PageTitle><div className="page-subtitle">{loading?"（加载中...）":`${logs.length} 条运行记录`}{/* 2026-10-16 round 77-AF: 2 个源各带自己的时刻 —— 本接口(77-AF 补的顶层 asOf) + flywheel-dashboard 的 timestamp。 */}<DataMoment items={[{ label: "管道", at: (data as any)?.asOf }, { label: "定时", at: (dash as any)?.timestamp }]} /></div></PageHeader>
     {/* 2026-10-15（规范 §2）：原来只有一句报错文本, 没有下一步动作 ✗ -> 换成 ErrorAlert(带重试)。 */}
     {(error || dashErr) ? (
       <ErrorAlert

@@ -1,5 +1,6 @@
 "use client";
 import dynamic from "next/dynamic";
+import styles from "./RadarChart.module.css";
 
 const ReactECharts = dynamic(() => import("echarts-for-react"), { ssr: false });
 
@@ -35,5 +36,5 @@ export default function RadarChart({ data, color = "#a78bfa" }: Props) {
       }],
     }],
   };
-  return <ReactECharts option={option} style={{ height: 280 }} />;
+  return <ReactECharts option={option} className={styles.chart} />;
 }

@@ -4,6 +4,7 @@ import { Button } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 
 import { ReloadOutlined } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t } from "@/i18n";
 import { PageHero, Pill } from "@/components/ui";
+import styles from "../page.module.css";
 
 /** 错误态下的极简页头 (与抽取前 error 分支逐字一致) */
 export function OverviewHeroPlain() {
@@ -40,7 +41,7 @@ export default function OverviewHero({
           <br />
           每 10 秒自动刷新
           <br />
-          <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} style={{ marginTop: "var(--sp-1-5)" }}>刷新</Button>
+          <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} className={styles.heroRefresh}>刷新</Button>
         </>
       }
     />

@@ -10,6 +10,7 @@ import { t } from "@/i18n";
 import { statusLabel } from "@/config/systemLabels";
 import TableCopyButton from "@/components/TableCopyButton";
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface P { logs?:Array<{id:string;sourceType:string;sourcePath?:string;status:string;recordsSynced:number;recordsSkipped:number;errorMessage?:string|null;messageCount:number;runMode:string;startedAt:string;completedAt?:string}>; summary?:{total:number;completed:number;failed:number} }
 export default function AccessLogPage() {
   const [expandedId, setExpandedId] = useState<string|null>(null);
@@ -18,7 +19,7 @@ export default function AccessLogPage() {
   const summary = data?.summary;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>业务与系统</span><span className="sep">/</span><span className="current">访问日志</span></div>
-    <div className="page-header"><div className="page-title">访问日志</div><div className="page-subtitle">流水线运行流水 · 异常统计</div></div>
+    <PageHeader><PageTitle>访问日志</PageTitle><div className="page-subtitle">流水线运行流水 · 异常统计</div></PageHeader>
     <div className="kpi-grid">
       <KPICard label="总运行" value={summary?summary.total.toString():"..."} />
       <KPICard label="成功" value={summary?summary.completed.toString():"..."} />

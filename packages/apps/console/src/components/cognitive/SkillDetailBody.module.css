@@ -1,0 +1,8 @@
+/* components/cognitive/SkillDetailBody 样式（P2 呈现层改造：内联 style 清零）
+   能复用 .panel / .mono / .tiny / .dt-* 的一律复用，这里只放该组件独有的留白与空态。 */
+
+/* 面板内留白（原来是内联 padding: var(--sp-5)） */
+.panelPad { padding: var(--sp-5); }
+
+/* 未找到该技能的空态框（原来是内联 padding + color） */
+.emptyBox { padding: var(--sp-5); color: var(--text-muted); }

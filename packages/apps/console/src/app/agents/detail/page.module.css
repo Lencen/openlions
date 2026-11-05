@@ -1,0 +1,7 @@
+/* /agents/detail · P2 呈现层（批1，ord-20261105-064）
+   只放本页需要的类；颜色/字号/间距一律走 globals.css 的令牌。 */
+
+/* 面包屑第一段（当前层级）压暗，末段用 .breadcrumb .current —— 原内联 color: var(--text-dim) */
+.crumbDim {
+  color: var(--text-dim);
+}

@@ -10,6 +10,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Skeleton, Tag } from "@/components/primitives";
 import { useApi } from "@/lib/api";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 type Kind = "memory" | "knowledge" | "skill";
 
@@ -106,12 +107,12 @@ export default function AssetVisibilityPage() {
 
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <div className="page-header">
+      <PageHeader>
         <div>
-          <div className="page-title">资产可见性</div>
+          <PageTitle>资产可见性</PageTitle>
           <div className="page-subtitle">记忆、知识、技能三类 · 由平台统一配置</div>
         </div>
-      </div>
+      </PageHeader>
 
       {doneMsg ? (
         <Alert type="success" showIcon title={doneMsg} closable onClose={() => setDoneMsg(null)} style={{ marginBottom: "var(--gap-block)" }} />

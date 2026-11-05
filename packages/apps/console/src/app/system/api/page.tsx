@@ -11,6 +11,7 @@ import ToolPlayground from "./_components/ToolPlayground";
 import useMcpTools from "./_components/useMcpTools";
 import type { McpTool, Svc } from "./_components/types";
 import ErrorAlert from "@/components/ErrorAlert";
+import styles from "./page.module.css";
 
 export default function ApiListPage() {
   const { data: svcData, loading, error, mutate } = useApi<Svc[] | { services: Svc[] }>(
@@ -120,7 +121,7 @@ export default function ApiListPage() {
         />
         <EndpointTables />
         {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-        <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+        <div className={`tiny ${styles.relatedLinks}`}>
           <span>相关视图：</span>
           <Link href="/system/guards">守门规则 →</Link>
           <Link href="/system/health">健康检查 →</Link>

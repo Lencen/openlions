@@ -3,12 +3,13 @@
 import { PanelCard } from "@/components/ui";
 import { t } from "@/i18n";
 import { fmtNum } from "@/lib/format";
+import styles from "../page.module.css";
 
 export default function CostCaliber({ data }: { data: any }) {
   return (
     <>
       <PanelCard title="统计口径" extra={<span className="tiny">可直接核对</span>}>
-        <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.9, color: "var(--text-dim)" }}>
+        <div className={styles.caliberBody}>
           <div>· <b>用量总量（实测）</b> = 窗口内所有实测调用事件的用量之和（不含仅记录字符数与空记录）。</div>
           <div>· <b>估算用量单列</b>：估算值由管理侧根据提示词长度推算，与实测分开统计，<b>不计入总量</b>；页面上的「估算（未并入）」列即为该口径，「参考合计」只作展示。</div>
           <div>· <b>未计量调用</b> = 事件标题为 <code>字符数估算</code> 或空的事件数（这些调用只统计次数，不计用量）。</div>
@@ -20,7 +21,7 @@ export default function CostCaliber({ data }: { data: any }) {
         </div>
       </PanelCard>
 
-      <div className="tiny" style={{ textAlign: "right" }}>
+      <div className={"tiny " + styles.caliberFoot}>
         {t("cost.source")}{" "}
         {data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "-"}
       </div>

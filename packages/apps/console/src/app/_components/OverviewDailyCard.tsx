@@ -4,10 +4,14 @@
 //       但此前界面上完全看不到 —— 首页没有入口, 反思页也不突出正文。
 // 本卡片把最近一期日结直接搬到首页一屏: 整体概况 / 亮点 / 异常 / 今日关注,
 // 并给出历史日结列表可就地切换日期, 不需要再去翻反思表。
+//
+// 2026-11-04（ord-20261104-032）：内联 style 清零 —— 24 处内联样式对象全部换成本页 CSS Module 的类，
+//   声明值逐项不变；动态部分（选中态）走 data-active 属性选择器。取数与文案未动。
 import { useEffect, useMemo, useState } from "react";
 import { Button, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { PanelCard, Pill, StateBlock } from "@/components/ui";
 import { relTime } from "@/lib/format";
+import styles from "../page.module.css";
 
 const ISSUE_LABEL: Record<string, string> = {
   low_coverage: "覆盖不足",
@@ -65,21 +69,10 @@ function HistoryRow({
     <button
       type="button"
       onClick={onPick}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: "var(--sp-2)",
-        width: "100%",
-        textAlign: "left",
-        padding: "var(--sp-1-5) var(--sp-2)",
-        borderRadius: "var(--radius-md)",
-        border: active ? "1px solid var(--primary)" : "1px solid var(--border)",
-        background: active ? "var(--primary-dim)" : "var(--bg-surface)",
-        cursor: "pointer",
-        marginBottom: "var(--sp-1-5)",
-      }}
+      className={styles.histRow}
+      data-active={active ? "true" : "false"}
     >
-      <span style={{ flex: 1, fontSize: "var(--fs-base)", fontWeight: active ? 600 : 400 }}>
+      <span className={styles.histDay}>
         {dayLabel(h.date)}
         {h.date === bjDateKey(-1) ? <span className="tiny"> · 昨天</span> : null}
       </span>
@@ -117,12 +110,12 @@ export default function OverviewDailyCard({ data, loading }: { data: any; loadin
   const isYesterday = item?.date === bjDateKey(-1);
 
   return (
-    <div className="card-grid" style={{ marginBottom: "var(--sp-4)" }}>
+    <div className={"card-grid " + styles.dcWrap}>
       <PanelCard
         title="日结"
         tone="var(--primary)"
         extra={
-          <span style={{ display: "inline-flex", gap: "var(--sp-2-5)", alignItems: "center" }}>
+          <span className={styles.dcExtra}>
             {item ? (
               <span className="tiny">
                 {isYesterday ? "昨天" : dayLabel(item.date)} · 生成 {item.generatedAt ? relTime(item.generatedAt) : "-"}
@@ -147,10 +140,10 @@ export default function OverviewDailyCard({ data, loading }: { data: any; loadin
             rows={2}
           />
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 2.2fr) minmax(0, 1fr)", gap: "var(--sp-4)" }}>
+          <div className={styles.dcBody}>
             {/* ---------- 主区: 昨日日结正文与要点 ---------- */}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--sp-2-5)" }}>
+            <div className={styles.dcCol}>
+              <div className={styles.dcHead}>
                 <Pill tone="info">{dayLabel(item.date)}</Pill>
                 <span className="tiny">
                   主题 {v(item.overview?.themesReflected)} · 活跃会话 {v(item.overview?.activeSessions)} · 消息{" "}
@@ -161,7 +154,7 @@ export default function OverviewDailyCard({ data, loading }: { data: any; loadin
                   {loading ? "…" : (item.products?.memory ?? 0) + (item.products?.knowledge ?? 0) + (item.products?.practice ?? 0)} 条 ·
                   任务完成 {v(item.counts?.tasksDone)}
                   {Number(item.counts?.tasksFailed || 0) > 0 ? (
-                    <span style={{ color: "var(--status-crit)" }}> · 失败 {item.counts.tasksFailed}</span>
+                    <span className={styles.dcCrit}> · 失败 {item.counts.tasksFailed}</span>
                   ) : (
                     " · 失败 0"
                   )}{" "}
@@ -169,51 +162,51 @@ export default function OverviewDailyCard({ data, loading }: { data: any; loadin
                 </span>
               </div>
 
-              <div style={{ marginBottom: "var(--sp-3)" }}>
-                <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-1)" }}>整体概况</div>
-                <div style={{ fontSize: "var(--fs-base)", whiteSpace: "pre-wrap", lineHeight: 1.75, color: "var(--text-dim)" }}>
+              <div className={styles.dcSection}>
+                <div className={styles.dcH}>整体概况</div>
+                <div className={styles.dcText}>
                   {shownSummary || "该日日结未包含正文。"}
                 </div>
                 {collapsed ? (
-                  <Button size="small" type="link" style={{ paddingLeft: 0 }} onClick={() => setExpanded((v) => !v)}>
+                  <Button size="small" type="link" className={styles.dcExpand} onClick={() => setExpanded((v) => !v)}>
                     {expanded ? "收起" : "展开全文"}
                   </Button>
                 ) : null}
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: "var(--sp-4)" }}>
+              <div className={styles.dcTwo}>
                 <div>
-                  <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-1)", color: "var(--status-ok)" }}>亮点</div>
+                  <div className={styles.dcH + " " + styles.dcHOk}>亮点</div>
                   {(item.highlights || []).length === 0 ? (
                     <span className="tiny">昨日无特别亮点</span>
                   ) : (
                     (item.highlights || []).map((h: string, i: number) => (
-                      <div key={i} style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-0-5)" }}>
+                      <div key={i} className={styles.dcItem}>
                         • {h}
                       </div>
                     ))
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-1)", color: "var(--status-crit)" }}>异常</div>
+                  <div className={styles.dcH + " " + styles.dcHCrit}>异常</div>
                   {(item.issues || []).length === 0 ? (
                     <span className="tiny">昨日未发现明显异常</span>
                   ) : (
                     (item.issues || []).map((x: any, i: number) => (
-                      <div key={i} style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-0-5)" }}>
-                        • <span style={{ color: "var(--text-muted)" }}>[{ISSUE_LABEL[x.type] || x.type}]</span> {x.detail}
+                      <div key={i} className={styles.dcItem}>
+                        • <span className={styles.dcDim}>[{ISSUE_LABEL[x.type] || x.type}]</span> {x.detail}
                       </div>
                     ))
                   )}
                 </div>
               </div>
 
-              <div style={{ marginTop: "var(--sp-3)" }}>
-                <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-1)" }}>今日关注</div>
+              <div className={styles.dcFocus}>
+                <div className={styles.dcH}>今日关注</div>
                 {(item.focus || []).length === 0 ? (
                   <span className="tiny">昨日数据未给出明确关注项</span>
                 ) : (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-1-5)" }}>
+                  <div className={styles.dcFocusList}>
                     {(item.focus || []).map((f: any, i: number) => (
                       <Tooltip key={i} title={f.reason}>
                         <span className="pill warn">
@@ -228,9 +221,9 @@ export default function OverviewDailyCard({ data, loading }: { data: any; loadin
             </div>
 
             {/* ---------- 侧栏: 历史日结列表 (点即切换) ---------- */}
-            <div style={{ minWidth: 0, borderLeft: "1px solid var(--border)", paddingLeft: "var(--sp-4)" }}>
-              <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-2)" }}>历史日结</div>
-              <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            <div className={styles.dcSide}>
+              <div className={styles.dcSideH}>历史日结</div>
+              <div className={styles.dcHistory}>
                 {history.map((h) => (
                   <HistoryRow key={h.id || h.date} h={h} active={h.id === item.id} onPick={() => setSelected(h.id)} loading={loading} />
                 ))}

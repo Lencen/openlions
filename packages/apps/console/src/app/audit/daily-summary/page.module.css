@@ -1,0 +1,45 @@
+/* /audit/daily-summary 页内样式（P2 呈现层改造：内联 style 清零）
+   本文件同时供 page.tsx 与 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
+   能复用 .panel / .panel-header / .panel-title / .data-health / .tiny / .mono 的一律复用。 */
+
+/* 加载态占位（原来是内联 padding + color） */
+.loading { padding: var(--sp-7); color: var(--text-dim); }
+
+/* 取数失败提示：与 .data-health 组合使用（原来是内联 margin + maxWidth） */
+.errorBox { margin: var(--sp-4); max-width: 720px; }
+
+/* 当日无日结数据（原来是内联 padding + color） */
+.emptyPanel { padding: var(--sp-6); color: var(--text-muted); }
+
+/* —— DailyHeader：面包屑 / 页头 / 日期选择器 —— */
+
+/* 面包屑里「审计」那一级（原来是内联 color） */
+.bcDim { color: var(--text-dim); }
+
+/* 页头右侧日期控件与标题同一行两端对齐（原来是内联 flex 布局） */
+.headerRow { display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: var(--sp-3); }
+
+/* 日期按钮组 */
+.dateRow { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* 原生日期输入框（原来是内联一长串边框/底色/字号） */
+.dateInput {
+  padding: var(--sp-1-5) var(--sp-2-5);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-surface2);
+  color: var(--text);
+  font-size: var(--fs-md);
+}
+
+/* —— DailyProductionTable：产出表 —— */
+
+/* 类型列到各自资产页的链接（原来是内联 color） */
+.link { color: var(--primary); }
+
+/* 数值列：等宽数字（原来是 .tbl td.num 的组合类，换表后由本类承担） */
+.num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+/* 环比涨跌色：涨绿跌红（原来是内联三元色）；用 data-tone 表达，不写内联 color */
+.diff[data-tone="ok"] { color: var(--status-ok); }
+.diff[data-tone="crit"] { color: var(--status-crit); }

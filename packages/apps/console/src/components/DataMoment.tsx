@@ -13,7 +13,11 @@
 // 纪律: ①**只在多源页面用**（单源页面写一条没意义, 页面级那行已经够了 ✓）;
 //      ②`at` 只填"该组数字真正的来源"提供的时刻 ✓ —— 宁可显示「未知」, **不许借** ✗;
 //      ③样式走令牌(间距/字号/颜色) ✓, 与顶栏「本页数据取自 …」是两件事(那是取数时刻, 这里是数据源时刻) ✓。
+//
+// P2 呈现层（批1）: 内联样式清零 —— 间距/字色/字号落到 DataMoment.module.css 的 .moment;
+// 调用方原来用内联 marginLeft: 0 表达的"贴边", 改由 `flush` 属性（.moment[data-flush="1"]）。
 import { fmtTime, UNKNOWN } from "@/lib/format";
+import styles from "./DataMoment.module.css";
 
 /** 四态里的"加载中"(口径: 与「未知」区分 —— 见 globals 规范铁律 2); 不用"-"以免与空值混淆 */
 const LOADING = "加载中";
@@ -26,11 +30,23 @@ export type DataMomentItem = { label: string; at?: string | number | null; loadi
 
 // showPrefix: 某些页面自带的文案已经以「…数据时间」结尾（例如首页 t(overview.source)）——
 //   此时再叠一个「数据时刻: 」会出现「数据时间 数据时刻:」的重复 ✗, 故允许关掉前缀 ✓。
-export default function DataMoment({ items, style, showPrefix = true }: { items: DataMomentItem[]; style?: React.CSSProperties; showPrefix?: boolean }) {
+export default function DataMoment({
+  items,
+  flush = false,
+  showPrefix = true,
+}: {
+  items: DataMomentItem[];
+  /** 贴边：不要与前面的文案留 8px 间距（等价于改前的内联 marginLeft: 0） */
+  flush?: boolean;
+  showPrefix?: boolean;
+  /** @deprecated P2 内联样式清零后本件不再消费内联样式（传了不生效）；贴边请用 flush，
+   *  其余样式请包一层用类控制。保留该属性只为不打断既有调用点。 */
+  style?: React.CSSProperties;
+}) {
   const shown = (items || []).filter((x) => x && x.label);
   if (!shown.length) return null;
   return (
-    <span className="tiny" style={{ marginLeft: "var(--sp-2)", color: "var(--text-dim)", ...(style || {}) }}>
+    <span className={styles.moment} data-flush={flush ? "1" : undefined}>
       {/* 2026-10-16（round 77-L）注意 JSX 空白: 只写 "数据时刻: " 而把 {map} 放下一行, 行尾空格会被吞掉 ✗
           —— 实测渲染成「数据时刻:服务 …」, 与改前的「数据时刻: 服务 …」差一个空格。用 {" "} 显式补上 ✓。 */}
       {showPrefix ? <>数据时刻:{" "}</> : null}

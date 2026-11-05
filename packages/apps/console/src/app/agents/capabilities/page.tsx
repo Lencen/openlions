@@ -9,6 +9,7 @@ import Link from "next/link";
 import { t } from "@/i18n";
 import { headers } from "next/headers";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 // 数据实时: 不做静态化, 保证每次 curl 拿到的是当次真实读数(否则 HTML 会固化在构建时)
 export const dynamic = "force-dynamic";
@@ -55,10 +56,10 @@ export default async function CapabilitiesPage() {
   return (
     <div className="layout-with-sidebar"><main className="main">
       <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>{t('capabilities.crumb')}</span><span className="sep">/</span><span className="current">能力中心</span></div>
-      <div className="page-header">
-        <div className="page-title">能力中心</div>
+      <PageHeader>
+        <PageTitle>能力中心</PageTitle>
         <div className="page-subtitle">{t('capabilities.subtitle')}</div>
-      </div>
+      </PageHeader>
       <div className="kpi-grid">
         {/* KPICard 的 props 是 {label,value,delta,deltaDir}(见 components/KPICard.tsx): 副标题用 delta 传, 不能用 hint */}
         {/* 文案业务化(见 i18n/glossary.ts 单一事实源): 状态不用英文 ACTIVE(用已登记的 status.active); MCP 的业务说法是「工具服务」 */}

@@ -1,0 +1,13 @@
+/* ErrorAlert · P2 批2 呈现层（2026-11-05）
+   行内提示条：提示占满剩余宽度，右侧固定"重试/额外动作"。颜色走 Alert 自带语义色。 */
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+}
+
+.alert {
+  flex: 1;
+}

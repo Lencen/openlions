@@ -1,5 +1,6 @@
 // [UI-S6 / 屏06] 智能体不存在 / 取数失败时的降级态 (不 500、不白屏)
 import Link from "next/link";
+import styles from "../page.module.css";
 
 export default function AgentMissing({ id }: { id: string }) {
   return (
@@ -12,11 +13,11 @@ export default function AgentMissing({ id }: { id: string }) {
           <span className="sep">/</span>
           <span className="current">未找到</span>
         </div>
-        <div className="panel" style={{ padding: "var(--sp-6)" }}>
-          <div style={{ fontWeight: 600, marginBottom: "var(--sp-2)" }}>没有这个智能体</div>
-          <div style={{ color: "var(--text-dim)", fontSize: "var(--fs-md)" }}>
+        <div className={"panel " + styles.panelPad}>
+          <div className={styles.missingTitle}>没有这个智能体</div>
+          <div className={styles.missingDesc}>
             名册里查不到 <span className="mono">{id || "(空)"}</span>，或名册接口暂时不可用。
-            &nbsp;<Link href="/agents" style={{ color: "var(--primary)" }}>返回智能体列表</Link>
+            &nbsp;<Link href="/agents" className={styles.link}>返回智能体列表</Link>
           </div>
         </div>
       </main>

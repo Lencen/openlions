@@ -13,6 +13,7 @@ import { useCognitiveListUrlState } from "@/components/cognitive/useCognitiveLis
 import { getQuickFilters } from "@/config/cognitiveQuickFilters";
 import TableCopyButton from "@/components/TableCopyButton";
 import { ownerLabel, visibilityLabel as visibility } from "@/lib/asset-ownership";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface S { items?: Array<{ id: string; name: string; category?: string; level?: string; description?: string; qualityScore?: number; totalUsageCount?: number; source?: string; trigger?: string; content?: string; verification?: string; version?: number; legacy?: boolean; hasContent?: boolean; createdAt?: string; updatedAt?: string }>; total?: number }
 const fmt = (n: number) => n.toLocaleString();
 // 2026-09-23 agent-x #2: 列表接口不再下发 content 全文, 改为 hasContent 布尔徽标 (有步骤全文=✓)。
@@ -29,7 +30,7 @@ export default function SkillsPage() {
   const total = data?.total ?? 0;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><span className="current">技能</span></div>
-    <div className="page-header"><div className="page-title">技能</div><div className="page-subtitle">技能管理 · 分类 · 熟练度 · SKILL-SPEC 7 字段 · 点名称用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></div>
+    <PageHeader><PageTitle>技能</PageTitle><div className="page-subtitle">技能管理 · 分类 · 熟练度 · SKILL-SPEC 7 字段 · 点名称用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></PageHeader>
     <div className="kpi-grid"><KPICard label="技能总量" value={total > 0 ? fmt(total) : "..."} /></div>
     <div className="panel"><div className="panel-header"><span className="panel-title">技能列表</span></div>
       <ListControls search={search} onSearch={setSearch} sortBy={sortBy} onSortBy={setSortBy} sortOrder={sortOrder} onSortOrder={setSortOrder} total={total} page={page} pageSize={pageSize} onPage={setPage} quickFilters={getQuickFilters("skill")} quick={quick} onQuick={setQuick} loading={loading} />

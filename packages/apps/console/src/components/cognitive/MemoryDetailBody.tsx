@@ -3,7 +3,7 @@ import { humanError } from "@/lib/humanError";
 import { fmtStamp as fmtTs } from "@/lib/format";
 // 2026-09-14 UI-3 (todo_a76adfd6303d4e6d9f16): 记忆详情正文抽成可复用组件 ——
 // 详情页(/cognitive/memory/detail)与列表侧边抽屉(CognitiveDetailDrawer)共用同一份渲染, 不再两处漂移。
-// 约定: 组件自己按 id 拉数据; 调用方可通过 renderHeader 注入自己的标题区(详情页用 page-header, 抽屉用紧凑标题)。
+// 约定: 组件自己按 id 拉数据; 调用方可通过 renderHeader 注入自己的标题区(详情页用 PageHeader 组件, 抽屉用紧凑标题)。
 import type { ReactNode } from "react";
 import { useApi } from "@/lib/api";
 import { Alert } from "@/components/primitives";

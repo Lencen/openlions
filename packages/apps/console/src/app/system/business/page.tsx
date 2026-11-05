@@ -7,6 +7,7 @@ import { t } from "@/i18n";
 import { statusLabel } from "@/config/systemLabels";
 import ErrorAlert from "@/components/ErrorAlert";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface S { services?:Array<{id:string;name:string;display_name:string;description:string;endpoint:string;version:string;status:string;enabled:boolean;available_perms?:string[];created_at:string}> }
 export default function BusinessPage() {
   const { data, loading, error, mutate } = useApi<S>("/api/agent-services");
@@ -14,7 +15,7 @@ export default function BusinessPage() {
   const services = servicesRaw;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>{t("business.crumb.parent")}</span><span className="sep">/</span><span className="current">{t("business.title")}</span></div>
-    <div className="page-header"><div className="page-title">{t("business.title")}</div><div className="page-subtitle">{loading ? t("business.loading") : t("business.subtitle", { n: services.length })}</div></div>
+    <PageHeader><PageTitle>{t("business.title")}</PageTitle><div className="page-subtitle">{loading ? t("business.loading") : t("business.subtitle", { n: services.length })}</div></PageHeader>
     <div className="kpi-grid">
       <KPICard label={t("business.kpi.total")} value={services.length.toString()} />
       <KPICard label={t("status.active")} value={services.filter(s=>s.status==="ACTIVE").length.toString()} />

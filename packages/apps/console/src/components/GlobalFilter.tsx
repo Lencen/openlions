@@ -6,6 +6,7 @@ import { Button, Select, Segmented, Tooltip } from "@/components/primitives"; //
 import { ReloadOutlined } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t as tr } from "@/i18n";
 import { usePathname } from "next/navigation";
+import styles from "./GlobalFilter.module.css";
 
 export type RangeKey = "1h" | "24h" | "7d" | "30d" | "all";
 
@@ -189,7 +190,7 @@ export function GlobalFilterBar() {
           <span className="gf-label">{tr('filter.agent')}</span>
           <Select
             size="small"
-            style={{ minWidth: 168 }}
+            className={styles.select}
             placeholder={tr('filter.allAgents')}
             allowClear
             showSearch
@@ -202,7 +203,7 @@ export function GlobalFilterBar() {
           <span className="gf-label">{tr('filter.theme')}</span>
           <Select
             size="small"
-            style={{ minWidth: 168 }}
+            className={styles.select}
             placeholder={tr('filter.allThemes')}
             allowClear
             showSearch
@@ -215,7 +216,7 @@ export function GlobalFilterBar() {
           {dirty ? <Button size="small" type="link" onClick={f.reset}>{tr('filter.clear')}</Button> : null}
         </>
       ) : (
-        <span className="gf-label" style={{ fontWeight: 400 }}>{tr('filter.notApplicable')}</span>
+        <span className={"gf-label " + styles.notApplicable}>{tr('filter.notApplicable')}</span>
       )}
       <span className="gf-spacer" />
       <span className="gf-asof">{tr('common.dataTime')} {tick ? tick.toLocaleTimeString("zh-CN", { hour12: false }) : "--:--:--"}</span>

@@ -8,6 +8,7 @@ import { useGlobalNonce } from "@/components/GlobalFilter";
 import TableCopyButton from "@/components/TableCopyButton";
 import KPICard from "@/components/KPICard";
 import { scopeLabelOfType } from "@/config/taskScopes";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 export default function HardMetricsPage() {
   const [data, setData] = useState<any>(null);
@@ -20,8 +21,8 @@ export default function HardMetricsPage() {
 
   return (
     <main className="page">
-      <div className="page-header"><div className="page-title">飞轮硬指标</div>
-        <div className="page-subtitle">同类任务成功率 · 自主完成率 · 跨主题泛化 · 周环比底线（触底自动开改进任务）</div></div>
+      <PageHeader><PageTitle>飞轮硬指标</PageTitle>
+        <div className="page-subtitle">同类任务成功率 · 自主完成率 · 跨主题泛化 · 周环比底线（触底自动开改进任务）</div></PageHeader>
       {err ? <div className="tiny" style={{ color: "var(--status-warn)" }}>{err}</div> : !data ? <div className="tiny">加载中…</div> : (
         <>
           {/* 2026-10-19 B4(方案 L2-1): 修前本页一个 KPI 卡都没有 ✗ —— "触底了几个"要管理员自己数表格。补 ≤3 张 ✓ */}

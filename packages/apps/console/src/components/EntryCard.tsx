@@ -7,8 +7,9 @@ import type { Submodule } from "@/config/submodules";
 export default function EntryCard({ sub }: { sub: Submodule }) {
   const locked = isLocked(sub.perm, sub.locked);
   return (
-    <Link href={locked ? "#" : sub.href} className={`entry-card ${locked ? "locked" : ""}`}
-      style={{ pointerEvents: locked ? "none" : "auto" }}>
+    // 锁定态的"不可点"由 globals.css 的 .entry-card.locked { pointer-events: none } 提供，
+    // 原来的内联 pointerEvents 与它重复，故直接删除（未解锁时默认就是 auto）。
+    <Link href={locked ? "#" : sub.href} className={`entry-card ${locked ? "locked" : ""}`}>
       {/* 2026-10-13 round 76-DC: 原来这里内联写死 rgba(94,234,212,.1)(其实是亮色 --table-memory 的值),
           把 CSS 里 `.entry-card .card-icon { background: var(--primary-dim) }` **盖掉**了 -> 暗色/高对比下不跟随主题。
           这里直接删掉内联, 让那条已有的令牌规则生效。 */}

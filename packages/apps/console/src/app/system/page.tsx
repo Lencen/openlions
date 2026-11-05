@@ -10,6 +10,7 @@ import { Alert } from "@/components/primitives";
 import ErrorAlert from "@/components/ErrorAlert";
 import { fmtTime , UNKNOWN } from "@/lib/format";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface S { result?: { data?: { learning: any; memory: any; knowledge: any } }; /** 76-GM: BFF 顶层新增的"数据时刻" */ asOf?: string }
 interface PingData {
   /** 77-K: BFF 顶层新增的"数据时刻" */
@@ -42,7 +43,7 @@ export default function SystemDashboard() {
   };
 
   return (<div className="layout"><main className="main">
-    <div className="page-header"><div className="page-title">业务与系统</div><div className="page-subtitle">业务对接 · 统一认证 · 权限管理 · 服务运维 · 审计<DataMoment items={[{ label: "服务", at: pingData?.asOf, loading: pingsLoading }, { label: "概览", at: data?.asOf }]} /></div></div>
+    <PageHeader><PageTitle>业务与系统</PageTitle><div className="page-subtitle">业务对接 · 统一认证 · 权限管理 · 服务运维 · 审计<DataMoment items={[{ label: "服务", at: pingData?.asOf, loading: pingsLoading }, { label: "概览", at: data?.asOf }]} /></div></PageHeader>
     {(error || pingErr) ? <ErrorAlert title="系统概览加载失败" message={String(((error || pingErr) as Error)?.message || (error || pingErr))} onRetry={() => { mutate(); mutatePing(); }} /> : null}
 
     <div className="dashboard-section"><div className="dashboard-section-title">服务状态</div>

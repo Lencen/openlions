@@ -11,6 +11,11 @@ import { useEffect, useState } from "react";
 import { useApi } from "@/lib/api";
 import { STAGES } from "./shared";
 import type { DashboardData } from "./shared";
+import styles from "../page.module.css";
+
+/** 5% 一档的宽度类（组件内不写内联 style） */
+const pctClass = (v: number, m: Record<string, string>) =>
+  m["p" + Math.round((Math.max(0, Math.min(1, v)) * 100) / 5) * 5] || m.p0;
 
 type Step = { id: string; label: string; qty: { m5: number; m15: number; h1: number; h24: number } };
 
@@ -74,8 +79,8 @@ export default function FlywheelFlow({
   const maxM5 = Math.max(1, ...nodes.map((n) => n.m5));
   const isActive = (id: string, i: number) => (nodes[i]?.m5 ?? 0) > 0 || recentEvents.some((e) => e.stage === id);
 
-  const chip = (label: string, value: string, tone?: string) => (
-    <span className="fw-chip" style={tone ? { color: tone } : undefined}>
+  const chip = (label: string, value: string, tone?: "ok" | "warn" | "crit" | "dim") => (
+    <span className={"fw-chip " + styles.fwChip} data-tone={tone}>
       <span className="fw-chip-k">{label}</span>
       <span className="fw-chip-v">{value}</span>
     </span>
@@ -89,11 +94,11 @@ export default function FlywheelFlow({
       </div>
 
       <div className="fw-status">
-        {chip("最近事件", lastAge == null ? "—" : lastAge + " 秒前", lastAge != null && lastAge < 120 ? "var(--ok)" : "var(--text-dim)")}
+        {chip("最近事件", lastAge == null ? "—" : lastAge + " 秒前", lastAge != null && lastAge < 120 ? "ok" : "dim")}
         {chip("近 5 分钟经过", totalM5 + " 条")}
         {chip("运行中任务", String(running))}
         {chip("待取会话", String(q?.sessionPending ?? 0))}
-        {chip("近 24h 失败", String(q?.sessionFailed ?? 0), (q?.sessionFailed ?? 0) > 0 ? "var(--warn)" : undefined)}
+        {chip("近 24h 失败", String(q?.sessionFailed ?? 0), (q?.sessionFailed ?? 0) > 0 ? "warn" : undefined)}
         {chip("最后活动", lastTs)}
       </div>
 
@@ -102,17 +107,17 @@ export default function FlywheelFlow({
           aria-label={"飞轮 7 个环节的实时流量：近 5 分钟共 " + totalM5 + " 条"}>
           <defs>
             <linearGradient id="fwBeam" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" style={{ stopColor: "var(--flow-1)", stopOpacity: 0.25 }} />
-              <stop offset="50%" style={{ stopColor: "var(--flow-2)", stopOpacity: 1 }} />
-              <stop offset="100%" style={{ stopColor: "var(--flow-3)", stopOpacity: 0.45 }} />
+              <stop offset="0%" className={styles.flowStop1} />
+              <stop offset="50%" className={styles.flowStop2} />
+              <stop offset="100%" className={styles.flowStop3} />
             </linearGradient>
             <filter id="fwGlow" x="-80%" y="-80%" width="260%" height="260%">
               <feGaussianBlur stdDeviation="3" result="b" />
               <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
             </filter>
             <radialGradient id="fwNodeActive" cx="50%" cy="0%" r="120%">
-              <stop offset="0%" style={{ stopColor: "var(--primary)", stopOpacity: 0.22 }} />
-              <stop offset="100%" style={{ stopColor: "var(--primary)", stopOpacity: 0.02 }} />
+              <stop offset="0%" className={styles.flowNodeStopA} />
+              <stop offset="100%" className={styles.flowNodeStopB} />
             </radialGradient>
           </defs>
 
@@ -176,7 +181,7 @@ export default function FlywheelFlow({
           {Object.entries(quality).map(([k, v]: any) => (
             <span key={k} className="fw-q-item">
               <span className="fw-q-k">{QUALITY_LABEL[k] || k}</span>
-              <span className="fw-q-bar"><span className="fw-q-fill" style={{ width: Math.round((Number(v?.avgQ) || 0) * 100) + "%" }} /></span>
+              <span className="fw-q-bar"><span className={"fw-q-fill " + pctClass(Number(v?.avgQ) || 0, styles as unknown as Record<string, string>)} /></span>
               <span className="fw-q-v">{Number(v?.avgQ ?? 0).toFixed(2)}</span>
               <span className="fw-q-n">{v?.n ?? 0} 条</span>
             </span>

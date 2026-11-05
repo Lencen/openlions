@@ -13,7 +13,7 @@
  */
 import { createHash } from "crypto";
 
-export type ProductKind = "memory" | "knowledge" | "practice" | "skill";
+export type ProductKind = "memory" | "knowledge" | "practice" | "skill" | "reflection";
 
 /** 脚本侧批次行对象: 字段名与旧直写 SQL 的列语义一致(便于与 direct 模式对拍) */
 export interface ExtractRow {
@@ -30,6 +30,7 @@ export interface SessionExtractBatch {
     knowledge?: ExtractRow[];
     practice?: ExtractRow[];
     skill?: ExtractRow[];
+    reflection?: ExtractRow[];
   };
   links?: {
     practiceUsedMemory?: ExtractRow[];
@@ -51,7 +52,7 @@ export function productContentHash(title: unknown, content: unknown): string {
 
 /** 按产物类型取正文列后复算 contentHash(唯一实现) */
 export function productHashForRow(kind: ProductKind, row: ExtractRow): string {
-  const body = kind === "practice" ? (row.description ?? row.content) : row.content;
+  const body = kind === "practice" || kind === "reflection" ? (row.description ?? row.content) : row.content;
   return productContentHash(row.title, body);
 }
 
@@ -60,7 +61,7 @@ export function emptyBatch(sessionUid: string, agentId?: string | null): Session
   return {
     sessionUid,
     agentId: agentId ?? null,
-    products: { memory: [], knowledge: [], practice: [], skill: [] },
+    products: { memory: [], knowledge: [], practice: [], skill: [], reflection: [] },
     links: { practiceUsedMemory: [], practiceKnowledge: [], practiceSkill: [] },
     tasks: [],
     events: [],

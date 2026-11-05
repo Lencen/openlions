@@ -1,0 +1,45 @@
+/* Skeleton · P2 批2 呈现层（2026-11-05）
+   底色/微光动画沿用 globals.css 的 .skeleton；这里只放尺寸档位。
+   宽度：百分比档 + 常用像素档；高度：常用像素档。未命中档位时回落 100% / 16px。 */
+
+.sk {
+  width: 100%;
+  height: 16px;
+}
+
+/* ── 宽度档 ── */
+.sk[data-w="25%"] { width: 25%; }
+.sk[data-w="33%"] { width: 33%; }
+.sk[data-w="50%"] { width: 50%; }
+.sk[data-w="62%"] { width: 62%; }
+.sk[data-w="66%"] { width: 66%; }
+.sk[data-w="75%"] { width: 75%; }
+.sk[data-w="100%"] { width: 100%; }
+.sk[data-w="24"] { width: 24px; }
+.sk[data-w="32"] { width: 32px; }
+.sk[data-w="40"] { width: 40px; }
+.sk[data-w="48"] { width: 48px; }
+.sk[data-w="64"] { width: 64px; }
+.sk[data-w="80"] { width: 80px; }
+.sk[data-w="100"] { width: 100px; }
+.sk[data-w="120"] { width: 120px; }
+.sk[data-w="160"] { width: 160px; }
+.sk[data-w="200"] { width: 200px; }
+.sk[data-w="240"] { width: 240px; }
+.sk[data-w="320"] { width: 320px; }
+
+/* ── 高度档 ── */
+.sk[data-h="8"] { height: 8px; }
+.sk[data-h="10"] { height: 10px; }
+.sk[data-h="12"] { height: 12px; }
+.sk[data-h="14"] { height: 14px; }
+.sk[data-h="16"] { height: 16px; }
+.sk[data-h="20"] { height: 20px; }
+.sk[data-h="24"] { height: 24px; }
+.sk[data-h="28"] { height: 28px; }
+.sk[data-h="32"] { height: 32px; }
+.sk[data-h="40"] { height: 40px; }
+.sk[data-h="48"] { height: 48px; }
+.sk[data-h="60"] { height: 60px; }
+.sk[data-h="80"] { height: 80px; }
+.sk[data-h="100"] { height: 100px; }

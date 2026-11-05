@@ -1,3 +1,4 @@
+import { extractLlmText } from "@/server/llm/extract-text";
 import type {
   ParsedConversation,
   ExtractedCognitiveData,
@@ -498,8 +499,8 @@ async function callMinimax(
   }
 
   const json = await response.json() as { content?: Array<{ type: string; text?: string }>; usage?: { input_tokens?: number; output_tokens?: number } };
-  const textBlocks = json.content?.filter((c) => c.type === "text") ?? [];
-  const text = textBlocks.map((c) => c.text ?? "").join("\n");
+  // 2026-11-05 ord-069: 统一走 extractLlmText（兼容 thinking 块）
+  const text = extractLlmText(json);
   // 2026-09-01: 记录真实 usage token (MiniMax 后台按次数计费不展示 token, 平台侧自记)
   try {
     const u = json.usage;
@@ -585,7 +586,15 @@ export async function extractCognitiveDataBatch(
 
   const batchBody = sessionParts.join("\n---\n\n");
 
-  const batchInstruction = `\n\n请分析以上 ${sessions.length} 个 session 的对话，分别提取认知数据。以如下 JSON 格式返回（不要包含 markdown 代码块标记）：\n\n{\n  "sessions": [\n    {\n      "sessionIndex": 1,\n      "summary": "一句话总结该 session",\n      "memories": [\n        {"content": "...", "title": "...", "tier": "HOT|WARM|COLD", "type": "DECISION|PREFERENCE|EXPERIENCE|CONTEXT", "domain": "platform|agent-ops|devops|product|data|security|ai", "tags": "标签1,标签2", "valueScore": 0.8, "theme": "主题词"}\n      ],\n      "knowledge": [\n        {"title": "...", "conclusion": "一句话判断/结论(是什么/为什么成立)", "principle": "原理/机制(为什么)", "evidence": "事实/依据(可选)", "boundary": "适用边界/限制(何时成立/不成立)", "caseExample": "案例(可选)", "category": "FRONTEND|BACKEND|DEVOPS|DESIGN|PRODUCT|PROCESS|OTHER", "tags": "标签", "confidence": 0.7, "theme": "主题词"}\n      ],\n      "reflections": [\n        {"title": "...", "description": "...", "category": "WORKFLOW|TECH|PRODUCT|PROCESS|TOOL", "priority": "P1|P2|P3", "lesson": "学到的教训", "improvements": "改进方向", "score": 0.6, "theme": "主题词"}\n      ],\n      "practices": [\n        {"title": "...", "description": "...", "type": "FEATURE|BUGFIX|REFACTOR|INTEGRATION|OTHER", "outcome": "SUCCESS|PARTIAL|FAILED", "qualityScore": 0.8, "difficulty": 3, "theme": "主题词"}\n      ],\n      "skills": [\n        {"name": "动宾短语技能名", "category": "类别", "description": "一句话概述", "trigger": "适用场景", "content": "1. 步骤一(含命令)\\n2. 步骤二(含命令)", "pitfalls": "已知坑", "verification": "验证方法"}\n      ]\n    }\n  ]\n}\n\n重要：sessionIndex 必须对应上面的 S1/S2/... 编号。如果某个 session 没有有价值的认知数据，对应数组返回空 []。注意: skills 必须含完整执行步骤(无 steps 不成 skill); knowledge 必须含 conclusion/principle/boundary 三要素(陈述性, 原理/边界各一两句即可), 内容为步骤/流程/命令的放 skills; 优先把可复用的判断+适用条件+理由产出为 knowledge, 仅对无法归纳边界与理由的单句放 memories(type=EXPERIENCE)。tags 一律逗号分隔字符串, 不要数组。`;
+  // 2026-11-05 (ord-068, 方案A · 默认关)：reflections 长期为空 -> Reflection 表 11 天零新增。
+  //   开关：MIND_REFLECT_FORCE_MIN1=1 才追加强制条款；不设则**完全保持原行为**（便于回退）。
+  const _forceReflect = process.env.MIND_REFLECT_FORCE_MIN1 === "1";
+  const _reflectClause = _forceReflect
+    ? "\n\n【反思强制(本轮启用)】每个 session 必须产出**至少 1 条** reflections：写这个 session 里实际犯的错、绕的弯、下次会改的具体动作；" +
+      "lesson 必须是一句可执行的话并带具体名词（例：把 X 的判据改成 Y，因为 Z），**禁止**写“加强沟通/注意细节”这类模板话；" +
+      "确实没有可写的，就写 lesson=\"无新增教训\" 且 description 给一句依据（会被下游质量门槛过滤掉）。"
+    : "";
+  const batchInstruction = `${_reflectClause}\n\n请分析以上 ${sessions.length} 个 session 的对话，分别提取认知数据。以如下 JSON 格式返回（不要包含 markdown 代码块标记）：\n\n{\n  "sessions": [\n    {\n      "sessionIndex": 1,\n      "summary": "一句话总结该 session",\n      "memories": [\n        {"content": "...", "title": "...", "tier": "HOT|WARM|COLD", "type": "DECISION|PREFERENCE|EXPERIENCE|CONTEXT", "domain": "platform|agent-ops|devops|product|data|security|ai", "tags": "标签1,标签2", "valueScore": 0.8, "theme": "主题词"}\n      ],\n      "knowledge": [\n        {"title": "...", "conclusion": "一句话判断/结论(是什么/为什么成立)", "principle": "原理/机制(为什么)", "evidence": "事实/依据(可选)", "boundary": "适用边界/限制(何时成立/不成立)", "caseExample": "案例(可选)", "category": "FRONTEND|BACKEND|DEVOPS|DESIGN|PRODUCT|PROCESS|OTHER", "tags": "标签", "confidence": 0.7, "theme": "主题词"}\n      ],\n      "reflections": [\n        {"title": "...", "description": "...", "category": "WORKFLOW|TECH|PRODUCT|PROCESS|TOOL", "priority": "P1|P2|P3", "lesson": "学到的教训", "improvements": "改进方向", "score": 0.6, "theme": "主题词"}\n      ],\n      "practices": [\n        {"title": "...", "description": "...", "type": "FEATURE|BUGFIX|REFACTOR|INTEGRATION|OTHER", "outcome": "SUCCESS|PARTIAL|FAILED", "qualityScore": 0.8, "difficulty": 3, "theme": "主题词"}\n      ],\n      "skills": [\n        {"name": "动宾短语技能名", "category": "类别", "description": "一句话概述", "trigger": "适用场景", "content": "1. 步骤一(含命令)\\n2. 步骤二(含命令)", "pitfalls": "已知坑", "verification": "验证方法"}\n      ]\n    }\n  ]\n}\n\n重要：sessionIndex 必须对应上面的 S1/S2/... 编号。如果某个 session 没有有价值的认知数据，对应数组返回空 []。注意: skills 必须含完整执行步骤(无 steps 不成 skill); knowledge 必须含 conclusion/principle/boundary 三要素(陈述性, 原理/边界各一两句即可), 内容为步骤/流程/命令的放 skills; 优先把可复用的判断+适用条件+理由产出为 knowledge, 仅对无法归纳边界与理由的单句放 memories(type=EXPERIENCE)。tags 一律逗号分隔字符串, 不要数组。`;
 
   const fullPrompt = `${batchBody}${batchInstruction}`;
 
@@ -735,6 +744,16 @@ function validateExtractedData(
       })),
     reflections: (data.reflections || [])
       .filter((r) => r.description && r.description.length >= 10)
+      // 2026-11-05 (ord-068)：质量门槛，默认关（MIND_REFLECT_MIN_SCORE 未设 = 不过滤）。
+      //   用途：开强制反思后，把「无新增教训」这类占位条目挡在入库前，避免制造低信息量内容。
+      .filter((r) => {
+        const minScore = Number(process.env.MIND_REFLECT_MIN_SCORE || 0);
+        if (!(minScore > 0)) return true;
+        const isPlaceholder = String(r.lesson || "").includes("无新增教训");
+        if (isPlaceholder) return false;
+        const s = typeof r.score === "number" && Number.isFinite(r.score) ? r.score : 1;
+        return s >= minScore;
+      })
       // 2026-09-29 todo_0aa1ea6d28a049fba44d: V3 五件套格式软验证
       .filter((r) => isFlywheelFormatValid(r, "reflection"))
       .map((r) => {

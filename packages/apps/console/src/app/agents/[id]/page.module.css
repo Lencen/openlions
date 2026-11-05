@@ -1,0 +1,48 @@
+/* /agents/[id] 页内样式（P2 呈现层改造：内联 style 清零）
+   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
+   能复用 .layout-with-sidebar / .main / .breadcrumb / .badge / .mono / .page-subtitle 的一律复用。 */
+
+/* 降级态面板留白（AgentMissing / AgentSourceError 原来是内联 padding） */
+.panelPad { padding: var(--sp-6); }
+
+/* 返回列表链接（原来是内联 color） */
+.link { color: var(--primary); }
+
+/* —— AgentMissing —— */
+.missingTitle { font-weight: 600; margin-bottom: var(--sp-2); }
+.missingDesc { color: var(--text-dim); font-size: var(--fs-md); }
+
+/* —— AgentSourceError —— */
+.errorTitle { font-weight: 600; margin-bottom: var(--sp-2); color: var(--status-crit); }
+.errorDesc { color: var(--text-dim); font-size: var(--fs-md); line-height: 1.7; }
+
+/* —— AgentShell —— */
+
+/* 状态徽标 + 最近露面 + 权限入口这一行（原来是内联 flex 布局） */
+.statusRow { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-3); }
+
+/* 「最近露面 …」说明文字 */
+.lastSeen { font-size: var(--fs-base); color: var(--text-dim); }
+
+/* 右侧「权限调整入口」（原来是内联 margin-left/color/字号/去下划线） */
+.permLink { margin-left: auto; color: var(--primary); font-size: var(--fs-base); text-decoration: none; }
+
+/* 对象页签条（原来是内联 flex + 下边框） */
+.tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-4); }
+
+/* 单个页签：未选中态（选中态走 data-on 属性选择器） */
+.tab {
+  padding: var(--sp-2) var(--sp-3-5);
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-dim);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.tab[data-on="true"] {
+  font-weight: 600;
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}

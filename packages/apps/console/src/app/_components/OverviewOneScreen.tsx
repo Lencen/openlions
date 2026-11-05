@@ -7,6 +7,7 @@ import { useApi } from "@/lib/api";
 import { fmtNum } from "@/lib/format";
 import LoopRing from "./LoopRing";
 import LayerTrends from "./LayerTrends";
+import styles from "../page.module.css";
 
 export default function OverviewOneScreen({ data, loading }: { data: any; loading: boolean }) {
   const { data: todo } = useApi<any>("/api/todos?ownerType=human&limit=1");
@@ -41,7 +42,7 @@ export default function OverviewOneScreen({ data, loading }: { data: any; loadin
   const claim = loading || !data ? "正在读取今天的业务状态…" : "";
 
   return (
-    <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+    <section className={"panel " + styles.osSection}>
       {/* 2026-10-25 R5: 去掉这句叙事 claim —— 业务环自己的头部已给出结论（"整体转得顺/有 N 环需要留意"），
           两句都说一遍等于重复，而且它把环挤到了首屏之外（实测 ring bottom 943 > 900）。 */}
       <div className="os-lights">

@@ -4,8 +4,10 @@ import { Tag, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞�
 import DataTable from "@/components/common/DataTable";
 import { PanelCard } from "@/components/ui";
 import { fmtNum, fmtScore, qualityTone, relTime, shortId, truncate } from "@/lib/format";
-import { TABLE_COLOR, TABLE_LABEL, VERIFY_TAG } from "./lineageShared";
-import { inkOf } from "@/lib/ink";
+import { TABLE_LABEL, VERIFY_TAG } from "./lineageShared";
+// 2026-11-05 P2：类型色不再现算 —— 改由 page.module.css 的 .typeName[data-table="…"] 表达（等价 55% 混色），
+//   故不再需要 TABLE_COLOR / inkOf。
+import styles from "../page.module.css";
 
 export default function LineageArtifactsTable({
   artifacts,
@@ -35,14 +37,14 @@ export default function LineageArtifactsTable({
             title: "类型",
             dataIndex: "table",
             width: 76,
-            render: (v: string) => <span style={{ color: inkOf(TABLE_COLOR[v]), fontWeight: 600, fontSize: "var(--fs-base)" }}>{TABLE_LABEL[v] || v}</span>,
+            render: (v: string) => <span className={styles.typeName} data-table={v}>{TABLE_LABEL[v] || v}</span>,
           },
           {
             title: "产物",
             dataIndex: "title",
             render: (v: string, row: any) => (
               <Tooltip title={v}>
-                <span style={{ fontSize: "var(--fs-base)" }}>{truncate(v, 46)}</span>
+                <span className={styles.artifactTitle}>{truncate(v, 46)}</span>
                 <div className="tiny mono">{shortId(row.id)}</div>
               </Tooltip>
             ),
@@ -52,7 +54,7 @@ export default function LineageArtifactsTable({
             dataIndex: "sourceType",
             width: 200,
             render: (v: string, row: any) => (
-              <div style={{ fontSize: "var(--fs-sm)" }}>
+              <div className={styles.sourceCell}>
                 <div>{v || <span className="tiny">未标注</span>}</div>
                 {row.sourceId ? <div className="tiny mono">{shortId(row.sourceId, 10, 4)}</div> : null}
               </div>
@@ -64,7 +66,7 @@ export default function LineageArtifactsTable({
             width: 76,
             render: (v: number) => {
               const q = qualityTone(v);
-              return <span style={{ color: q.color, fontFamily: "var(--font-mono)", fontSize: "var(--fs-base)" }}>{v ? fmtScore(v) : "-"}</span>;
+              return <span className={styles.quality} data-q={q.cls}>{v ? fmtScore(v) : "-"}</span>;
             },
           },
           {

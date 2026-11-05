@@ -1,79 +1,23 @@
-import { prisma } from "@/lib/prisma";
 import Topbar from "./components/Topbar";
 import SyncLogPanel from "./components/SyncLogPanel";
 import { TrendChart, HourChart, AgentBar, SourceSplit } from "./components/Charts";
 // 2026-09-02: 排除 0-消息 + 定时任务触发的 session
-import { SESSION_EXCLUDE_FILTER } from "@/lib/session-filters";
+import { loadOverview } from "@/lib/home-overview";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const now = new Date(); now.setUTCHours(0,0,0,0);
-  const dayMs = 86400000;
-  const ago14 = new Date(now.getTime() - 13*dayMs);
-  const ago7 = new Date(now.getTime() - 7*dayMs);
 
-  // 2026-09-02: 排除 0-消息 + 定时任务触发的 session, KPI 才反映"真"业务会话
-  const [sessionCount, messageCount, byAgent, byStatus, recentSessions, allSessions, sources, agent7dRaw] = await Promise.all([
-    prisma.session.count({ where: SESSION_EXCLUDE_FILTER }),
-    prisma.message.count(),
-    prisma.session.groupBy({ by: ["agentId"], _count: true, orderBy: { _count: { agentId: "desc" } }, where: SESSION_EXCLUDE_FILTER }),
-    prisma.session.groupBy({ by: ["extractStatus"], _count: true, where: SESSION_EXCLUDE_FILTER }),
-    prisma.session.findMany({
-      where: SESSION_EXCLUDE_FILTER,
-      orderBy: { lastMessageAt: "desc" },
-      take: 10,
-      select: {
-        id: true, title: true, agentId: true, agentName: true,
-        source: true, channel: true, messageCount: true,
-        lastMessageAt: true, extractStatus: true,
-      },
-    }),
-    // 2026-10-21 Phase 3: 一次取全量（trend/hour 共用），避免第二次全表扫描
-    prisma.session.findMany({
-      where: SESSION_EXCLUDE_FILTER,
-      select: { startedAt: true, messageCount: true },
-    }),
-    prisma.session.groupBy({ by: ["source"], _count: true, where: SESSION_EXCLUDE_FILTER }),
-    prisma.session.findMany({
-      where: { startedAt: { gte: ago7 }, ...SESSION_EXCLUDE_FILTER },
-      select: { agentId: true, messageCount: true },
-    }),
-  ]);
+  // ord-20261104-046：8 条查询合并为 1 条 CTE + 60s 缓存（口径不变，见 lib/home-overview.ts）
+  const ov = await loadOverview();
+  const { sessionCount, messageCount, byAgent, byStatus, recentSessions, trend, hourDist, agent7d, sourceDist } = ov;
 
-  // 14d trend
-  const trend = [] as { date: string; sessions: number; messages: number }[];
-  for (let i = 13; i >= 0; i--) {
-    const d = new Date(now.getTime() - i*dayMs);
-    const next = new Date(d.getTime() + dayMs);
-    const inBucket = allSessions.filter(s => s.startedAt && s.startedAt >= d && s.startedAt < next);
-    trend.push({
-      date: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai" }).format(d).slice(5), // MM-DD
-      sessions: inBucket.length,
-      messages: inBucket.reduce((sum,s) => sum + (s.messageCount || 0), 0),
-    });
-  }
-  // 24h hour distribution（复用 allSessions，不再第二次全表扫描）
-  const hourDist = new Array(24).fill(0);
-  // D-14 (2026-09-07): hour 分布按 Asia/Shanghai 统计；用 getTime 做 +8h（避免 2 万次 Intl.format 开销）
-  for (const r of allSessions) {
-    if (!r.startedAt) continue;
-    const h = new Date(r.startedAt.getTime() + 8 * 3600 * 1000).getUTCHours();
-    hourDist[h]++;
-  }
-  // 7d agent
-  const a7Map = new Map<string, { sessions: number; messages: number }>();
-  for (const r of agent7dRaw) {
-    const k = r.agentId || "unknown";
-    const cur = a7Map.get(k) || { sessions: 0, messages: 0 };
-    cur.sessions++; cur.messages += (r.messageCount || 0);
-    a7Map.set(k, cur);
-  }
-  const agent7d = [...a7Map.entries()].map(([agentId,v]) => ({ agentId, ...v })).sort((a,b) => b.sessions - a.sessions);
-  const sourceDist = sources.map(s => ({ source: s.source || "UNKNOWN", count: s._count as number }));
+  // 14d trend / hourly distribution 已由 SQL 聚合（见 home-overview.ts）
+  // 7d agent / source 分布已由 SQL 聚合（见 home-overview.ts）
 
   const fmt = (d: Date | null) =>
-    d ? new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai",  month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d) : "—";
+    d ? new Intl.DateTimeFormat("zh-CN", { timeZone: "Asia/Shanghai",  month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).format(d instanceof Date ? d : new Date(d)) : "—";
 
   // Phase C 2026-08-31: EXTRACTED 统计 DONE (Session 表实际用 DONE, 之前查 PROCESSED/EXTRACTED 永远 0)
   const extracted = byStatus.find(s => s.extractStatus === "DONE")?._count || 0;

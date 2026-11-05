@@ -8,6 +8,7 @@ import { useUrlParam } from "@/lib/useUrlParam";
 import Link from "next/link";
 import { Button, Input, Modal, Segmented, Select, Tag } from "@/components/primitives";
 import { useGlobalNonce } from "@/components/GlobalFilter";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface OrgData { departments: any[]; groups: any[]; agents: any[]; platformName?: string }
 const EMPTY: OrgData = { departments: [], groups: [], agents: [], platformName: "lions" };
@@ -81,8 +82,8 @@ export default function OrgPage() {
 
   return (
     <main className="page">
-      <div className="page-header"><div className="page-title">组织架构</div>
-        <div className="page-subtitle">部门树（根 = 平台「{data.platformName || "lions"}」）· 小组（按条件或手动）</div></div>
+      <PageHeader><PageTitle>组织架构</PageTitle>
+        <div className="page-subtitle">部门树（根 = 平台「{data.platformName || "lions"}」）· 小组（按条件或手动）</div></PageHeader>
       {msg ? <div className="tiny" style={{ color: msg.startsWith("失败") ? "var(--status-crit)" : "var(--status-ok)", marginBottom: "var(--sp-2)" }}>{msg}</div> : null}
       <div style={{ marginBottom: "var(--sp-3)" }}>
         <Segmented options={[{ label: "组织架构", value: "dept" }, { label: "小组", value: "group" }]} value={tab} onChange={(v) => setTab(v as "dept" | "group")} />

@@ -1,0 +1,33 @@
+/* /flywheel/flow · P2 批2 呈现层（2026-11-05）
+   FlowHeader 所需：面包屑首段弱化色 + 行内错误提示。
+   注意：本文件由 flow 页多个子组件共用（FlowLogsPanel 等随所属批次追加），
+   新增类请用带前缀的名字，避免与后续批次撞名。 */
+
+.flowCrumbDim {
+  color: var(--text-dim);
+}
+
+.flowErr {
+  color: var(--status-crit);
+  margin-bottom: var(--sp-3);
+}
+/* —— 批1（FlowLogsPanel + page）追加；按本文件约定带 flow 前缀 —— */
+
+/* 实时日志尾部：限高滚动 + 可换行
+   （原来是内联 maxHeight/overflowY/fontSize/lineHeight/color/whiteSpace，值逐项一致） */
+.flowLogsPre {
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+
+/* 页面底部「相关视图」出链行 */
+.flowRelatedLinks {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-top: var(--sp-4);
+}

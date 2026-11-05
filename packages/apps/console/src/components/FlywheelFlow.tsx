@@ -1,3 +1,6 @@
+// FlywheelFlow · P2 呈现层（批1）：内联样式清零（每一步的横排对齐改由 FlywheelFlow.module.css 的 .stepWrap 承担）。
+import styles from "./FlywheelFlow.module.css";
+
 interface Step {
   label: string;
   count?: string | number;
@@ -12,7 +15,7 @@ export default function FlywheelFlow({ steps }: Props) {
   return (
     <div className="fw-flow">
       {steps.map((s, i) => (
-        <span key={i} style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-1)" }}>
+        <span key={i} className={styles.stepWrap}>
           <span className={`fw-step ${s.active ? "active" : ""}`}>
             {s.label}
             {s.count !== undefined && ` (${s.count})`}

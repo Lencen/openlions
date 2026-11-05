@@ -1,5 +1,10 @@
 "use client";
 import Sparkline from "@/components/Sparkline";
+import styles from "../page.module.css";
+/** 5% 一档的宽度类（组件内不写内联 style） */
+const pctClass = (v: number, m: Record<string, string>) =>
+  m["p" + Math.round((Math.max(0, Math.min(1, v)) * 100) / 5) * 5] || m.p0;
+
 import { fmt } from "./shared";
 import type { DashboardData } from "./shared";
 
@@ -37,15 +42,15 @@ export default function FlywheelTrends({
       <div className="trend-card">
         {/* 同上：错误总数在 KPI 已有，这里给峰值/小时 */}
         <div className="trend-label"><span>错误 · 峰值/小时</span><span>合计 {totalErrors}</span></div>
-        <div className="trend-val" style={{ color: totalErrors > 50 ? "var(--status-warn)" : "var(--text)" }}>{fmt(Math.max(0, ...errors24))}</div>
+        <div className={"trend-val " + styles.trVal} data-tone={totalErrors > 50 ? "warn" : undefined}>{fmt(Math.max(0, ...errors24))}</div>
         <Sparkline data={errors24} color="var(--status-warn)" />
       </div>
       <div className="trend-card">
         <div className="trend-label"><span>改进任务</span></div>
         <div className="trend-val">{actionStats.completed} / {actionStats.pending}</div>
-        <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-2)" }}>完成 / 待执行 · 共 {fmt(actionStats.total)}</div>
-        <div className="mini-bar" style={{ width: "100%" }}>
-          <div className="mini-bar-fill" style={{ width: `${Math.round(actionStats.completed / Math.max(actionStats.total, 1) * 100)}%` }} />
+        <div className={styles.trSub}>完成 / 待执行 · 共 {fmt(actionStats.total)}</div>
+        <div className={"mini-bar " + styles.miniBarFull}>
+          <div className={"mini-bar-fill " + pctClass(actionStats.completed / Math.max(actionStats.total, 1), styles as unknown as Record<string, string>)} />
         </div>
       </div>
     </div>

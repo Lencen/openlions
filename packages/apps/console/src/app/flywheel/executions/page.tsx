@@ -10,6 +10,7 @@ import { t } from "@/i18n";
 import ErrorAlert from "@/components/ErrorAlert";
 import DataMoment from "@/components/DataMoment";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface T { total?:number; items?:Array<{id:string;type?:string;status:string;title?:string;description?:string;createdAt?:string;targetType?:string;targetId?:string;measuredDelta?:number;actionType?:string}> }
 interface S { data?:{tasks?:any} }
@@ -36,7 +37,7 @@ export default function ExecutionsPage() {
   const failed = taskStats.FAILED ?? 0;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">执行记录</span></div>
-    <div className="page-header"><div className="page-title">执行记录</div><div className="page-subtitle">{st?`${t('status.done')} ${done} · ${t('status.failed')} ${failed} · ${t('status.inProgress')} ${taskStats.IN_PROGRESS??0}`:"加载中..."}{/* 2026-10-16 round 77-AD（决策③逐源 + 77-M 机检清单）: 本页有 **2 个源** ——    /api/flywheel-tasks（下方任务列表）与 /api/flywheel-stats（这里三个计数）。    此前本页**没有时刻** ✗ -> 两组数字的新旧都无法判断。    本轮给 flywheel-tasks 补了顶层 asOf（stats 侧 77-P 已有）, 故这里是纯页面改动 ✓。 */}<DataMoment items={[{ label: "指标", at: (stats as any)?.asOf }, { label: "任务", at: (data as any)?.asOf }]} /></div></div>
+    <PageHeader><PageTitle>执行记录</PageTitle><div className="page-subtitle">{st?`${t('status.done')} ${done} · ${t('status.failed')} ${failed} · ${t('status.inProgress')} ${taskStats.IN_PROGRESS??0}`:"加载中..."}{/* 2026-10-16 round 77-AD（决策③逐源 + 77-M 机检清单）: 本页有 **2 个源** ——    /api/flywheel-tasks（下方任务列表）与 /api/flywheel-stats（这里三个计数）。    此前本页**没有时刻** ✗ -> 两组数字的新旧都无法判断。    本轮给 flywheel-tasks 补了顶层 asOf（stats 侧 77-P 已有）, 故这里是纯页面改动 ✓。 */}<DataMoment items={[{ label: "指标", at: (stats as any)?.asOf }, { label: "任务", at: (data as any)?.asOf }]} /></div></PageHeader>
     <div className="kpi-grid">
       <KPICard label={t('status.done')} value={done.toString()} />
       <KPICard label={t('status.failed')} value={failed.toString()} />

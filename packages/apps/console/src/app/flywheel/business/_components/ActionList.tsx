@@ -1,6 +1,7 @@
 "use client";
 import type { ActionSpec } from "./types";
 import { Panel, SimpleTable, Note, Pill } from "./ui";
+import styles from "../page.module.css";
 
 export default function ActionList({ actions, s, title = "本维度红色动作" }: { actions: ActionSpec[]; s: any; title?: string }) {
   return (
@@ -14,7 +15,7 @@ export default function ActionList({ actions, s, title = "本维度红色动作"
             a.current(s),
             a.threshold,
             a.owner,
-            <span key={"act" + a.key} className="tiny">{a.action}{a.note ? <span style={{ color: "var(--text-muted)" }}>（{a.note}）</span> : null}</span>,
+            <span key={"act" + a.key} className="tiny">{a.action}{a.note ? <span className={styles.noteMuted}>（{a.note}）</span> : null}</span>,
             <code key={"v" + a.key}>{a.verify}</code>,
           ])}
         />

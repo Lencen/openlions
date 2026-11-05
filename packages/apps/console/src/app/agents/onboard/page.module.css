@@ -1,0 +1,14 @@
+/* /agents/onboard · P2 批2 呈现层（2026-11-05）
+   向导页本身很薄（分步控件在 _components/ 下；那些文件随所属批次改造）。
+   这里只放：取数失败提示的上边距 + 页脚"相关视图"出链行。 */
+
+.alertRow {
+  margin-bottom: var(--sp-3);
+}
+
+.relatedLinks {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-top: var(--sp-4);
+}

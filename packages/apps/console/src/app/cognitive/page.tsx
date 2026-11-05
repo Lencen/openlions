@@ -11,6 +11,7 @@ import ErrorAlert from "@/components/ErrorAlert";
 import { fmtTime , UNKNOWN } from "@/lib/format";
 import TableCopyButton from "@/components/TableCopyButton";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface StatsData {
   /** 77-J: BFF 顶层新增的"数据时刻"(本页数字的真正来源) */
@@ -58,8 +59,8 @@ export default function CognitiveDashboard() {
   ];
   return (
     <div className="layout"><main className="main">
-      <div className="page-header"><div className="page-title">记忆与知识</div>
-      <div className="page-subtitle">统一大脑 · 所有 AI 共享的记忆/知识/反思/实践/技能<DataMoment items={[{ label: "表格", at: data?.asOf }, { label: "反思", at: dash?.timestamp }]} /></div></div>
+      <PageHeader><PageTitle>记忆与知识</PageTitle>
+      <div className="page-subtitle">统一大脑 · 所有 AI 共享的记忆/知识/反思/实践/技能<DataMoment items={[{ label: "表格", at: data?.asOf }, { label: "反思", at: dash?.timestamp }]} /></div></PageHeader>
       {(error || dashErr) ? <ErrorAlert title="认知看板加载失败" message={String((error || dashErr)?.message || (error || dashErr))} onRetry={() => { mutate(); mutateDash(); }} /> : null}
 
       <div className="trend-grid">

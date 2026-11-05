@@ -1,0 +1,13 @@
+/* /agents/config · P2 批2 呈现层（2026-11-05）
+   本页只做自动跳转：跳转提示与 Suspense 兜底各一行文字，居中展示。 */
+
+.redirect {
+  padding: var(--sp-7);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.fallback {
+  padding: var(--sp-7);
+  text-align: center;
+}

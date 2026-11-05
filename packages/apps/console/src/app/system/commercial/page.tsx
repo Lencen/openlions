@@ -8,6 +8,7 @@
 //   3. 只读：没有按钮、不发 POST。
 import { Alert, Skeleton, Tag } from "@/components/primitives";
 import { useApi } from "@/lib/api";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface GoalItem {
   id: string;
@@ -87,12 +88,12 @@ export default function CommercialGatePage() {
 
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <div className="page-header">
-        <div className="page-title">商业化 Gate</div>
+      <PageHeader>
+        <PageTitle>商业化 Gate</PageTitle>
         <div className="page-subtitle">
           只读看板 · 目标达成、就绪检查与 S1 发布门禁 · 数据取自平台自身读数，本页不做计算
         </div>
-      </div>
+      </PageHeader>
 
       {error ? (
         <Alert

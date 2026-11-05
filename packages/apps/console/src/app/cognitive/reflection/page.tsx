@@ -13,6 +13,7 @@ import CognitiveDetailDrawer from "@/components/cognitive/CognitiveDetailDrawer"
 import { useCognitiveListUrlState } from "@/components/cognitive/useCognitiveListUrlState";
 import { getQuickFilters } from "@/config/cognitiveQuickFilters";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 interface R { items?: Array<{ id: string; title: string; status?: string; category?: string; priority?: string; theme?: string; score?: number; actionType?: string; lesson?: string; description?: string; createdAt?: string; updatedAt?: string }>; total?: number }
 const fmt = (n: number) => n.toLocaleString();
 const linkBtn: CSSProperties = { background: "none", border: 0, padding: 0, cursor: "pointer", color: "var(--primary)", font: "inherit", textAlign: "left" };
@@ -27,7 +28,7 @@ export default function ReflectionPage() {
   const total = data?.total ?? 0;
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>记忆与知识</span><span className="sep">/</span><span className="current">反思</span></div>
-    <div className="page-header"><div className="page-title">反思</div><div className="page-subtitle">AI 反思记录 · 教训 · 经验总结 · 点标题用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></div>
+    <PageHeader><PageTitle>反思</PageTitle><div className="page-subtitle">AI 反思记录 · 教训 · 经验总结 · 点标题用侧边抽屉看详情（不离开列表） {loading && "（加载中...）"}</div></PageHeader>
     <div className="kpi-grid"><KPICard label="反思总量" value={total > 0 ? fmt(total) : "..."} /></div>
     <div className="panel"><div className="panel-header"><span className="panel-title">反思列表</span></div>
       <ListControls search={search} onSearch={setSearch} sortBy={sortBy} onSortBy={setSortBy} sortOrder={sortOrder} onSortOrder={setSortOrder} total={total} page={page} pageSize={pageSize} onPage={setPage} quickFilters={getQuickFilters("reflection")} quick={quick} onQuick={setQuick} loading={loading} />

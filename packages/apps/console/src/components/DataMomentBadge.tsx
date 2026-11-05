@@ -6,6 +6,7 @@
 //   语义: 说的是"**这份数据是什么时候取的**"（= 取数时刻）✓;
 //         **不是**"上游数据本身多新" ✗ —— 所以文案用「取自」而不是「截至」, 不夸大 ✓。
 import { useEffect, useState } from "react";
+import styles from "./DataMomentBadge.module.css";
 
 export default function DataMomentBadge() {
   // 2026-10-15（round 76-GT）**兜底: 用"页面打开时刻"**。
@@ -64,10 +65,9 @@ export default function DataMomentBadge() {
     //   76-GT 加了兜底之后, 每页都会显示时刻 -> 普查再也分不出"真有取数"与"只有兜底" ✗。
     //   这里在 title 里写清来源(data-source), 普查读 title 即可分别统计 ✓。
     <span
-      className="tiny"
+      className={styles.badge}
       data-source={count > 0 ? "fetch" : "open"}
       title={"来源: " + (count > 0 ? "本页接口取数" : "页面打开时刻") + "；本页共 " + count + " 次成功取数"}
-      style={{ color: "var(--text-dim)", whiteSpace: "nowrap" }}
     >
       本页数据取自 {hh}:{mm}:{ss}
     </span>

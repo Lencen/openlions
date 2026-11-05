@@ -8,6 +8,7 @@
 //      否则用户会去找客服买一个他其实已经有的东西。
 import { useApi } from "@/lib/api";
 import { Skeleton } from "@/components/primitives";
+import styles from "./FeatureGate.module.css";
 
 interface Feature {
   key: string;
@@ -64,13 +65,13 @@ export default function FeatureGate({
       <div className="panel-header">
         <div className="panel-title">{label}需要 Pro 授权</div>
       </div>
-      <div style={{ padding: "0 var(--gap-sect) var(--gap-block)" }}>
-        <p style={{ marginTop: 0 }}>
+      <div className={styles.body}>
+        <p className={styles.lede}>
           {unknown
             ? "当前无法确认授权状态，因此暂不展示该功能。这不是「未购买」——请稍后刷新；持续如此请联系平台管理员。"
             : "当前授权不含该功能。升级到 Pro 后可查看；已有的核心功能不受影响。"}
         </p>
-        <div className="tiny" style={{ lineHeight: 1.9 }}>
+        <div className={"tiny " + styles.meta}>
           <div>· 状态：{stateText}</div>
           {data?.edition ? <div>· 授权版本：{data.edition}</div> : null}
           {typeof data?.daysLeft === "number" ? <div>· 剩余有效期：{data.daysLeft} 天</div> : null}

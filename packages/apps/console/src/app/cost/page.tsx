@@ -16,6 +16,7 @@ import CostTopCallsTable from "./_components/CostTopCallsTable";
 import CostAgentTable from "./_components/CostAgentTable";
 import CostCaliber from "./_components/CostCaliber";
 import FeatureGate from "@/components/FeatureGate";
+import styles from "./page.module.css";
 
 export default function CostPage() {
   const f = useGlobalFilter();
@@ -41,7 +42,7 @@ export default function CostPage() {
       <CostHero data={data} agent={f.agent} />
 
       {data?.warnings?.length ? (
-        <Alert type="info" showIcon style={{ marginBottom: "var(--sp-4)" }} title="口径提示" description={data.warnings.join("；")} />
+        <Alert type="info" showIcon className={styles.warnAlert} title="口径提示" description={data.warnings.join("；")} />
       ) : null}
 
       <CostMetrics data={data} loadingAll={loadingAll} />

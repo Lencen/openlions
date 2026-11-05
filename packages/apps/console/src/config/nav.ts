@@ -41,7 +41,7 @@ const GROUP_DEFS: { id: string; labelKey: string; color: string }[] = [
 /** 条目定义: [group, id, href?, icon, children?, locked?] — 文案 key = nav.item.<id>.label/desc */
 const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge?: 'new'; children?: { id: string; href: string; icon: string }[]; locked?: boolean }[] = [
   // ── 工作台 ──
-  { group: 'workbench', id: 'workbench', href: '/workbench', icon: 'compass', badge: 'new' },
+  // ord-078: /workbench 下线（301 → /），入口移除，见 docs/design/uiux-bento-2026-11/OFFLINE-SCOPE-078.md
   { group: 'workbench', id: 'home', href: '/', icon: 'dashboard' },
   { group: 'workbench', id: 'daily', href: '/audit/daily-summary', icon: 'calendar' },
   // ── 待办中心 (独立顶级, 人类决策入口) ──
@@ -54,7 +54,8 @@ const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge
   { group: 'workbench', id: 'todo', href: '/todo', icon: 'check-square' },
   // ── 会话与协同 (会话记录 + MACS) ──
   { group: 'comm', id: 'sessions', href: '/sessions', icon: 'message-square', badge: 'new' },
-  { group: 'comm', id: 'macs', href: '/system/comm', icon: 'radio' },
+  // ord-078: /system/comm 下线（301 → /messages），入口移除；MACS 工作区改用 /messages
+
   // 2026-10-21 Phase 1：MACS 消息工作区（console 内建，方案 C）
   { group: 'comm', id: 'messages', href: '/messages', icon: 'mail', badge: 'new' },
   // 2026-10-21 Phase 3：跨会话消息管理表格（只读）
@@ -91,11 +92,8 @@ const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge
   { group: 'cognition', id: 'lineage', href: '/lineage', icon: 'git-branch' },
   // ── 飞轮 (独立顶级, 9 子页聚合为 5 项) ──
   { group: 'flywheel', id: 'flywheel', href: '/flywheel', icon: 'refresh' },
-  // 2026-10-27 业务数据分析线：飞轮业务维度看板（L0 总览 + 8 维下钻）。
-  // ia-ok: /flywheel/business 是**面向管理者**的模块级入口（业务维度：正常吗/哪里卡/谁去动），
-  //   与 /flywheel（面向运维的飞轮看板）受众与目的都不同，不是某个列表的过滤视图，也没有父列表可挂 Tab；
-  //   依据：交接包 DoD“一页管理者总览 + 8 维下钻页”，与 /flywheel/learning 同属“面向用户的模块级入口”先例。
-  { group: 'flywheel', id: 'flywheelBusiness', href: '/flywheel/business', icon: 'bar-chart', badge: 'new' },
+  // ord-078: /flywheel/business 下线（301 → /market），入口移除；业务维度看板并入 /market 六域
+  //   原 ia-ok 理由见 OFFLINE-SCOPE-078.md §2（候选 3）。
   // ia-ok: 「它在学」是**面向用户**的模块级入口, 与 /flywheel(面向运维的飞轮看板)受众与目的都不同 ——
   //        它只回答一个问题:「它最近学到了什么」。按守门 R6 的要求在此写明理由; 不是过滤视图, 故不走 Tab。
   //        依据: docs/practices/2026-10-15-console-data-display-guidelines.md §5 第 ④ 项。

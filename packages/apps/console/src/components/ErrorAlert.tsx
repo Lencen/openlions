@@ -6,6 +6,7 @@
 //   与 ui.tsx 的 ErrorBlock 的区别: ErrorBlock 是**整块状态区**(适合整页失败),
 //   本组件是**行内提示条**(适合"页面上有一块数据没取到, 但页面其余部分还能用")。
 import { Alert, Button, ReloadOutlined } from "@/components/primitives";
+import styles from "./ErrorAlert.module.css";
 
 export default function ErrorAlert({
   title,
@@ -23,11 +24,11 @@ export default function ErrorAlert({
   extra?: React.ReactNode;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", marginBottom: "var(--sp-3)" }}>
+    <div className={styles.row}>
       <Alert
         type="error"
         showIcon
-        style={{ flex: 1 }}
+        className={styles.alert}
         title={title}
         description={message ? String(message).slice(0, 200) : undefined}
       />

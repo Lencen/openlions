@@ -1,6 +1,6 @@
 # LIONS 多 Agent 管理系统
 
-> **100% vibecoding**：本项目的架构、代码、测试、文档和这张 README，均由 Agent 在人类设定的目标、边界与验收标准下生成与迭代；人类只做决策、验收与发布。
+> **本项目 100% 由 Agent 编写（vibecoding）**：架构、代码、测试、文档和这张 README，都由 Agent 在人类设定的目标、边界与验收标准下生成与迭代；人类负责决策、验收与发布。
 
 ![架构图](docs/open-source/architecture.svg)
 
@@ -28,6 +28,12 @@ LIONS 把“会话”变成“资产”，再把“资产”变成“任务”�
 3. Task Engine 从资产与缺口里生成改进任务；
 4. 任一已接入 Agent 可以认领任务、执行、提交；
 5. 执行结果和证据回到资产层，成为下一个 Agent 的上下文。
+
+**典型用法（不写代码也能对上）**
+
+- 换人接手：上一轮踩过的坑、定过的结论，直接从记忆/知识里取，不用重新问一遍；
+- 多工具协作：一个 Agent 做完的调研，另一个 Agent 接着用，上下文不用人来搬；
+- 团队复盘：每个任务的执行证据自动留档，月末能看出哪些做法真的有效。
 
 ---
 
@@ -86,7 +92,7 @@ LIONS 把“会话”变成“资产”，再把“资产”变成“任务”�
 前提：Linux + systemd --user + Node 20+；Docker 可选（介质内有 PG 时用 Docker 拉起）。
 
     # 1. 解开发布介质
-    mkdir -p /tmp/lions && tar -xzf lions-0.4.23.tar.gz -C /tmp/lions
+    mkdir -p /tmp/lions && tar -xzf lions-0.4.28.tar.gz -C /tmp/lions
 
     # 2. 一条命令安装（介质里有 pg/ 时自动拉起 PostgreSQL）
     node /tmp/lions/scripts/lions-install.cjs \

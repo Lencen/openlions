@@ -8,6 +8,7 @@ import KPICard from "@/components/KPICard";
 import { MetricCard } from "@/components/ui";
 import DataTable, { StateChip } from "@/components/DataTable";
 import DensityToggle from "@/components/DensityToggle";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 const TYPE_SCALE: { token: string; sample: string; hint: string }[] = [
   { token: "--fs-3xl / 30px", sample: "325,918", hint: "主数值（每屏最多一个）" },
@@ -49,9 +50,9 @@ const SAMPLE_ROWS = [
 export default function DesignPage() {
   return (
     <div className="layout"><main className="main" style={{ padding: "var(--sp-5)" }}>
-      <div className="page-header">
+      <PageHeader>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--sp-4)" }}>
-          <div className="page-title">设计规范</div>
+          <PageTitle>设计规范</PageTitle>
           {/* 2026-10-25：密度是高级偏好，放这里而不是顶栏 —— 顶栏加控件会挤掉通知按钮（实测遮挡点击）。 */}
           <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
             <span className="tiny">界面密度</span>
@@ -62,7 +63,7 @@ export default function DesignPage() {
           平台唯一视觉参照：字号、颜色、层级、图标与组件都在这一页。改样式前先看这里，改完回来对照。
           守门：<code>npm run check:ui-design</code>（最小字号 / 字号种类 / chrome emoji / 卡片边框 / 点击目标 / 原始异常）。
         </div>
-      </div>
+      </PageHeader>
 
       <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
         <div className="panel-header"><span className="panel-title">字号尺度</span><span className="tiny">正文 14 · 微标 12 为下限，禁止 9/10px</span></div>

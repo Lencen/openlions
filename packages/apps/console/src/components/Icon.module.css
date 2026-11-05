@@ -1,0 +1,8 @@
+/* Icon · P2 批2 呈现层（2026-11-05）
+   图标基线：不参与 flex 伸缩、行内对齐到基线略上方。尺寸仍由 width/height 属性给（14/16/18/20/24）。 */
+
+.icon {
+  flex: none;
+  display: inline-block;
+  vertical-align: -0.15em;
+}

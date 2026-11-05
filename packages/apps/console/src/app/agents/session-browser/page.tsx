@@ -5,6 +5,7 @@ import KPICard from "@/components/KPICard";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import { useState, useEffect, useCallback } from "react";
 import { t } from "@/i18n";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 interface SessionItem {
   id: string;
@@ -143,8 +144,8 @@ export default function SessionBrowserPage() {
           <span className="sep">/</span>
           <span className="current">{t('sessionBrowser.title')}</span>
         </div>
-        <div className="page-header">
-          <div className="page-title">{t('sessionBrowser.title')}</div>
+        <PageHeader>
+          <PageTitle>{t('sessionBrowser.title')}</PageTitle>
           <div className="page-subtitle">
             {t('sessionBrowser.meta', {
               n: loadingPage
@@ -154,7 +155,7 @@ export default function SessionBrowserPage() {
                   : items.length,
             })}
           </div>
-        </div>
+        </PageHeader>
         {/* 2026-10-19 B4: 修前首屏大号数字 **0 个** ✗ —— "已加载/总数"藏在副标题小字里。补 ≤3 张 ✓ */}
 
         <div className="kpi-grid" style={{ marginBottom: "var(--sp-3)" }}>

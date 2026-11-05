@@ -4,7 +4,7 @@
 // 约束：stroke 走 currentColor，尺寸只允许 14/16/18/20（默认 16），不写 fill。
 // 未知名字返回 null（调用方可回退），保证灰度期不炸。
 "use client";
-import type { CSSProperties } from "react";
+import styles from "./Icon.module.css";
 
 export type IconName =
   | "compass" | "dashboard" | "calendar" | "check-square" | "message-square"
@@ -100,13 +100,11 @@ export default function Icon({
   name,
   size = 16,
   className,
-  style,
   title,
 }: {
   name?: string | null;
   size?: 14 | 16 | 18 | 20 | 24;
   className?: string;
-  style?: CSSProperties;
   title?: string;
 }) {
   const key = resolveIcon(name);
@@ -121,8 +119,7 @@ export default function Icon({
       strokeWidth={1.7}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={className}
-      style={{ flex: "none", display: "inline-block", verticalAlign: "-0.15em", ...style }}
+      className={className ? styles.icon + " " + className : styles.icon}
       aria-hidden={title ? undefined : true}
       role={title ? "img" : undefined}
       dangerouslySetInnerHTML={
