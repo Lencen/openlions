@@ -14,7 +14,6 @@ import { t } from "@/i18n";
 import { useGlobalFilter } from "@/components/GlobalFilter";
 import { fmtCompact, fmtNum, fmtScore, fmtTime, truncate } from "@/lib/format";
 import {
-  DataTable,
   ErrorBlock,
   KpiCard,
   PageHeader,
@@ -23,7 +22,8 @@ import {
   StateBlock,
   StateChip,
 } from "@/components/ui";
-import type { DataColumn } from "@/components/ui";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import OverviewMetrics from "./_components/OverviewMetrics";
 import OverviewFlowCharts from "./_components/OverviewFlowCharts";
 import OverviewTrendCharts from "./_components/OverviewTrendCharts";
@@ -95,6 +95,10 @@ export default function OverviewPage() {
   const daily = useApi<any>("/api/daily-reflection?limit=14");
   // 2026-10-21 前端对账：查询失败要能被看见——否则 PG 方言错误会以"0"的样子伪装成真数据。
   const { data: dbh } = useApi<any>("/api/db-health");
+  // 2026-11-05（数据卡 1 · §6/§11）：四项指标里 console 只读面只有 OPEN 待办数（/api/todos 的 counts）。
+  //   其余三项（cutover 红项 / 失败 unit / 孪生对）在主机侧判据脚本里，没有 console 只读接口
+  //   -> 指标卡显示「不可得」+ 原因，不写 0（卡片 1 §11）。
+  const todos = useApi<any>("/api/todos?limit=1");
 
   const forbidden = isForbidden(error?.message ? String(error.message) : "");
   const loadingCards = loading && !data;
@@ -114,6 +118,16 @@ export default function OverviewPage() {
   const recentTasks: RecentTask[] = Array.isArray(tk?.recent) ? (tk.recent as RecentTask[]) : [];
   const isEmpty = !loading && !error && !!data
     && num(s?.newSessions) === 0 && num(p?.total) === 0 && recentTasks.length === 0;
+  // OPEN 待办数：counts[] 里 status='OPEN' 的 c；取不到 -> null（显示不可得，不写 0）。
+  const openTodoCount: number | null = (() => {
+    const list = Array.isArray(todos.data?.counts) ? todos.data.counts : [];
+    const row = list.find((x: any) => String(x?.status || "").toUpperCase() === "OPEN");
+    const n = row ? Number(row.c) : NaN;
+    return Number.isFinite(n) ? n : null;
+  })();
+  const todoReason = todos.data?.error
+    || (todos.error ? String((todos.error as Error)?.message || todos.error) : "")
+    || "待办接口未返回待办计数";
 
   const columns: DataColumn<RecentTask>[] = [
     {
@@ -214,36 +228,48 @@ export default function OverviewPage() {
         warnings={Array.isArray(data?.warnings) ? data.warnings : []}
       />
 
-      {/* ---------- ② 指标带：≤4 张，只回答「总量 / 健康 / 异常 / 增量」 ----------
-          TODO(数据卡 · 总览)：PILOT-10 数据卡 1 声明的是 cutover 红项数 / 失败 unit 数 / 孪生表对数 / OPEN 待办数，
-          console 目前没有对应只读接口（cutover 与 unit 判据在 scripts/ 侧）。接口到位前这四张卡沿用既有口径，不编造数字。 */}
+      {/* ---------- ② 指标带：4 张 KpiCard = 数据卡 1 §6 的四项指标 ----------
+          卡片 1 §6：cutover 红项数 / 失败 unit 数 / 孪生表对数 / OPEN 待办数（口径见 DATA-DICTIONARY）。
+          console 只读面只有 OPEN 待办数（/api/todos 的 counts）；其余三项在主机侧判据脚本里
+          （cutover-status.cjs / systemctl / check-twin-table-recurrence.cjs），没有 console 只读接口
+          -> 按卡片 1 §11 显示「不可得」+ 原因，不写 0；四张卡均可点击下钻（卡片 1 §10）。 */}
       <div className="kpi-grid">
-        <KpiCard
-          label="会话流入"
-          value={loadingCards ? "…" : fmtNum(s?.newSessions)}
-          delta={loadingCards ? "" : "活跃 " + fmtNum(s?.activeSessions)}
-          deltaDir="up"
-          hint={"消息 " + fmtNum(s?.inflowMessages) + " 条 · 已提炼 " + fmtNum(s?.extractedSessions)}
-        />
-        <KpiCard
-          label="提炼产物"
-          value={loadingCards ? "…" : fmtNum(p?.total)}
-          delta={loadingCards ? "" : "存量 " + fmtNum(p?.totalAll)}
-          hint="记忆 + 知识 + 实践 + 技能 + 反思（本时段新增）"
-        />
-        <KpiCard
-          label="改进任务完成"
-          value={loadingCards ? "…" : fmtNum(tk?.done)}
-          delta={loadingCards ? "" : "失败 " + fmtNum(tk?.failed)}
-          deltaDir={num(tk?.failed) > 0 ? "down" : "up"}
-          hint={"进行中 " + fmtNum(tk?.running) + " · 待执行 " + fmtNum(tk?.pending)}
-        />
-        <KpiCard
-          label="产物质量分"
-          value={loadingCards ? "…" : fmtScore(quality)}
-          delta={loadingCards ? "" : "有评分 " + fmtNum(q?.scoredTotal) + " 条"}
-          hint="五表平均质量分，未评分不计入"
-        />
+        <Link className={styles.kpiLink} href="/system/health" aria-label="cutover 红项数 · 去运维看板">
+          <KpiCard
+            label="cutover 红项数"
+            value="不可得"
+            hint="console 无 cutover-status 只读接口（判据：node scripts/cutover-status.cjs）· 取不到不写 0"
+          />
+        </Link>
+        <Link className={styles.kpiLink} href="/system/health" aria-label="失败 unit 数 · 去运维看板">
+          <KpiCard
+            label="失败 unit 数"
+            value="不可得"
+            hint="systemd 失败 unit 不在 console 只读面（systemctl 在主机侧）· 取不到不写 0"
+          />
+        </Link>
+        <Link className={styles.kpiLink} href="/system/health" aria-label="孪生表对数 · 去运维看板">
+          <KpiCard
+            label="孪生表对数"
+            value="不可得"
+            hint="无孪生表配对只读接口（判据：node scripts/check-twin-table-recurrence.cjs）· 取不到不写 0"
+          />
+        </Link>
+        <Link className={styles.kpiLink} href="/todo" aria-label="OPEN 待办数 · 去待办看板">
+          <KpiCard
+            label="OPEN 待办数"
+            value={todos.loading ? "…" : openTodoCount != null ? fmtNum(openTodoCount) : "不可得"}
+            hint={openTodoCount != null
+              ? "源 lions_mind.Todo（status=OPEN）· 点击去 /todo"
+              : "原因：" + todoReason + " · 取不到不写 0"}
+          />
+        </Link>
+      </div>
+      <div className={styles.bandNote}>
+        <span className="tiny">
+          数据卡 1 四指标：前三项由主机侧判据产出（点卡进运维看板可复跑命令），console 只读面只覆盖 OPEN 待办数；
+          取不到一律「不可得」+ 原因，不写 0。会话 / 产物 / 飞轮 / 智能体 / 成本五域数字见下方 Bento 域格。
+        </span>
       </div>
 
       {/* ---------- ③ Bento 域格：5 格，每格一个域，整格可点（下钻） ---------- */}
@@ -367,11 +393,14 @@ export default function OverviewPage() {
             }}
           />
         )}
+        <div className="tiny">
+          仅展示 Top 10（按更新时间倒序）；行数 ≤20，按卡片 1 §12 不提供搜索 —— 需要全量请去 <Link href="/flywheel/tasks">改进任务看板</Link>。
+        </div>
       </section>
 
       {/* ---------- 深入：业务闭环 + 分析/运维明细（改前内容一条没删，默认折叠） ----------
            OverviewOneScreen 自带 panel 外壳，这里不再套一层（避免双边框）。
-           TODO(P2)：折叠区里的「核心 6 指标」仍是 MetricCard（已 deprecated），本批只改呈现层，留待 P2 统一换 KpiCard。 */}
+           TODO(P2)：折叠区里的「核心 6 指标」仍是旧指标卡（已 deprecated），本批只改呈现层，留待 P2 统一换 KpiCard。 */}
       <OverviewOneScreen data={data} loading={loadingCards} />
 
       <details className="os-more">
@@ -388,7 +417,7 @@ export default function OverviewPage() {
       <footer className={styles.foot}>
         <span className="tiny">{t("overview.source")}</span>
         <DataMoment
-          items={[{ label: "总览", at: data?.asOf }, { label: "日结", at: daily.data?.asOf }]}
+          items={[{ label: "总览", at: data?.asOf }, { label: "日结", at: daily.data?.asOf }, { label: "待办", at: todos.data?.asOf }]}
           showPrefix={false}
         />
         <span className="tiny">

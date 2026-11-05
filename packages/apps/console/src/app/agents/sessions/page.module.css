@@ -1,0 +1,46 @@
+/* /agents/sessions 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   两张表换成白名单 DataTable 后，原先挂在 td/容器上的内联样式改由本文件承担；
+   能复用 .panel / .kpi-grid / .tiny / .badge / .mono 的一律复用。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 图表/空态占位（原来是内联 padding + color） */
+.emptyNote { padding: var(--sp-5); color: var(--text-muted); }
+
+/* 小字等宽单元格（原来是内联 fontSize: var(--fs-sm)） */
+.sm { font-size: var(--fs-sm); }
+
+/* 标题列限宽省略（原来是内联 maxWidth/overflow/textOverflow/whiteSpace） */
+.clip {
+  display: inline-block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* 右上角复制/导出（原来是内联 flex + marginBottom） */
+.copyRow { display: flex; justify-content: flex-end; margin-bottom: var(--sp-1-5); }
+
+/* 计数分页行（原来是内联 flex + marginTop + fontSize） */
+.pageFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--sp-2-5);
+  font-size: var(--fs-md);
+}
+.pageState { color: var(--text-dim); }
+.pgBtn, .pgBtnPrev {
+  padding: var(--sp-1) var(--sp-2-5);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+}
+/* 上一页右侧留白（原来是内联 marginRight） */
+.pgBtnPrev { margin-right: var(--sp-2); }
+
+/* 页脚相关视图出链 */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

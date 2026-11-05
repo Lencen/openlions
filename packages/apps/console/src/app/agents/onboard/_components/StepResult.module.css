@@ -1,0 +1,98 @@
+/* /agents/onboard · StepResult（P2 批 4/5，2026-11-05）
+   内联 style → 类。本组件无表格；文案全部走 i18n（一字未改），只换样式承载方式。
+   状态色（reused/registered → ok，其余 muted）走 data-tone 属性选择器。 */
+
+/* 整块宽度（原内联 maxWidth: 640） */
+.wrap { max-width: 640px; }
+
+/* 标题与引导句 */
+.title { font-size: var(--fs-xl); margin-bottom: var(--sp-2); }
+.lead { font-size: var(--fs-md); color: var(--text-muted); margin-bottom: var(--sp-4); }
+
+/* 卡片外壳（原内联 padding/borderRadius/background/border/marginBottom） */
+.card {
+  padding: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  margin-bottom: var(--sp-4);
+}
+.cardPrimary { border-color: var(--primary); }
+
+/* 行布局 */
+.rowBetween { display: flex; justify-content: space-between; }
+.rowFlex { display: flex; gap: var(--sp-2); align-items: center; }
+.actions { display: flex; gap: var(--sp-2); }
+
+/* 间距档位（原内联 marginBottom / marginTop 的多档组合） */
+.mb1 { margin-bottom: var(--sp-1); }
+.mb2 { margin-bottom: var(--sp-2); }
+.mb15 { margin-bottom: var(--sp-1-5); }
+.mt1 { margin-top: var(--sp-1); }
+.mt05 { margin-top: var(--sp-0-5); }
+
+/* 文字档位 */
+.strongMd { font-weight: 600; font-size: var(--fs-md); }
+.metaSm { font-size: var(--fs-sm); color: var(--text-muted); }
+.baseMuted { font-size: var(--fs-base); color: var(--text-muted); }
+/* 服务条目状态：沿用/已发放 = 成功色，其余弱化 */
+.metaSm[data-tone="ok"] { color: var(--status-ok); }
+
+/* 一次性券 / 旧明文钥匙的代码块 */
+.codeLine {
+  font-size: var(--fs-base);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+  color: var(--primary);
+  flex: 1;
+  word-break: break-all;
+}
+.copyBtn {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+/* 「查看命令」折叠区（端点/命令原文原样保留） */
+.details { margin-top: var(--sp-1-5); }
+.summary { cursor: pointer; font-size: var(--fs-sm); }
+.pre {
+  font-size: var(--fs-sm);
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow-x: auto;
+  margin: var(--sp-1-5) 0 0;
+}
+
+/* 服务条目（下边框分隔，原内联 marginBottom/paddingBottom/borderBottom） */
+.serviceRow {
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  border-bottom: 1px solid var(--border);
+}
+
+/* 底部两个动作按钮 */
+.btnGhost {
+  padding: var(--sp-2-5) var(--sp-5);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btnPrimary {
+  padding: var(--sp-2-5) var(--sp-5);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+  background: var(--primary);
+  color: var(--on-primary);
+  border: none;
+}

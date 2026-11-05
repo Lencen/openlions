@@ -1,0 +1,73 @@
+/* /system/assets · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类。本页无表格。
+   文案已按 docs/notes/2026-10-26-asset-visibility-copy-frozen.md 冻结：本文件只动样式，一字未改。
+   取数（/api/asset-policy、/api/asset-policy/ownerless）与交互语义未改。 */
+
+/* 顶部提示条下间距（原内联在 <Alert style> 上；Alert 只吃 style，改由外层容器给） */
+.alertGap { margin-bottom: var(--gap-block); }
+
+/* 段落下贴边（原内联 marginTop: 0） */
+.flushTop { margin-top: 0; }
+
+/* 策略行（原内联 dt-row + alignItems/display/gap/paddingBlock） */
+.policyRow {
+  align-items: center;
+  display: flex;
+  gap: var(--gap-block);
+  padding-block: var(--gap-tight);
+}
+.kindName { width: 96px; font-weight: 600; }
+.grow { flex: 1; }
+.decideTitle { font-weight: 600; margin-bottom: var(--gap-label); }
+
+/* 单选组（改前两处内联：inline-flex / 居中 / 6px 间距 / 右侧 gap-block） */
+.radioLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: var(--gap-block);
+}
+
+/* 提示的上下间距档位（原内联 marginTop / marginLeft / marginBottom: var(--gap-label)） */
+.hintTop { margin-top: var(--gap-label); }
+.hintLeft { margin-left: var(--gap-label); }
+.hintBottom { margin-bottom: var(--gap-label); }
+
+/* 「?」帮助点（原内联 16×16 圆形 + 描边 + cursor: help） */
+.helpDot {
+  margin-left: var(--gap-label);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  cursor: help;
+}
+
+/* 「切换说明」面板上间距（原内联 marginTop: var(--gap-block)） */
+.panelTop { margin-top: var(--gap-block); }
+
+/* 确认弹窗：遮罩 + 卡体（原内联 fixed/inset/rgba/居中/z-index 与 width/maxWidth/背景） */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 24, 40, .32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+.dialog {
+  width: 560px;
+  max-width: 92vw;
+  background: var(--bg-panel, #fff);
+}
+.dialogBody { padding: 0 var(--gap-sect) var(--gap-block); }
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gap-label);
+  margin-top: var(--gap-block);
+}

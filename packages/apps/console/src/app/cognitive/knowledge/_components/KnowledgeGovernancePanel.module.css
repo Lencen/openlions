@@ -1,0 +1,95 @@
+/* /cognitive/knowledge · KnowledgeGovernancePanel（P2 批 4/5，2026-11-05）
+   内联 style → 类。本组件无表格。
+   动态色（"(null)" 领域 = 告警色；待办徽标 = 有/无）走 data-tone 属性选择器；
+   领域分布条宽度走 5% 一档的档位类 .p0…​.p100。取数（/api/knowledge-governance、/api/knowledge-dedupe）未改。 */
+
+/* 顶部说明（原内联 marginBottom: var(--sp-3)） */
+.subtitle { margin-bottom: var(--sp-3); }
+
+/* 面板内边距与间距档位 */
+.padPanel { padding: var(--sp-4); }
+.panelMb5 { margin-bottom: var(--sp-5); }
+.pad34 { padding: var(--sp-3) var(--sp-4); }
+.pad35 { padding: var(--sp-3) var(--sp-3-5); }
+.padBody { padding: var(--sp-3-5); }
+
+/* 治理接口不可用（原内联 color: var(--status-crit)） */
+.crit { color: var(--status-crit); }
+
+/* 领域分布一行 */
+.domainRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2-5);
+  margin-bottom: var(--sp-1-5);
+  font-size: var(--fs-base);
+}
+.domainName { width: 90px; }
+.domainName[data-tone="ok"] { color: var(--text); }
+.domainName[data-tone="warn"] { color: var(--status-warn); }
+.domainTrack {
+  flex: 1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+}
+.domainFill { height: 100%; }
+.domainFill[data-tone="ok"] { background: var(--primary); }
+.domainFill[data-tone="warn"] { background: var(--status-warn); }
+.domainCount { width: 90px; text-align: right; color: var(--text-dim); }
+
+/* 人工审核区 */
+.reviewList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2-5);
+  padding: var(--sp-3) var(--sp-4);
+}
+.plainLink { text-decoration: none; color: inherit; }
+.reviewCard {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-3-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.reviewCard[data-clickable] { cursor: pointer; }
+/* 第二张卡改前是块级（标题在上、说明在下）+ opacity .7，不是 flex 行 */
+.reviewCardStack {
+  padding: var(--sp-3) var(--sp-3-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  opacity: 0.7;
+}
+.grow { flex: 1; }
+.cardTitle { font-weight: 600; font-size: var(--fs-md); margin-bottom: var(--sp-1); }
+.cardDesc { color: var(--text-dim); font-size: var(--fs-base); }
+
+/* 「去待办中心 / 无待办」徽标（原内联三元背景色/文字色） */
+.waitBadge[data-tone="warn"] { background: var(--status-warn); color: var(--on-accent); }
+.waitBadge[data-tone="none"] { background: var(--bg-surface); color: var(--text-dim); }
+
+/* 领域分布条宽度档位（5% 一档） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

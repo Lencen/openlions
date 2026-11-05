@@ -1,0 +1,31 @@
+/* /agents/[id]/overview 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   三张「标签 → 值」表 + 一张「待开始任务」表换成白名单 DataTable：
+   · 无表头的键值表用 .kvTable 藏掉 DataTable 的空表头行，并把首列还原成改前 th 的观感（120px）；
+   · 其余内联间距/字色逐项落类。 */
+
+/* 降级提示的上边距（原来是内联在 <Alert style> 上） */
+.alertRow { margin-bottom: var(--sp-4); }
+
+/* 区块竖向间距（原来是内联 marginBottom: var(--sp-4)） */
+.mb4 { margin-bottom: var(--sp-4); }
+
+/* 键值表：藏空表头 + 首列还原成 th 观感 */
+.kvTable thead { display: none; }
+.kvTable tbody td:first-child {
+  width: 120px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .03em;
+  background: var(--bg-surface2);
+  white-space: nowrap;
+}
+
+/* 时间这类小字（原来是内联 fontSize: var(--fs-sm)） */
+.sm { font-size: var(--fs-sm); }
+
+/* 能力清单徽标组（原来是内联 inline-flex + gap + wrap） */
+.capWrap { display: inline-flex; gap: var(--sp-2); flex-wrap: wrap; }
+
+/* 「当前没有在办任务」空态（原来是内联 padding + color） */
+.emptyNote { padding: var(--sp-4); color: var(--text-dim); }

@@ -1,39 +1,47 @@
 "use client";
 import type { DailyReport } from "./shared";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import styles from "../page.module.css";
 
-/** 高分记忆 / 高优先级反思 / 智能体活动 / 飞轮事件+超容 */
+/** 高分记忆 / 高优先级反思 / 智能体活动 / 飞轮事件+超容
+ *  2026-11-05 P2 呈现层：内联 style 清零（类在 ../page.module.css），
+ *  「智能体活动」由裸 table.tbl 换成白名单 DataTable（列不变：来源 / 产出）。 */
 export default function DailyHighlights({ d }: { d: DailyReport }) {
+  const activityCols = [
+    { key: "agent", title: "来源", render: (r: { agent: string; count: number }) => r.agent },
+    { key: "count", title: "产出", align: "right" as const, render: (r: { agent: string; count: number }) => r.count },
+  ];
   return (
     <>
       <div className="grid-2">
         {/* 亮点：高分记忆 */}
         <div className="panel">
           <div className="panel-header"><span className="panel-title">✨ 高分记忆</span></div>
-          <div style={{ padding: "var(--sp-2) 0", display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+          <div className={styles.dhHlList}>
             {d.highlights.memories.map((m, i) => (
-              <div key={i} style={{ fontSize: "var(--fs-base)" }}>
-                <span style={{ color: "var(--text-muted)" }}>[{m.theme}]</span>{" "}
+              <div key={i} className={styles.dhHlItem}>
+                <span className={styles.dhDim}>[{m.theme}]</span>{" "}
                 <span>{m.title}</span>{" "}
-                <span style={{ color: "var(--status-ok)", fontSize: "var(--fs-sm)" }}>q={m.score.toFixed(2)}</span>
+                <span className={styles.dhScore}>q={m.score.toFixed(2)}</span>
               </div>
             ))}
-            {d.highlights.memories.length === 0 && <span style={{ color: "var(--text-muted)", fontSize: "var(--fs-base)" }}>无高分记忆</span>}
+            {d.highlights.memories.length === 0 && <span className={styles.dhEmpty}>无高分记忆</span>}
           </div>
         </div>
 
         {/* 亮点：反思 */}
         <div className="panel">
           <div className="panel-header"><span className="panel-title">💡 高优先级反思</span></div>
-          <div style={{ padding: "var(--sp-2) 0", display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+          <div className={styles.dhHlList}>
             {d.highlights.reflections.map((r, i) => (
-              <div key={i} style={{ fontSize: "var(--fs-base)" }}>
+              <div key={i} className={styles.dhHlItem}>
                 <span className="badge badge-red">{r.priority}</span>{" "}
-                <span style={{ color: "var(--text-muted)" }}>[{r.theme}]</span>{" "}
+                <span className={styles.dhDim}>[{r.theme}]</span>{" "}
                 <span>{r.title}</span>
               </div>
             ))}
-            {d.highlights.reflections.length === 0 && <span style={{ color: "var(--text-muted)", fontSize: "var(--fs-base)" }}>无</span>}
+            {d.highlights.reflections.length === 0 && <span className={styles.dhEmpty}>无</span>}
           </div>
         </div>
       </div>
@@ -43,32 +51,24 @@ export default function DailyHighlights({ d }: { d: DailyReport }) {
         <div className="panel">
           <div className="panel-header"><span className="panel-title">智能体活动</span></div>
           <TableCopyButton />
-          <table className="tbl">
-            <thead><tr><th>来源</th><th>产出</th></tr></thead>
-            <tbody>
-              {d.agentActivity.map((a) => (
-                <tr key={a.agent}><td style={{ fontSize: "var(--fs-base)" }}>{a.agent}</td><td className="num">{a.count}</td></tr>
-              ))}
-              {d.agentActivity.length === 0 && <tr><td colSpan={2} style={{ color: "var(--text-muted)", fontSize: "var(--fs-base)" }}>无</td></tr>}
-            </tbody>
-          </table>
+          <DataTable columns={activityCols} rows={d.agentActivity} rowKey={(r) => r.agent} empty={{ title: "无" }} />
         </div>
 
         {/* 飞轮事件 + 超容 */}
         <div className="panel">
           <div className="panel-header"><span className="panel-title">飞轮事件 / 超容告警</span></div>
-          <div style={{ padding: "var(--sp-2) 0" }}>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-1-5)", marginBottom: "var(--sp-2-5)" }}>
+          <div className={styles.dhPadY}>
+            <div className={styles.dhChipsGap}>
               {d.flywheelEvents.slice(0, 8).map((e) => (
                 <span key={e.stage} className="badge badge-blue">{e.stage} <b>{e.count}</b></span>
               ))}
             </div>
-            <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)", marginBottom: "var(--sp-1)" }}>超容主题（限 50）</div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-1-5)" }}>
+            <div className={styles.dhCap}>超容主题（限 50）</div>
+            <div className={styles.dhChips}>
               {d.overCapacity.map((o) => (
                 <span key={o.theme} className="badge badge-red">{o.theme} <b>{o.count}</b></span>
               ))}
-              {d.overCapacity.length === 0 && <span style={{ color: "var(--status-ok)", fontSize: "var(--fs-base)" }}>✅ 无超容</span>}
+              {d.overCapacity.length === 0 && <span className={styles.dhOk}>✅ 无超容</span>}
             </div>
           </div>
         </div>

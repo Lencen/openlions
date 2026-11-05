@@ -1,0 +1,26 @@
+/* /flywheel/executions 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   任务流水表换成白名单表格组件后，原内联的单元格小字 / 展开详情 / 标题强调色改由本文件的类承担。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 编号 / 时间这类小字等宽单元格 */
+.cellSm { font-size: var(--fs-sm); }
+.cellBase { font-size: var(--fs-base); }
+
+/* 标题单元格：展开时强调（原来是内联三元 color: primary / inherit） */
+.titleCell[data-open="true"] { color: var(--primary); }
+
+/* 加载态占位（原来是内联 padding） */
+.skelPad { padding: var(--sp-3); }
+
+/* 展开详情（原来是详情行 td 上的内联 background + padding） */
+.detail { background: var(--bg-hover); padding: var(--sp-3); }
+.detailRowFirst { margin-bottom: var(--sp-2); }
+.detailRow { margin-top: var(--sp-1); }
+.descText { font-size: var(--fs-base); white-space: pre-wrap; }
+/* 实测变化的涨跌色（原来是内联三元 color） */
+.detail [data-tone="ok"] { color: var(--status-ok); }
+.detail [data-tone="muted"] { color: var(--text-muted); }
+
+/* 页脚相关视图出链 */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

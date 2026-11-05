@@ -1,0 +1,39 @@
+/* /agents/[id]/config · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；三张手写 .tbl 表 → 白名单 DataTable（列/字段/文案/只读语义不变）。
+   两张「标签 → 值」表改前只有 tbody、没有表头：换 DataTable 后用 .kvTable 藏掉空表头行，
+   并把首列还原成改前 th 的观感（120px / fs-xs / text-dim / surface2 底）。 */
+
+/* 降级提示的上边距（原内联在 <Alert style> 上；Alert 只吃 style，改由外层容器给） */
+.alertRow { margin-bottom: var(--sp-4); }
+
+/* 面板头右侧的「去调整权限」链接（原内联 color/fontSize/textDecoration） */
+.adjustLink {
+  color: var(--primary);
+  font-size: var(--fs-base);
+  text-decoration: none;
+}
+
+/* 键值表：藏空表头 + 首列还原成 th 观感 */
+.kvTable thead { display: none; }
+.kvTable tbody td:first-child {
+  width: 120px;
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .03em;
+  background: var(--bg-surface2);
+  white-space: nowrap;
+}
+
+/* 单元格字色/字号档位（原内联 fontSize: var(--fs-sm) / color: var(--text-dim) / muted） */
+.sm { font-size: var(--fs-sm); }
+.dim { color: var(--text-dim); }
+.muted { color: var(--text-muted); }
+.strong { font-weight: 600; }
+
+/* 已授权权限的徽标换行容器（原内联 inline-flex + gap + wrap） */
+.badgeWrap {
+  display: inline-flex;
+  gap: var(--sp-1-5);
+  flex-wrap: wrap;
+}

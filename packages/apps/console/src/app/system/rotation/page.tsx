@@ -1,6 +1,8 @@
 "use client";
 // 2026-10-13 round 76-BM: 从 mind 的 /rotation 搬来(用户决策: console 是唯一管理后台, mind 前端退休)。
 //   数据与动作走 console 的 BFF /api/rotation(-> mind 的 autoRotation.*); 界面用 console 原子件与主题令牌。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 手写 .tbl 表换成白名单 DataTable。
+//   列/字段/文案/动作与接口（/api/rotation）一字未改；输入框宽度改为 .w200 / .w100 档位类。
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { statusLabel } from "@/config/systemLabels";
@@ -8,7 +10,10 @@ import KPICard from "@/components/KPICard";
 import { useApi } from "@/lib/api";
 import { Alert, Button, Empty, Input, Skeleton, Tag } from "@/components/primitives";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 interface Status {
   enabled?: boolean; status?: string; cronExpression?: string; cronHumanReadable?: string;
@@ -32,6 +37,20 @@ const SUCCESS_LABEL: Record<string, string> = {
   runNow: "已触发立即运行（几分钟后刷新查看结果）",
   updateConfig: "配置已保存",
 };
+
+/** 轮转记录列（与改前 <thead> 时间/来源/处理记录/状态 逐列对应） */
+const columns: DataColumn<TL>[] = [
+  { key: "date", title: "时间", render: (x) => <span className={"nowrap mono " + styles.cellSm}>{fmt(x.date)}</span> },
+  { key: "sourceType", title: "来源", render: (x) => <span className="nowrap">{x.sourceType || "-"}</span> },
+  { key: "recordsSynced", title: "处理记录", align: "right", render: (x) => <>{x.recordsSynced ?? 0}</> },
+  {
+    key: "status",
+    title: "状态",
+    render: (x) => (
+      <Tag color={x.status === "COMPLETED" ? "green" : x.status === "FAILED" ? "red" : "orange"}>{statusLabel(x.status) || "-"}</Tag>
+    ),
+  },
+];
 
 export default function RotationPage() {
   const { data, loading, error, mutate } = useApi<Resp>("/api/rotation");
@@ -74,9 +93,9 @@ export default function RotationPage() {
 
   const running = st?.status === "RUNNING" || st?.isCurrentlyRunning === true;
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>平台管理</span><span className="sep">/</span><span className="current">飞轮轮转</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>平台管理</span><span className="sep">/</span><span className="current">飞轮轮转</span></div>
     <PageHeader><PageTitle>飞轮自动轮转</PageTitle><div className="page-subtitle">定时把会话轮转成认知资产；此处可启停、立即执行一次、并调整定时与单次上限。</div></PageHeader>
-    {error && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="轮转状态加载失败" description={String((error as Error)?.message || error).slice(0, 200)} /></div>}
+    {error && <div className={styles.alertRow}><Alert type="error" message="轮转状态加载失败" description={String((error as Error)?.message || error).slice(0, 200)} /></div>}
     {!error && <div className="kpi-grid">
       <KPICard label="运行状态" value={loading && !st ? "..." : (st?.isCurrentlyRunning ? "执行中" : (running ? "运行中" : "已停止"))} />
       <KPICard label="定时" value={st?.cronHumanReadable || "..."} />
@@ -84,40 +103,37 @@ export default function RotationPage() {
       <KPICard label="累计处理记录" value={st?.totalRecords != null ? String(st.totalRecords) : "..."} />
     </div>}
     {!error && <div className="panel"><div className="panel-header"><span className="panel-title">控制</span>
-      <span className="tiny" style={{ color: "var(--text-dim)" }}>上次运行 {fmt(st?.lastRunAt)} · 下次 {fmt(st?.nextRunAt)}</span></div>
-      <div style={{ padding: "var(--sp-3-5)", display: "flex", flexWrap: "wrap", gap: "var(--sp-2-5)", alignItems: "flex-end" }}>
-        <label style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)", fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>定时表达式
-          <Input value={expr} onChange={(e: any) => setExpr(e.target.value)} style={{ width: 200 }} placeholder="*/30 * * * *" /></label>
-        <label style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)", fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>单次上限
-          <Input type="number" value={maxPerRun} onChange={(e: any) => setMaxPerRun(Math.max(1, Number(e.target.value) || 1))} style={{ width: 100 }} /></label>
-        <label style={{ display: "flex", flexDirection: "column", gap: "var(--sp-1)", fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>项目过滤（留空 = 全部）
-          <Input value={projectFilter} onChange={(e: any) => setProjectFilter(e.target.value)} style={{ width: 200 }} placeholder="全部" allowClear /></label>
-        <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+      <span className={"tiny " + styles.dimText}>上次运行 {fmt(st?.lastRunAt)} · 下次 {fmt(st?.nextRunAt)}</span></div>
+      <div className={styles.controlBody}>
+        <label className={styles.fieldLabel}>定时表达式
+          <Input className={styles.w200} value={expr} onChange={(e: any) => setExpr(e.target.value)} placeholder="*/30 * * * *" /></label>
+        <label className={styles.fieldLabel}>单次上限
+          <Input className={styles.w100} type="number" value={maxPerRun} onChange={(e: any) => setMaxPerRun(Math.max(1, Number(e.target.value) || 1))} /></label>
+        <label className={styles.fieldLabel}>项目过滤（留空 = 全部）
+          <Input className={styles.w200} value={projectFilter} onChange={(e: any) => setProjectFilter(e.target.value)} placeholder="全部" allowClear /></label>
+        <div className={styles.btnRow}>
           <Button type="primary" disabled={busy !== null || running} onClick={() => act("start")}>{busy === "start" ? "启动中…" : "启动"}</Button>
           <Button disabled={busy !== null || !running} onClick={() => act("stop")}>{busy === "stop" ? "停止中…" : "停止"}</Button>
           <Button disabled={busy !== null} onClick={() => act("runNow")}>{busy === "runNow" ? "触发中…" : "立即执行一次"}</Button>
           <Button disabled={busy !== null} onClick={() => act("updateConfig")}>{busy === "updateConfig" ? "保存中…" : "保存配置"}</Button>
         </div>
       </div>
-      {msg && <div style={{ padding: "0 var(--sp-3-5) var(--sp-3-5)" }}><Alert type={msg.ok ? "success" : "error"} message={msg.text} /></div>}
-      {st?.lastError && <div style={{ padding: "0 var(--sp-3-5) var(--sp-3-5)" }}><Alert type="warning" message="上次运行有错误" description={String(st.lastError).slice(0, 200)} /></div>}
+      {msg && <div className={styles.alertPad}><Alert type={msg.ok ? "success" : "error"} message={msg.text} /></div>}
+      {st?.lastError && <div className={styles.alertPad}><Alert type="warning" message="上次运行有错误" description={String(st.lastError).slice(0, 200)} /></div>}
     </div>}
     {!error && <div className="panel"><div className="panel-header"><span className="panel-title">最近轮转记录 {loading && <span className="tiny">（加载中…）</span>}</span></div>
-      {loading && !tl.length && <div style={{ padding: "var(--sp-3-5)" }}><Skeleton active title={false} paragraph={{ rows: 3 }} /></div>}
+      {loading && !tl.length && <div className={styles.pad35}><Skeleton active title={false} paragraph={{ rows: 3 }} /></div>}
       {!loading && !tl.length && <Empty description="暂无轮转记录" />}
         {tl.length > 0 && <>
         <TableCopyButton />
-        <table className="tbl"><thead><tr><th>时间</th><th>来源</th><th>处理记录</th><th>状态</th></tr></thead><tbody>
-        {tl.slice(0, 30).map((x, i) => (<tr key={i}>
-          <td className="nowrap mono" style={{ fontSize: "var(--fs-sm)" }}>{fmt(x.date)}</td>
-          <td className="nowrap" style={{ fontSize: "var(--fs-base)" }}>{x.sourceType || "-"}</td>
-          <td className="num">{x.recordsSynced ?? 0}</td>
-          <td><Tag color={x.status === "COMPLETED" ? "green" : x.status === "FAILED" ? "red" : "orange"}>{statusLabel(x.status) || "-"}</Tag></td>
-        </tr>))}
-      </tbody></table>
+        <DataTable
+          columns={columns}
+          rows={tl.slice(0, 30)}
+          rowKey={(_x, i) => i}
+        />
         </>}</div>}
     {/* 2026-10-19 B5(方案 L3-2): 修前正文 0 出链 ✗; 轮转产物最终进入流水线/访问日志, 给出后续去向 ✓ */}
-    <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+    <div className={"tiny " + styles.related}>
       <span>相关视图：</span>
       <Link href="/system/pipeline">流水线监控 →</Link>
       <Link href="/system/access-log">访问日志 →</Link>

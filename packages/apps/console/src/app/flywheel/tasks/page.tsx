@@ -9,6 +9,7 @@ import { useApi } from "@/lib/api";
 import { TASK_SCOPES } from "@/config/taskScopes";
 import QueueBoundary from "@/components/common/QueueBoundary";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataMoment from "@/components/DataMoment";
 import { Select } from "@/components/primitives";
 import { PageHeader, PageTitle, KpiCard, DataTable, FilterBar, StateBlock, Pill } from "@/components/ui";
 import TaskDetailPanel from "./_components/TaskDetailPanel";
@@ -52,6 +53,9 @@ export default function TasksBoard() {
   const [detailLoading, setDetailLoading] = useState<string | null>(null);
   // 2026-10-13 round 76-BG: 接入全局时间范围(用户决策③)。该页原来自成一套 filter, 完全无视顶栏 range。
   const f = useGlobalFilter();
+  // 2026-11-05（数据卡 7 §6）：积压数取 FlywheelJob 队列（既有只读端点 /api/flywheel-flow 的 queues）。
+  //   完成(7d) / 失败(7d) / P95(7d) 在 console 没有只读接口 -> 卡片显示「不可得」+ 原因，不写 0。
+  const flowQ = useApi<any>("/api/flywheel-flow", { pollMs: 0 });
 
   useEffect(() => {
     const id = setTimeout(() => setThemeQ(qInput.trim()), 250);
@@ -128,6 +132,18 @@ export default function TasksBoard() {
   const typeOptions = data?.scopeTypes && data.scopeTypes.length ? data.scopeTypes : curScope.types;
   const bs = counts.byStatus || {};
   const pendingCount = (bs.PENDING ?? 0) + (bs.PROCESSING ?? 0) + (bs.IN_PROGRESS ?? 0);
+  // 积压数 = FlywheelJob 的 PENDING/QUEUED + PROCESSING（字典「飞轮任务积压数」同表）。
+  //   两个值都拿得到才给数字；否则 null -> 卡片显示「不可得」，不写 0。
+  const flowQueues = flowQ.data?.queues || {};
+  const jobPendingN = Number(flowQueues.jobPending);
+  const jobRunningN = Number(flowQueues.jobRunning);
+  const backlog = !flowQ.error && flowQueues.jobPending != null && flowQueues.jobRunning != null
+    && Number.isFinite(jobPendingN) && Number.isFinite(jobRunningN)
+    ? jobPendingN + jobRunningN
+    : null;
+  const backlogReason = flowQ.error
+    ? String((flowQ.error as Error)?.message || flowQ.error)
+    : (flowQ.data?.error || "飞轮队列接口未返回 queues.jobPending / queues.jobRunning");
 
   // 客户端搜索：改进项（标题）/ ID / 主题 / 类型。theme 已由服务端过滤（参数未改），这里只是把
   // 「改进项 / 来源 ID」也纳入同一关键词，避免出现"搜得到主题、搜不到 ID"的两套行为。
@@ -212,12 +228,31 @@ export default function TasksBoard() {
           />
         ) : (
           <>
+            {/* 指标带（4 张 KpiCard）= 数据卡 7 §6 的四项 FlywheelJob 指标；取不到一律「不可得」+ 原因，不写 0。
+                说明：任务总数 / 待做 / 完成 / 失败（Task 口径）仍在页头副标题与状态 FilterBar 的计数里，没有丢。 */}
             <div className="kpi-grid">
-              {/* 2026-10-13 round 76-DP: 4 个 KPI 统一用 loading 守卫，避免首屏假 0。 */}
-              <KpiCard label="任务总数" value={loading ? "..." : fmtNum(counts.total)} hint="全库改进任务" />
-              <KpiCard label="待做" value={loading ? "..." : fmtNum(pendingCount)} hint="待认领 + 处理中 + 进行中" />
-              <KpiCard label="完成" value={loading ? "..." : fmtNum(bs.DONE ?? 0)} hint="状态为已完成" />
-              <KpiCard label="失败" value={loading ? "..." : fmtNum(bs.FAILED ?? 0)} hint="需人工复核" />
+              <KpiCard
+                label="飞轮任务积压数"
+                value={flowQ.loading ? "…" : backlog != null ? fmtNum(backlog) : "不可得"}
+                hint={backlog != null
+                  ? "源：飞轮作业队列（排队中 + 处理中；排队含已入队未开工）· 与下方改进项不是同一张表"
+                  : "原因：" + backlogReason + " · 不写 0"}
+              />
+              <KpiCard
+                label="飞轮任务完成数（近7日）"
+                value="不可得"
+                hint="原因：本平台没有飞轮作业近 7 日完成数的只读接口 · 不写 0"
+              />
+              <KpiCard
+                label="飞轮任务失败数（近7日）"
+                value="不可得"
+                hint="原因：同「完成数（近7日）」——没有飞轮作业近 7 日窗口的只读接口 · 不写 0"
+              />
+              <KpiCard
+                label="飞轮任务 P95 耗时（近7日，秒）"
+                value="不可得"
+                hint="字典条目「飞轮任务 P95 耗时（近7日，秒）」；异常阈值 300s（卡片 7 异常注：2026-11-04 实测 53s，非本页实时值）· 无只读接口 · 不写 0"
+              />
             </div>
 
             {/* 工具条 1：作用域分段（FilterBar）+ 右侧口径说明 */}
@@ -305,6 +340,21 @@ export default function TasksBoard() {
               detail={expandedId ? details[expandedId] : undefined}
               loading={!!expandedId && detailLoading === expandedId}
             />
+
+            {/* 页脚：逐源数据时刻 + 口径（卡片 7 §11：取不到显示不可得，不留空） */}
+            <footer className={styles.foot}>
+              <DataMoment
+                items={[
+                  { label: "改进任务", at: raw?.asOf },
+                  { label: "飞轮队列", at: flowQ.data?.timestamp },
+                ]}
+                showPrefix={false}
+              />
+              <span className="tiny">
+                口径：积压数 = 飞轮作业（排队中 + 处理中）；完成 / 失败 / P95 耗时 = 近 7 日飞轮作业（字典条目「飞轮任务完成数（近7日）」「飞轮任务失败数（近7日）」「飞轮任务 P95 耗时（近7日，秒）」）。
+                取不到显示「不可得」+ 原因，不写 0。
+              </span>
+            </footer>
           </>
         )}
       </main>

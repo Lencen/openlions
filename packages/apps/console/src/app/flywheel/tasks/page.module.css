@@ -255,3 +255,16 @@
   color: var(--text-dim);
   margin-top: var(--sp-0-5);
 }
+
+/* 页脚：逐源数据时刻 + 口径（卡片 7 §11） */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+  margin-top: var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  text-align: right;
+}

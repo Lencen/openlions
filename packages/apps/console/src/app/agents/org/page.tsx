@@ -2,6 +2,9 @@
 // 组织架构 (2026-09-21 重做, 用户规格): Tab[组织架构|小组]
 //   组织架构: 部门树(根=平台名, 每级 [+][-]), 点部门右侧=部门信息+agent列表(进详情/移出/添加)
 //   小组: 与组织同级, 右上角添加(按条件(平台/终端/IP/岗位/模型)或手动), 组信息+成员+添加agent
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（含 Button/Tag 上的 style）。
+//   部门树缩进改为 .indent0…​.indent6 档位类；选中/成功失败色走 data-* 属性选择器。
+//   取数（/api/org GET/POST）、动作、全部文案与路由一字未改。
 import { useEffect, useState } from "react";
 import KPICard from "@/components/KPICard";
 import { useUrlParam } from "@/lib/useUrlParam";
@@ -9,9 +12,15 @@ import Link from "next/link";
 import { Button, Input, Modal, Segmented, Select, Tag } from "@/components/primitives";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 interface OrgData { departments: any[]; groups: any[]; agents: any[]; platformName?: string }
 const EMPTY: OrgData = { departments: [], groups: [], agents: [], platformName: "lions" };
+
+/** 部门层级 → 缩进档位类（改前是内联 calc(var(--sp-4) * depth)；超过 6 级按 6 级） */
+function indentClass(depth: number): string {
+  return styles["indent" + Math.min(6, Math.max(0, depth))] || styles.indent0;
+}
 
 export default function OrgPage() {
   const [data, setData] = useState<OrgData>(EMPTY);
@@ -55,13 +64,12 @@ export default function OrgPage() {
 
   // ===== 部门树 =====
   const renderDeptNode = (d: any, depth: number): any => (
-    <div key={d.id} style={{ marginLeft: `calc(var(--sp-4) * ${depth})` }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1)", padding: "var(--sp-1)", cursor: "pointer", borderRadius: "var(--radius-sm)",
-        background: selectedDept?.id === d.id ? "var(--primary-dim)" : "transparent", fontSize: "var(--fs-md)" }}
+    <div key={d.id} className={indentClass(depth)}>
+      <div className={styles.deptNode} data-active={selectedDept?.id === d.id ? "true" : undefined}
         onClick={() => setSelectedDept(d)}>
         <span>📁 {d.name}</span><span className="tiny">({d.agentCount})</span>
-        <Button size="small" type="link" style={{ padding: "0 var(--sp-1)" }} title="新增子部门" onClick={(e: any) => { e.stopPropagation(); setDeptInput({ parent: d.id, name: "" }); }}>＋</Button>
-        <Button size="small" type="link" style={{ padding: "0 var(--sp-1)", color: "var(--status-crit)" }} title="删除该部门及其子部门"
+        <Button size="small" type="link" className={styles.linkTight} title="新增子部门" onClick={(e: any) => { e.stopPropagation(); setDeptInput({ parent: d.id, name: "" }); }}>＋</Button>
+        <Button size="small" type="link" className={styles.linkTightDanger} title="删除该部门及其子部门"
           onClick={(e: any) => { e.stopPropagation(); if (confirm("删除部门「" + d.name + "」将连同其全部子部门一并删除，确认？")) post({ kind: "deleteDepartment", id: d.id }, "已删除"); }}>－</Button>
       </div>
       {d.children && d.children.map((c: any) => renderDeptNode(c, depth + 1))}
@@ -84,20 +92,20 @@ export default function OrgPage() {
     <main className="page">
       <PageHeader><PageTitle>组织架构</PageTitle>
         <div className="page-subtitle">部门树（根 = 平台「{data.platformName || "lions"}」）· 小组（按条件或手动）</div></PageHeader>
-      {msg ? <div className="tiny" style={{ color: msg.startsWith("失败") ? "var(--status-crit)" : "var(--status-ok)", marginBottom: "var(--sp-2)" }}>{msg}</div> : null}
-      <div style={{ marginBottom: "var(--sp-3)" }}>
+      {msg ? <div className={"tiny " + styles.msgLine} data-tone={msg.startsWith("失败") ? "crit" : "ok"}>{msg}</div> : null}
+      <div className={styles.sectionGap}>
         <Segmented options={[{ label: "组织架构", value: "dept" }, { label: "小组", value: "group" }]} value={tab} onChange={(v) => setTab(v as "dept" | "group")} />
       </div>      {/* 2026-10-19 B4: 修前首屏大号数字 **0 个** ✗(只有一棵树)。补 ≤3 张: 部门/小组/智能体 ✓ */}
-      <div className="kpi-grid" style={{ marginBottom: "var(--sp-3)" }}>
+      <div className={"kpi-grid " + styles.kpiTight}>
         <KPICard label="部门（个）" value={data.departments.length} delta={data.platformName || "lions"} />
         <KPICard label="小组（个）" value={data.groups.length} delta="手动或按条件" />
         <KPICard label="智能体（个）" value={data.agents.length} delta="平台在册" />
       </div>
 
       {loading ? <div className="tiny">加载中…</div> : tab === "dept" ? (
-        <div style={{ display: "grid", gap: "var(--sp-4)", gridTemplateColumns: "320px 1fr" }}>
+        <div className={styles.deptLayout}>
           <div className="panel"><div className="panel-header"><span className="panel-title">部门树</span>
-            <Button size="small" type="link" style={{ padding: 0 }} onClick={() => setDeptInput({ parent: "", name: "" })}>＋ 根部门</Button></div>
+            <Button size="small" type="link" className={styles.linkBare} onClick={() => setDeptInput({ parent: "", name: "" })}>＋ 根部门</Button></div>
             {(data.departments || []).map((d: any) => renderDeptNode(d, 0))}
             {data.departments.length === 0 && <div className="tiny">暂无部门（平台名「{data.platformName || "lions"}」为根）</div>}
           </div>
@@ -106,18 +114,18 @@ export default function OrgPage() {
               <>
                 <div className="panel-header"><span className="panel-title">📁 {selectedDept.name}</span>
                   <Button size="small" type="primary" onClick={() => openPickAgent("dept", selectedDept.id, selectedDept.agents || [])}>＋ 添加智能体</Button></div>
-                <div style={{ display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", marginBottom: "var(--sp-3)" }} className="tiny">
+                <div className={"tiny " + styles.deptMeta}>
                   <span>标识 <span className="mono">{selectedDept.id}</span></span>
                   <span>名称 {selectedDept.name}</span>
                   <span>智能体 {selectedDept.agentCount} 个</span>
                   <span>说明 {selectedDept.desc || "—"}</span>
                 </div>
                 {selectedDept.agents && selectedDept.agents.length ? selectedDept.agents.map((a: string) => (
-                  <div key={a} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", padding: "var(--sp-1) var(--sp-2)", borderBottom: "1px solid var(--border)", fontSize: "var(--fs-md)" }}>
-                    <Tag style={{ marginInlineEnd: 0 }}>{a}</Tag><span className="tiny">{agentLabel(a)}</span>
-                    <span style={{ marginLeft: "auto", display: "flex", gap: "var(--sp-2)" }}>
+                  <div key={a} className={styles.memberRow}>
+                    <Tag className={styles.tagFlush}>{a}</Tag><span className="tiny">{agentLabel(a)}</span>
+                    <span className={styles.memberActions}>
                       <Link href={"/agents/" + encodeURIComponent(a) + "/overview"} className="tiny">详情 →</Link>
-                      <Button size="small" type="link" style={{ padding: 0, color: "var(--status-crit)" }} onClick={() => post({ kind: "deptMemberRemove", agentId: a, departmentId: selectedDept.id }, "已移出")}>移出</Button>
+                      <Button size="small" type="link" className={styles.linkBareDanger} onClick={() => post({ kind: "deptMemberRemove", agentId: a, departmentId: selectedDept.id }, "已移出")}>移出</Button>
                     </span>
                   </div>
                 )) : <div className="tiny">该部门暂无智能体，点「＋ 添加智能体」加入</div>}
@@ -129,17 +137,17 @@ export default function OrgPage() {
         <div className="panel"><div className="panel-header"><span className="panel-title">小组</span>
           <Button size="small" type="primary" onClick={() => setGroupModal(true)}>＋ 添加小组</Button></div>
           {(data.groups || []).length === 0 ? <div className="tiny">暂无小组</div> : (data.groups || []).map((g: any) => (
-            <div key={g.id} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "var(--sp-3)", marginBottom: "var(--sp-2)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", flexWrap: "wrap" }}>
-                <b style={{ fontSize: "var(--fs-md)" }}>{g.name}</b>
+            <div key={g.id} className={styles.groupCard}>
+              <div className={styles.groupHead}>
+                <b className={styles.groupName}>{g.name}</b>
                 <span className="tiny">标识 <span className="mono">{g.id}</span></span>
                 <span className="tiny">智能体 {g.members.length} 个</span>
                 {g.conditions ? <Tag variant="outlined">条件组: {Object.entries(g.conditions).map(([k, v]) => k + "=" + String(v)).join(" ")}</Tag> : <Tag variant="outlined">手动组</Tag>}
-                <span style={{ marginLeft: "auto" }}><Button size="small" type="primary" ghost onClick={() => openPickAgent("group", g.id, g.members.map((m: any) => m.agentId))}>＋ 添加智能体</Button></span>
+                <span className={styles.pushRight}><Button size="small" type="primary" ghost onClick={() => openPickAgent("group", g.id, g.members.map((m: any) => m.agentId))}>＋ 添加智能体</Button></span>
               </div>
-              <div className="tiny" style={{ margin: "var(--sp-2) 0" }}>说明: {g.desc || "—"}</div>
-              <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
-                {g.members.map((m: any) => <Tag key={m.agentId} style={{ marginInlineEnd: 0 }}>{m.agentId}{m.roleInGroup === "leader" ? " 👑" : ""}</Tag>)}
+              <div className={"tiny " + styles.groupDesc}>说明: {g.desc || "—"}</div>
+              <div className={styles.memberTags}>
+                {g.members.map((m: any) => <Tag key={m.agentId} className={styles.tagFlush}>{m.agentId}{m.roleInGroup === "leader" ? " 👑" : ""}</Tag>)}
               </div>
             </div>
           ))}
@@ -156,9 +164,9 @@ export default function OrgPage() {
 
       {/* 选择智能体弹窗 */}
       <Modal open={!!pickAgentFor} title={"选择智能体加入" + (pickAgentFor?.type === "dept" ? "部门" : "小组")} onCancel={() => setPickAgentFor(null)} onOk={confirmPickAgent} okText="加入">
-        <div style={{ maxHeight: 320, overflow: "auto" }}>
+        <div className={styles.pickList}>
           {availableForPick.length === 0 ? <div className="tiny">没有可添加的智能体</div> : availableForPick.map((a: any) => (
-            <label key={a.agent_id} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", padding: "var(--sp-1) 0", fontSize: "var(--fs-md)" }}>
+            <label key={a.agent_id} className={styles.pickRow}>
               <input type="checkbox" checked={pickAgentSel.includes(a.agent_id)}
                 onChange={() => setPickAgentSel((s) => s.includes(a.agent_id) ? s.filter((x) => x !== a.agent_id) : [...s, a.agent_id])} />
               {agentLabel(a.agent_id)}
@@ -174,12 +182,12 @@ export default function OrgPage() {
         post({ kind: "group", name: gName.trim(), desc: gDesc, conditions, manual: gMode === "manual" }, "小组已建");
         setGroupModal(false); setGName(""); setGDesc(""); setGCond({});
       }} okText="创建" width={520}>
-        <div style={{ display: "grid", gap: "var(--sp-2)" }}>
+        <div className={styles.formGrid}>
           <Input placeholder="小组名称" value={gName} onChange={(e: any) => setGName(e.target.value)} />
           <Input placeholder="说明描述" value={gDesc} onChange={(e: any) => setGDesc(e.target.value)} />
           <Segmented options={[{ label: "手动添加", value: "manual" }, { label: "按条件创建", value: "condition" }]} value={gMode} onChange={(v) => setGMode(v as "manual" | "condition")} />
           {gMode === "condition" ? (
-            <div style={{ display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "1fr 1fr" }}>
+            <div className={styles.condGrid}>
               {(["channel", "host", "ip", "position", "model"] as const).map((c) => (
                 <div key={c}><label className="tiny">{c}</label>
                   <Input placeholder={"条件值" + (c === "channel" ? "（AI 平台）" : c === "host" ? "（终端）" : c === "ip" ? "（IP 段）" : c === "position" ? "（岗位）" : "（模型）")}
@@ -190,7 +198,7 @@ export default function OrgPage() {
         </div>
       </Modal>
       {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.related}>
         <span>相关视图：</span>
         <Link href="/agents">智能体总览 →</Link>
         <Link href="/system/permissions">业务授权矩阵 →</Link>

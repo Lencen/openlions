@@ -1,4 +1,7 @@
 "use client";
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 page.module.css 的类 / data-* 承载）。
+//   选中会话行 = data-active，消息角色 = data-role，加载更多按钮 = data-busy。
+//   取数（session-service-list / session-detail）、分页游标、全部文案与交互语义一字未改。
 import { interactiveProps } from "@/components/a11y";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
@@ -6,6 +9,7 @@ import { useGlobalNonce } from "@/components/GlobalFilter";
 import { useState, useEffect, useCallback } from "react";
 import { t } from "@/i18n";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 interface SessionItem {
   id: string;
@@ -140,7 +144,7 @@ export default function SessionBrowserPage() {
 
       <main className="main">
         <div className="breadcrumb">
-          <span style={{ color: "var(--text-dim)" }}>{t('sessionBrowser.crumb')}</span>
+          <span className={styles.crumbDim}>{t('sessionBrowser.crumb')}</span>
           <span className="sep">/</span>
           <span className="current">{t('sessionBrowser.title')}</span>
         </div>
@@ -158,7 +162,7 @@ export default function SessionBrowserPage() {
         </PageHeader>
         {/* 2026-10-19 B4: 修前首屏大号数字 **0 个** ✗ —— "已加载/总数"藏在副标题小字里。补 ≤3 张 ✓ */}
 
-        <div className="kpi-grid" style={{ marginBottom: "var(--sp-3)" }}>
+        <div className={"kpi-grid " + styles.kpiTight}>
 
           <KPICard label="已加载会话（个）" value={items.length} delta={total !== null ? "共 " + total : "总数未知"} />
 
@@ -169,16 +173,16 @@ export default function SessionBrowserPage() {
         </div>
 
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "var(--sp-4)", height: "calc(100vh - 180px)" }}>
+        <div className={styles.split}>
           {/* 左侧：会话列表 */}
-          <div className="panel" style={{ overflow: "auto", margin: 0 }}>
+          <div className={"panel " + styles.panelScroll}>
             <div className="panel-header">
               <span className="panel-title">{t('sessionBrowser.list')}</span>
               <select
                 aria-label="按智能体筛选"
                 value={filterAgent}
                 onChange={(e) => setFilterAgent(e.target.value)}
-                style={{ padding: "var(--sp-1) var(--sp-2)", background: "var(--bg-surface2)", color: "var(--text)", border: "1px solid var(--border)", borderRadius: "var(--radius-xs)" }}
+                className={styles.select}
               >
                 <option value="">{t('sessionBrowser.allAgents')}</option>
                 {agentOptions.map((a) => (
@@ -187,46 +191,35 @@ export default function SessionBrowserPage() {
               </select>
             </div>
             {listError && (
-              <div style={{ padding: "var(--sp-5)", color: "var(--status-crit)" }}>
+              <div className={styles.stateCrit}>
                 加载失败: {listError}
               </div>
             )}
             {items.length === 0 && !loadingPage && !listError && (
-              <div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>{t('sessionBrowser.empty')}</div>
+              <div className={styles.stateMuted}>{t('sessionBrowser.empty')}</div>
             )}
             {items.map((s) => (
               <div
                 key={s.id}
                 {...interactiveProps(selectedUid === s.id)}
                 onClick={() => setSelectedUid(s.id)}
-                style={{
-                  padding: "var(--sp-2-5) var(--sp-3-5)",
-                  borderBottom: "1px solid var(--border)",
-                  cursor: "pointer",
-                  background: selectedUid === s.id ? "var(--bg-hover)" : "transparent",
-                }}
+                className={styles.sessionItem}
+                data-active={selectedUid === s.id ? "true" : undefined}
               >
-                <div style={{ fontSize: "var(--fs-md)", fontWeight: 500 }}>{s.title || s.id.slice(0, 50)}</div>
-                <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginTop: "var(--sp-1)" }}>
+                <div className={styles.itemTitle}>{s.title || s.id.slice(0, 50)}</div>
+                <div className={styles.itemMeta}>
                   {s.agentId} · {s.messageCount} msgs · {new Date(s.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}
                 </div>
               </div>
             ))}
             {/* P0 加载更多按钮 */}
             {nextCursor && (
-              <div style={{ padding: "var(--sp-3) var(--sp-3-5)", textAlign: "center" }}>
+              <div className={styles.moreWrap}>
                 <button
                   onClick={loadMore}
                   disabled={loadingMore}
-                  style={{
-                    padding: "var(--sp-1-5) var(--sp-4)",
-                    background: "var(--bg-surface2)",
-                    color: "var(--text)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "var(--radius-xs)",
-                    cursor: loadingMore ? "wait" : "pointer",
-                    fontSize: "var(--fs-base)",
-                  }}
+                  className={styles.moreBtn}
+                  data-busy={loadingMore ? "true" : undefined}
                 >
                   {loadingMore ? "加载中..." : `加载更多 (已加载 ${items.length} / 总 ${total ?? "?"})`}
                 </button>
@@ -235,37 +228,32 @@ export default function SessionBrowserPage() {
           </div>
 
           {/* 右侧：消息详情 */}
-          <div className="panel" style={{ overflow: "auto", margin: 0 }}>
+          <div className={"panel " + styles.panelScroll}>
             <div className="panel-header">
               <span className="panel-title">
                 {detail?.session?.title || (selectedUid ? (detailError ? "加载失败" : "加载中...") : t('sessionBrowser.pick'))}
               </span>
               {detail && (
-                <span style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)" }}>
+                <span className={styles.metaSm}>
                   {detail.messages.length} 条消息
                 </span>
               )}
             </div>
-            <div style={{ padding: "var(--sp-3-5)" }}>
-              {detailLoading && <div style={{ color: "var(--text-muted)" }}>加载中...</div>}
-              {detailError && <div style={{ color: "var(--status-crit)" }}>详情加载失败: {detailError}</div>}
+            <div className={styles.pad35}>
+              {detailLoading && <div className={styles.muted}>加载中...</div>}
+              {detailError && <div className={styles.crit}>详情加载失败: {detailError}</div>}
               {detail && (
                 <>
                   {detail.messages.map((m, i) => (
                     <div
                       key={i}
-                      style={{
-                        marginBottom: "var(--sp-3)",
-                        padding: "var(--sp-2-5)",
-                        borderRadius: "var(--radius-sm)",
-                        background: m.role === "user" ? "var(--bg-surface2)" : "var(--bg-hover)",
-                        borderLeft: `3px solid ${m.role === "user" ? "var(--info)" : "var(--status-ok)"}`,
-                      }}
+                      className={styles.msg}
+                      data-role={m.role}
                     >
-                      <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-1)" }}>
+                      <div className={styles.msgMeta}>
                         {m.role} {m.timestamp && `· ${new Date(m.timestamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}`}
                       </div>
-                      <div style={{ fontSize: "var(--fs-md)", whiteSpace: "pre-wrap", wordBreak: "break-word", fontFamily: "ui-monospace, monospace" }}>
+                      <div className={styles.msgBody}>
                         {m.content.length > 2000 ? m.content.slice(0, 2000) + "..." : m.content}
                       </div>
                     </div>
@@ -276,7 +264,7 @@ export default function SessionBrowserPage() {
           </div>
         </div>
         {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-        <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+        <div className={"tiny " + styles.related}>
           <span>相关视图：</span>
           <Link href="/sessions">会话中心 →</Link>
           <Link href="/agents/sessions">会话概览 →</Link>

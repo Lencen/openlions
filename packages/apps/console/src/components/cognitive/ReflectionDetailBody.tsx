@@ -3,6 +3,8 @@ import { humanError } from "@/lib/humanError";
 // 2026-09-14 UI-3: 反思详情正文抽成可复用组件 (详情页 + 列表侧边抽屉共用)。
 // 两个 id 体系并存 (旧 Reflection 记录 / 主题反思 FlywheelReflection), 逻辑保持原样:
 //   - 讨论面板挂载目标: 优先主题反思 (本轮反思), 否则旧反思记录
+// 2026-11-05 P2 呈现层（批 4/5）：内联 style 清零（类在同名 ReflectionDetailBody.module.css）。
+//   结构与文案、取数（/api/reflection-detail）与两个 id 体系的判定逻辑均未动。
 import type { ReactNode } from "react";
 import { useApi } from "@/lib/api";
 import { Alert } from "@/components/primitives";
@@ -11,12 +13,13 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { Pill, StateBlock } from "@/components/ui";
 import { fmtNum, fmtScore, fmtStamp as fmtTs, relTime, truncate } from "@/lib/format";
 import { DetailFields, DetailProse, DetailSection, DetailTech } from "@/components/detail";
+import styles from "./ReflectionDetailBody.module.css";
 
 
 function Json({ v }: { v: any }) {
   if (v == null) return <span className="tiny">-</span>;
   const s = typeof v === "string" ? v : JSON.stringify(v, null, 1);
-  return <pre style={{ fontSize: "var(--fs-sm)", whiteSpace: "pre-wrap", margin: 0, maxHeight: 260, overflow: "auto" }}>{s}</pre>;
+  return <pre className={styles.json}>{s}</pre>;
 }
 
 export default function ReflectionDetailBody({
@@ -46,11 +49,11 @@ export default function ReflectionDetailBody({
     <div>
       {renderHeader ? renderHeader({ legacy, fw, discEntityId, loading }) : null}
       {loading && !data ? <div className="panel"><StateBlock loading rows={4} /></div> : null}
-      {error ? <div className="panel" style={{ padding: "var(--sp-5)" }}><Alert type="error" message="反思详情加载失败" description={humanError(error, "这条详情")} /></div> : null}
+      {error ? <div className={"panel " + styles.padLg}><Alert type="error" message="反思详情加载失败" description={humanError(error, "这条详情")} /></div> : null}
 
       {data && !loading && !fw && !legacy?.id ? (
         <>
-          <div className="panel"><div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>{t('cognitive.reflection.notFound')}</div></div>
+          <div className="panel"><div className={styles.padLgDim}>{t('cognitive.reflection.notFound')}</div></div>
           <DiscussionPanel entityType="reflection" entityId={id} title="反思讨论" />
         </>
       ) : null}
@@ -84,11 +87,11 @@ export default function ReflectionDetailBody({
             <DetailProse title="建议计划" text={legacy.proposedPlan} />
             {legacy.structuredImprovements ? (
               <DetailSection title="结构化改进">
-                <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.8 }}>{(() => {
+                <div className={styles.siBox}>{(() => {
                   try {
                     const arr = typeof legacy.structuredImprovements === "string" ? JSON.parse(legacy.structuredImprovements) : legacy.structuredImprovements;
                     return Array.isArray(arr)
-                      ? arr.map((x: any, i: number) => (<div key={i} style={{ marginBottom: "var(--sp-1-5)" }}>[{x.severity || "-"}] {x.text}{x.area ? <span style={{ color: "var(--text-dim)" }}> ({x.area})</span> : null}</div>))
+                      ? arr.map((x: any, i: number) => (<div key={i} className={styles.siRow}>[{x.severity || "-"}] {x.text}{x.area ? <span className={styles.dim}> ({x.area})</span> : null}</div>))
                       : String(legacy.structuredImprovements);
                   } catch { return String(legacy.structuredImprovements); }
                 })()}</div>
@@ -120,21 +123,21 @@ export default function ReflectionDetailBody({
           <div className="dt-grid-2">
             <DetailSection title="覆盖缺口">
               {Array.isArray(fw.missedTopics) && fw.missedTopics.length
-                ? fw.missedTopics.map((t: string, i: number) => (<div key={i} style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-1)" }}>· {t}</div>))
+                ? fw.missedTopics.map((t: string, i: number) => (<div key={i} className={styles.listRow}>· {t}</div>))
                 : <span className="tiny">无</span>}
             </DetailSection>
             <DetailSection title="改进建议">
               {Array.isArray(fw.improvements) && fw.improvements.length
-                ? fw.improvements.map((t: string, i: number) => (<div key={i} style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-1)" }}>· {t}</div>))
+                ? fw.improvements.map((t: string, i: number) => (<div key={i} className={styles.listRow}>· {t}</div>))
                 : <span className="tiny">无</span>}
             </DetailSection>
           </div>
           <div className="dt-grid-2">
             <DetailSection title="冲突">
               {Array.isArray(fw.conflicts) && fw.conflicts.length ? fw.conflicts.map((c: any, i: number) => (
-                <div key={i} style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-1-5)" }}>
+                <div key={i} className={styles.conflictRow}>
                   <span className="badge badge-yellow">冲突</span> {c?.reason || JSON.stringify(c)}
-                  {Array.isArray(c?.memoryIds) ? <span className="tiny mono" style={{ marginLeft: "var(--sp-1-5)" }}>{c.memoryIds.join(", ")}</span> : null}
+                  {Array.isArray(c?.memoryIds) ? <span className={"tiny mono " + styles.gapLeft}>{c.memoryIds.join(", ")}</span> : null}
                 </div>
               )) : <span className="tiny">无</span>}
             </DetailSection>
@@ -153,13 +156,13 @@ export default function ReflectionDetailBody({
           </div>
           <DetailSection title={t('cognitive.reflection.structured')}>
             {Array.isArray(fw.structuredFindings) && fw.structuredFindings.length ? fw.structuredFindings.map((f: any, i: number) => (
-              <div key={i} style={{ marginBottom: "var(--gap-tight)", borderBottom: "1px solid var(--border)", paddingBottom: "var(--sp-1-5)" }}>
-                <div style={{ fontSize: "var(--fs-base)" }}>
+              <div key={i} className={styles.finding}>
+                <div className={styles.findingHead}>
                   <span className="badge badge-blue">{f.category || "-"}</span>
-                  {f.id ? <span className="tiny mono" style={{ marginLeft: "var(--sp-1-5)" }}>{f.id}</span> : null}
+                  {f.id ? <span className={"tiny mono " + styles.gapLeft}>{f.id}</span> : null}
                 </div>
-                <div style={{ fontSize: "var(--fs-base)", marginTop: "var(--sp-0-5)", whiteSpace: "pre-wrap" }}>{truncate(f.what || f.text || JSON.stringify(f), 240)}</div>
-                {f.why ? <div className="tiny" style={{ marginTop: "var(--sp-0-5)" }}>原因：{truncate(f.why, 160)}</div> : null}
+                <div className={styles.findingBody}>{truncate(f.what || f.text || JSON.stringify(f), 240)}</div>
+                {f.why ? <div className={"tiny " + styles.findingWhy}>原因：{truncate(f.why, 160)}</div> : null}
               </div>
             )) : <span className="tiny">无</span>}
           </DetailSection>

@@ -43,3 +43,35 @@
 /* 环比涨跌色：涨绿跌红（原来是内联三元色）；用 data-tone 表达，不写内联 color */
 .diff[data-tone="ok"] { color: var(--status-ok); }
 .diff[data-tone="crit"] { color: var(--status-crit); }
+/* —— DailyHighlights（批4/5）：原来都是内联 padding/gap/color —— */
+.dhHlList { padding: var(--sp-2) 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.dhHlItem { font-size: var(--fs-base); }
+.dhDim { color: var(--text-muted); }
+.dhScore { color: var(--status-ok); font-size: var(--fs-sm); }
+.dhEmpty { color: var(--text-muted); font-size: var(--fs-base); }
+.dhOk { color: var(--status-ok); font-size: var(--fs-base); }
+.dhPadY { padding: var(--sp-2) 0; }
+.dhChips { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); }
+.dhChipsGap { display: flex; flex-wrap: wrap; gap: var(--sp-1-5); margin-bottom: var(--sp-2-5); }
+.dhCap { font-size: var(--fs-sm); color: var(--text-muted); margin-bottom: var(--sp-1); }
+
+/* —— DailyQualityPanels（批4/5）：质量档语气键 / 错误分类令牌 —— */
+.dqRow { display: flex; gap: var(--sp-3); padding: var(--sp-2) 0; }
+.dqCell { flex: 1; text-align: center; }
+.dqVal { font-size: var(--fs-2xl); font-weight: 600; color: var(--text); }
+.dqVal[data-tone="ok"] { color: var(--status-ok); }
+.dqVal[data-tone="warn"] { color: var(--status-warn); }
+.dqVal[data-tone="dim"] { color: var(--text-dim); }
+.dqVal[data-tone="muted"] { color: var(--text-muted); }
+.dqLabel { font-size: var(--fs-sm); color: var(--text-muted); }
+.dqChipWrap { display: flex; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-2) 0; }
+
+/* 错误分类徽章：原来内联 errBg() 拼的 color-mix + 前景色 -> data-err + 属性选择器（默认 UNKNOWN） */
+.dqErrBadge { background: color-mix(in srgb, var(--err-unknown) 13%, transparent); color: var(--err-unknown); }
+.dqErrBadge[data-err="RATE_LIMIT"] { background: color-mix(in srgb, var(--err-rate-limit) 13%, transparent); color: var(--err-rate-limit); }
+.dqErrBadge[data-err="SCHEMA_INVALID"] { background: color-mix(in srgb, var(--err-schema) 13%, transparent); color: var(--err-schema); }
+.dqErrBadge[data-err="NETWORK"] { background: color-mix(in srgb, var(--err-network) 13%, transparent); color: var(--err-network); }
+.dqErrBadge[data-err="AUTH_ERROR"] { background: color-mix(in srgb, var(--err-auth) 13%, transparent); color: var(--err-auth); }
+.dqErrBadge[data-err="TIMEOUT"] { background: color-mix(in srgb, var(--err-timeout) 13%, transparent); color: var(--err-timeout); }
+.dqErrBadge[data-err="UNKNOWN"] { background: color-mix(in srgb, var(--err-unknown) 13%, transparent); color: var(--err-unknown); }
+.dqErrBadge[data-err="SERVER_ERROR"] { background: color-mix(in srgb, var(--err-server) 13%, transparent); color: var(--err-server); }

@@ -120,12 +120,17 @@ export interface StructuredFinding {
 const SESSION_API_BASE = "http://localhost:3002/api/v1";
 const SESSION_API_KEY = sessionApiKey(/* LIONS_SESSION_API_KEY */);
 const REFLECT_MODEL = process.env.REFLECT_MODEL || process.env.ANTHROPIC_MODEL || "MiniMax-M3";
-const REFLECT_MAX_TOKENS = 8192; // V1.8: 4096->8192, structured_findings 需要更多输出空间
+// 2026-11-05（Q7-min）：max_tokens 改为可配置，默认 16384。
+// 为什么：两条链已切到 thinking 模型（agent-x-flash / M3.1），长反思在 8192 会被截断，
+// 表现为 "all chunks failed"，把"模型没答完"误报成"API 不可用"。
+const REFLECT_MAX_TOKENS = Number(process.env.REFLECT_MAX_TOKENS || 16384);
 const REFLECT_TIMEOUT_MS = 180000; // 单批 LLM 反思 3 分钟 (大 chunk 需要更长)
 // 2026-09-01 合并提交优化: 用户套餐按调用次数计费 (token 不限), 应把多次小调用合并为少次大调用
 //   原 CHUNK_MAX_TOKENS=12000 -> 单主题 25 chunk = 25 次调用 (碎片化, 调用次数消耗快)
 //   现 50000: MiniMax-M3 支持 200K+ 上下文, 50K 输入 + 8K 输出无压力; 单主题调用从 25 次 -> ~2-3 次
 const CHUNK_MAX_TOKENS = 50000;
+// 2026-11-05（Q7-min）：最近一次 LLM 响应的 stop_reason（模块级，供失败归因读取）
+let lastStopReason = "";
 
 // P2-1 2026-08-31: 反思 chunk 预算 + 熔断 (额度烧光事件遗留)
 //   2026-09-01: chunk 变大后, 上限 25 -> 6 (50K x 6 = 300K 覆盖超大主题; 常规主题 1-2 chunk)
@@ -713,6 +718,8 @@ ${products.reflection.slice(0, 20).map(p => `- [${p.id.slice(-6)}] ${(p.title ||
     throw new Error(`LLM API ${res.status}: ${text.slice(0, 200)}`);
   }
   const data = await res.json();
+  // 2026-11-05（Q7-min）：记录 stop_reason，供失败归因使用（区分"被截断"与"真不可用"）。
+  lastStopReason = String((data as any)?.stop_reason || "");
   // 2026-09-01: 记录真实 usage token (MiniMax 后台按次数计费不展示 token)
   const usage = (data as any)?.usage;
   const tokenUsed = usage && typeof usage.input_tokens === "number" ? usage.input_tokens + (usage.output_tokens || 0) : undefined;
@@ -953,7 +960,10 @@ export async function reflect(input: ReflectInput): Promise<FlywheelReflectionRe
   const aborted = !!signal?.aborted;
   const failReason = aborted
     ? `aborted: cron/route timeout or client disconnect (completed ${coverageScores.length}/${chunks.length} chunks)`
-    : "all chunks failed (LLM API unavailable?)";
+    : "all chunks failed (LLM API unavailable?)" +
+      // 2026-11-05（Q7-min）：把 LLM 返回的 stop_reason 带进错误文本，
+      // 否则 max_tokens 截断与真实不可用无法区分（今天 M3.1 那次就吃了这个亏）。
+      (lastStopReason ? ` [stop_reason=${lastStopReason}]` : "");
 
   // 2026-09-09 P2.5: finding 选取(近重复合并 + 证据校准 + 多样性贪心 Top10), 逻辑见 reflect-select.ts
   // P4(2026-10-17): 让出后再进同步选取段(见 yieldToEventLoop 注释)。

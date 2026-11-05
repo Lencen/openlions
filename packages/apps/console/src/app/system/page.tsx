@@ -1,4 +1,7 @@
 "use client";
+// 2026-11-05 P2 呈现层（批 4/5）：内联 style 清零。
+//   三条比例条的宽度改走 1% 档位类（.p0~.p100，值本来就是整数百分比 -> 逐像素等价）；
+//   存活态/平均响应等颜色改走 data-tone + 属性选择器。取数端点、字段与文案未动。
 import EntryCard from "@/components/EntryCard";
 import DataTable, { StateChip } from "@/components/DataTable";
 import FlywheelFlow from "@/components/FlywheelFlow";
@@ -11,6 +14,7 @@ import ErrorAlert from "@/components/ErrorAlert";
 import { fmtTime , UNKNOWN } from "@/lib/format";
 import DataMoment from "@/components/DataMoment";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 interface S { result?: { data?: { learning: any; memory: any; knowledge: any } }; /** 76-GM: BFF 顶层新增的"数据时刻" */ asOf?: string }
 interface PingData {
   /** 77-K: BFF 顶层新增的"数据时刻" */
@@ -60,7 +64,7 @@ export default function SystemDashboard() {
           key: "name", title: "服务",
           render: (r: any) => (
             <span>
-              <span style={{ fontWeight: 500 }}>{serviceLabel(r.name)}</span>
+              <span className={styles.strong}>{serviceLabel(r.name)}</span>
               <span className="dt-who-sub">{r.port ? "localhost:" + r.port : ""}</span>
             </span>
           ),
@@ -80,33 +84,33 @@ export default function SystemDashboard() {
     <div className="trend-grid">
       <div className="trend-card">
         <div className="trend-label"><span>服务在线</span></div>
-        <div className="trend-val" style={{ color: aliveCount === 5 ? "var(--status-ok)" : "var(--status-warn)" }}>
+        <div className={"trend-val " + styles.trendVal} data-tone={aliveCount === 5 ? "ok" : "warn"}>
           {pingsLoading ? "… / 5" : `${aliveCount} / 5`}
         </div>
-        <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-2)" }}>
+        <div className={styles.trendHint}>
           平均响应 {pingsLoading ? "…" : `${avgMs}ms`}
         </div>
-        <div className="mini-bar" style={{ width: "100%" }}>
-          <div className="mini-bar-fill" style={{ width: `${(aliveCount / 5) * 100}%`, background: aliveCount === 5 ? "var(--status-ok)" : "var(--status-warn)" }} />
+        <div className={"mini-bar " + styles.barFull}>
+          <div className={"mini-bar-fill " + styles.barFill + " " + (styles["p" + Math.round((aliveCount / 5) * 100)] || "")} data-tone={aliveCount === 5 ? "ok" : "warn"} />
         </div>
       </div>
       <div className="trend-card">
         <div className="trend-label"><span>记忆</span></div>
         <div className="trend-val">{st ? (st.memory?.total?.toLocaleString() ?? 0) : "..."}</div>
-        <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-2)" }}>统一记忆 · 占 {pct("memory")}%</div>
-        <div className="mini-bar" style={{ width: "100%" }}><div className="mini-bar-fill" style={{ width: `${pct("memory")}%` }} /></div>
+        <div className={styles.trendHint}>统一记忆 · 占 {pct("memory")}%</div>
+        <div className={"mini-bar " + styles.barFull}><div className={"mini-bar-fill " + (styles["p" + pct("memory")] || "")} /></div>
       </div>
       <div className="trend-card">
         <div className="trend-label"><span>知识</span></div>
         <div className="trend-val">{st ? (st.knowledge?.total?.toLocaleString() ?? 0) : "..."}</div>
-        <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-2)" }}>统一知识 · 占 {pct("knowledge")}%</div>
-        <div className="mini-bar" style={{ width: "100%" }}><div className="mini-bar-fill" style={{ width: `${pct("knowledge")}%` }} /></div>
+        <div className={styles.trendHint}>统一知识 · 占 {pct("knowledge")}%</div>
+        <div className={"mini-bar " + styles.barFull}><div className={"mini-bar-fill " + (styles["p" + pct("knowledge")] || "")} /></div>
       </div>
       <div className="trend-card">
         <div className="trend-label"><span>反思</span></div>
         <div className="trend-val">{st ? (st.learning?.total?.toLocaleString() ?? 0) : "..."}</div>
-        <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginBottom: "var(--sp-2)" }}>反思学习 · 占 {pct("learning")}%</div>
-        <div className="mini-bar" style={{ width: "100%" }}><div className="mini-bar-fill" style={{ width: `${pct("learning")}%` }} /></div>
+        <div className={styles.trendHint}>反思学习 · 占 {pct("learning")}%</div>
+        <div className={"mini-bar " + styles.barFull}><div className={"mini-bar-fill " + (styles["p" + pct("learning")] || "")} /></div>
       </div>
     </div>
 

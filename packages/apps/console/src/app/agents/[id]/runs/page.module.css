@@ -1,0 +1,51 @@
+/* /agents/[id]/runs · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；五张手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   其中四张是「标签 → 值」无表头表：用 .kvTable 藏掉 DataTable 的空表头行，并把首列还原成改前 th 的观感
+   （各表首列宽度按改前内联 120 / 180 / 110 / 110 分档）。
+   取数（loadAgent / loadLive / loadSessions）与只读语义一字未改。 */
+
+/* 降级提示上边距（Alert 只吃 style，改由外层容器给） */
+.alertRow { margin-bottom: var(--sp-4); }
+
+/* 面板头右侧的「会话中心」链接（原内联 color/fontSize/textDecoration） */
+.adjustLink {
+  color: var(--primary);
+  font-size: var(--fs-base);
+  text-decoration: none;
+}
+
+/* 键值表：藏空表头 + 首列还原成 th 观感 */
+.kvTable thead { display: none; }
+.kvTable tbody td:first-child {
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .03em;
+  background: var(--bg-surface2);
+  white-space: nowrap;
+}
+.kvW120 tbody td:first-child { width: 120px; }
+.kvW180 tbody td:first-child { width: 180px; }
+.kvW110 tbody td:first-child { width: 110px; }
+
+/* 档位：单元格字号 / 弱化色 / 空态块 */
+.sm { font-size: var(--fs-sm); }
+/* 数值列右对齐（改前 td.num：等宽数字 + 右对齐；DataTable 的列对齐是整列级的，这里压在内容上） */
+.numCell {
+  display: block;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.monoSm { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.dim { color: var(--text-dim); }
+.metaSm { font-size: var(--fs-sm); color: var(--text-dim); }
+.emptyBlock { padding: var(--sp-4); color: var(--text-dim); }
+.emptyBlockMd { padding: var(--sp-4); color: var(--text-dim); font-size: var(--fs-md); }
+
+/* 会话标题链接（原内联 color: var(--text)） */
+.sessionLink { color: var(--text); }
+
+/* 热力图面板：上间距 + 内边距 + 横向滚动（原内联 style） */
+.panelTop { margin-top: var(--sp-4); }
+.heatWrap { padding: var(--sp-4) var(--sp-3); overflow-x: auto; }

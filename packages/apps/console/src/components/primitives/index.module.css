@@ -1,0 +1,370 @@
+/* primitives 原子件样式（P2 呈现层改造：本文件内联 style 计数为 0）
+   面板/按钮/输入等外观仍由 globals.css 的 .ui-* 全局类承载（三主题随 data-theme），这里只收四类：
+   1) 宽高档位类：.w*（10px 一档，>380px 后 20px 一档）/ .p*（1% 一档）/ .h* / .mh* / .mnw*；
+      选择器刻意写成双类名（.w520.w520）—— 要压过 globals 的单类规则
+      （.ui-drawer / .ui-modal 自带 width、.ui-prog-track 自带 height、.ui-table th 带 text-align），
+      同时调用方透传的行内 style 仍然优先（行内样式不受特异性影响）。
+   2) 语气键 [data-tone]：承接原来内联的 background / borderColor（令牌 -> 语气键映射在 index.tsx 的 TONES）。
+   3) 对齐类：.alignLeft/.alignCenter/.alignRight（同样双类名压过 .ui-table th）。
+   4) Descriptions 的列数/跨列/标题留白（原来内联 gridTemplateColumns / gridColumn / marginBottom）。 */
+
+/* Table 展开行的操作列（原来内联 width: 32） */
+.colExpand { width: 32px; }
+
+/* 单元格对齐（原来内联 textAlign） */
+.alignLeft.alignLeft { text-align: left; }
+.alignCenter.alignCenter { text-align: center; }
+.alignRight.alignRight { text-align: right; }
+
+/* Descriptions：标题下留白、列数、跨列 */
+.descTitle { margin-bottom: var(--sp-2); }
+.descGrid { display: grid; gap: var(--sp-2) var(--sp-4); }
+.descGrid[data-cols="1"] { grid-template-columns: repeat(1, minmax(0, 1fr)); }
+.descGrid[data-cols="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.descGrid[data-cols="3"] { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.descGrid[data-cols="4"] { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.descGrid[data-cols="5"] { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.descGrid[data-cols="6"] { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.descCell[data-span="2"] { grid-column: span 2; }
+.descCell[data-span="3"] { grid-column: span 3; }
+.descCell[data-span="4"] { grid-column: span 4; }
+.descCell[data-span="5"] { grid-column: span 5; }
+.descCell[data-span="6"] { grid-column: span 6; }
+
+/* Progress 轨道底色：调用方传的是 globals 令牌（未传时不写规则，保持 .ui-prog-track 的默认外观） */
+.progTrack[data-rail="surface2"] { background: var(--bg-surface2); }
+.progTrack[data-rail="surface"] { background: var(--bg-surface); }
+
+/* Tag 语气色：原来内联 borderColor/color。globals 的 .ui-tag-filled:not([style*="color"]) 是 0,2,0，
+   这里用双类 + [data-tone] 抬到 0,3,0 才压得住（否则圆角标签会一律变主色）。 */
+.tagTone.tagTone[data-tone="primary"] { color: var(--primary); border-color: var(--primary); }
+.tagTone.tagTone[data-tone="brand"] { color: var(--brand); border-color: var(--brand); }
+.tagTone.tagTone[data-tone="info"] { color: var(--info); border-color: var(--info); }
+.tagTone.tagTone[data-tone="ok"] { color: var(--status-ok); border-color: var(--status-ok); }
+.tagTone.tagTone[data-tone="warn"] { color: var(--status-warn); border-color: var(--status-warn); }
+.tagTone.tagTone[data-tone="crit"] { color: var(--status-crit); border-color: var(--status-crit); }
+.tagTone.tagTone[data-tone="muted"] { color: var(--text-muted); border-color: var(--text-muted); }
+.tagTone.tagTone[data-tone="dim"] { color: var(--text-dim); border-color: var(--text-dim); }
+.tagTone.tagTone[data-tone="text3"] { color: var(--text-3); border-color: var(--text-3); }
+.tagTone.tagTone[data-tone="memory"] { color: var(--table-memory); border-color: var(--table-memory); }
+.tagTone.tagTone[data-tone="knowledge"] { color: var(--table-knowledge); border-color: var(--table-knowledge); }
+.tagTone.tagTone[data-tone="practice"] { color: var(--table-practice); border-color: var(--table-practice); }
+.tagTone.tagTone[data-tone="skill"] { color: var(--table-skill); border-color: var(--table-skill); }
+.tagTone.tagTone[data-tone="reflection"] { color: var(--table-reflection); border-color: var(--table-reflection); }
+
+/* filled 变体的底色：globals 的 .ui-tag-filled:not([style*="color"]) 在没有内联色时会改用主色浅底；
+   现在颜色走 data-tone（不再有内联色），改用 :global(.ui-tag-filled) + 双类 + 属性选择器把它压回
+   "底色 = 自身色相的浅底"（与改前 .ui-tag-filled 的 color-mix(currentColor …) 观感一致）。
+   只作用于 filled：outlined 变体仍是透明底。 */
+:global(.ui-tag-filled).tagTone.tagTone[data-tone] {
+  background: color-mix(in srgb, currentColor 12%, var(--bg-surface));
+  border-color: transparent;
+}
+
+/* Progress 填充色 / 时间线圆点色：语气键（未登记回退主色，与 BarChart 同口径） */
+.progFill[data-tone="primary"] { background: var(--primary); }
+.progFill[data-tone="brand"] { background: var(--brand); }
+.progFill[data-tone="info"] { background: var(--info); }
+.progFill[data-tone="ok"] { background: var(--status-ok); }
+.progFill[data-tone="warn"] { background: var(--status-warn); }
+.progFill[data-tone="crit"] { background: var(--status-crit); }
+.progFill[data-tone="muted"] { background: var(--text-muted); }
+.progFill[data-tone="dim"] { background: var(--text-dim); }
+.progFill[data-tone="text3"] { background: var(--text-3); }
+.progFill[data-tone="memory"] { background: var(--table-memory); }
+.progFill[data-tone="knowledge"] { background: var(--table-knowledge); }
+.progFill[data-tone="practice"] { background: var(--table-practice); }
+.progFill[data-tone="skill"] { background: var(--table-skill); }
+.progFill[data-tone="reflection"] { background: var(--table-reflection); }
+.tlDot[data-tone="primary"] { background: var(--primary); border-color: var(--primary); }
+.tlDot[data-tone="brand"] { background: var(--brand); border-color: var(--brand); }
+.tlDot[data-tone="info"] { background: var(--info); border-color: var(--info); }
+.tlDot[data-tone="ok"] { background: var(--status-ok); border-color: var(--status-ok); }
+.tlDot[data-tone="warn"] { background: var(--status-warn); border-color: var(--status-warn); }
+.tlDot[data-tone="crit"] { background: var(--status-crit); border-color: var(--status-crit); }
+.tlDot[data-tone="muted"] { background: var(--text-muted); border-color: var(--text-muted); }
+.tlDot[data-tone="dim"] { background: var(--text-dim); border-color: var(--text-dim); }
+.tlDot[data-tone="text3"] { background: var(--text-3); border-color: var(--text-3); }
+.tlDot[data-tone="memory"] { background: var(--table-memory); border-color: var(--table-memory); }
+.tlDot[data-tone="knowledge"] { background: var(--table-knowledge); border-color: var(--table-knowledge); }
+.tlDot[data-tone="practice"] { background: var(--table-practice); border-color: var(--table-practice); }
+.tlDot[data-tone="skill"] { background: var(--table-skill); border-color: var(--table-skill); }
+.tlDot[data-tone="reflection"] { background: var(--table-reflection); border-color: var(--table-reflection); }
+
+/* 宽度档位：px（10px 一档；>380px 后 20px 一档） */
+.w40.w40 { width: 40px; }
+.w50.w50 { width: 50px; }
+.w60.w60 { width: 60px; }
+.w70.w70 { width: 70px; }
+.w80.w80 { width: 80px; }
+.w90.w90 { width: 90px; }
+.w100.w100 { width: 100px; }
+.w110.w110 { width: 110px; }
+.w120.w120 { width: 120px; }
+.w130.w130 { width: 130px; }
+.w140.w140 { width: 140px; }
+.w150.w150 { width: 150px; }
+.w160.w160 { width: 160px; }
+.w170.w170 { width: 170px; }
+.w180.w180 { width: 180px; }
+.w190.w190 { width: 190px; }
+.w200.w200 { width: 200px; }
+.w210.w210 { width: 210px; }
+.w220.w220 { width: 220px; }
+.w230.w230 { width: 230px; }
+.w240.w240 { width: 240px; }
+.w250.w250 { width: 250px; }
+.w260.w260 { width: 260px; }
+.w270.w270 { width: 270px; }
+.w280.w280 { width: 280px; }
+.w290.w290 { width: 290px; }
+.w300.w300 { width: 300px; }
+.w310.w310 { width: 310px; }
+.w320.w320 { width: 320px; }
+.w330.w330 { width: 330px; }
+.w340.w340 { width: 340px; }
+.w350.w350 { width: 350px; }
+.w360.w360 { width: 360px; }
+.w380.w380 { width: 380px; }
+.w400.w400 { width: 400px; }
+.w420.w420 { width: 420px; }
+.w440.w440 { width: 440px; }
+.w460.w460 { width: 460px; }
+.w480.w480 { width: 480px; }
+.w500.w500 { width: 500px; }
+.w520.w520 { width: 520px; }
+.w540.w540 { width: 540px; }
+.w560.w560 { width: 560px; }
+.w580.w580 { width: 580px; }
+.w600.w600 { width: 600px; }
+.w620.w620 { width: 620px; }
+.w640.w640 { width: 640px; }
+.w660.w660 { width: 660px; }
+.w680.w680 { width: 680px; }
+.w700.w700 { width: 700px; }
+.w720.w720 { width: 720px; }
+.w740.w740 { width: 740px; }
+.w760.w760 { width: 760px; }
+.w780.w780 { width: 780px; }
+.w800.w800 { width: 800px; }
+.w820.w820 { width: 820px; }
+.w840.w840 { width: 840px; }
+.w860.w860 { width: 860px; }
+.w880.w880 { width: 880px; }
+.w900.w900 { width: 900px; }
+.w920.w920 { width: 920px; }
+.w940.w940 { width: 940px; }
+.w960.w960 { width: 960px; }
+.w980.w980 { width: 980px; }
+.w1000.w1000 { width: 1000px; }
+.w1020.w1020 { width: 1020px; }
+.w1040.w1040 { width: 1040px; }
+.w1060.w1060 { width: 1060px; }
+.w1080.w1080 { width: 1080px; }
+.w1100.w1100 { width: 1100px; }
+.w1120.w1120 { width: 1120px; }
+.w1140.w1140 { width: 1140px; }
+.w1160.w1160 { width: 1160px; }
+.w1180.w1180 { width: 1180px; }
+.w1200.w1200 { width: 1200px; }
+.w1220.w1220 { width: 1220px; }
+.w1240.w1240 { width: 1240px; }
+.w1260.w1260 { width: 1260px; }
+.w1280.w1280 { width: 1280px; }
+.w1300.w1300 { width: 1300px; }
+.w1320.w1320 { width: 1320px; }
+.w1340.w1340 { width: 1340px; }
+.w1360.w1360 { width: 1360px; }
+.w1380.w1380 { width: 1380px; }
+.w1400.w1400 { width: 1400px; }
+
+/* 宽度档位：%（1% 一档） */
+.p0.p0 { width: 0%; }
+.p1.p1 { width: 1%; }
+.p2.p2 { width: 2%; }
+.p3.p3 { width: 3%; }
+.p4.p4 { width: 4%; }
+.p5.p5 { width: 5%; }
+.p6.p6 { width: 6%; }
+.p7.p7 { width: 7%; }
+.p8.p8 { width: 8%; }
+.p9.p9 { width: 9%; }
+.p10.p10 { width: 10%; }
+.p11.p11 { width: 11%; }
+.p12.p12 { width: 12%; }
+.p13.p13 { width: 13%; }
+.p14.p14 { width: 14%; }
+.p15.p15 { width: 15%; }
+.p16.p16 { width: 16%; }
+.p17.p17 { width: 17%; }
+.p18.p18 { width: 18%; }
+.p19.p19 { width: 19%; }
+.p20.p20 { width: 20%; }
+.p21.p21 { width: 21%; }
+.p22.p22 { width: 22%; }
+.p23.p23 { width: 23%; }
+.p24.p24 { width: 24%; }
+.p25.p25 { width: 25%; }
+.p26.p26 { width: 26%; }
+.p27.p27 { width: 27%; }
+.p28.p28 { width: 28%; }
+.p29.p29 { width: 29%; }
+.p30.p30 { width: 30%; }
+.p31.p31 { width: 31%; }
+.p32.p32 { width: 32%; }
+.p33.p33 { width: 33%; }
+.p34.p34 { width: 34%; }
+.p35.p35 { width: 35%; }
+.p36.p36 { width: 36%; }
+.p37.p37 { width: 37%; }
+.p38.p38 { width: 38%; }
+.p39.p39 { width: 39%; }
+.p40.p40 { width: 40%; }
+.p41.p41 { width: 41%; }
+.p42.p42 { width: 42%; }
+.p43.p43 { width: 43%; }
+.p44.p44 { width: 44%; }
+.p45.p45 { width: 45%; }
+.p46.p46 { width: 46%; }
+.p47.p47 { width: 47%; }
+.p48.p48 { width: 48%; }
+.p49.p49 { width: 49%; }
+.p50.p50 { width: 50%; }
+.p51.p51 { width: 51%; }
+.p52.p52 { width: 52%; }
+.p53.p53 { width: 53%; }
+.p54.p54 { width: 54%; }
+.p55.p55 { width: 55%; }
+.p56.p56 { width: 56%; }
+.p57.p57 { width: 57%; }
+.p58.p58 { width: 58%; }
+.p59.p59 { width: 59%; }
+.p60.p60 { width: 60%; }
+.p61.p61 { width: 61%; }
+.p62.p62 { width: 62%; }
+.p63.p63 { width: 63%; }
+.p64.p64 { width: 64%; }
+.p65.p65 { width: 65%; }
+.p66.p66 { width: 66%; }
+.p67.p67 { width: 67%; }
+.p68.p68 { width: 68%; }
+.p69.p69 { width: 69%; }
+.p70.p70 { width: 70%; }
+.p71.p71 { width: 71%; }
+.p72.p72 { width: 72%; }
+.p73.p73 { width: 73%; }
+.p74.p74 { width: 74%; }
+.p75.p75 { width: 75%; }
+.p76.p76 { width: 76%; }
+.p77.p77 { width: 77%; }
+.p78.p78 { width: 78%; }
+.p79.p79 { width: 79%; }
+.p80.p80 { width: 80%; }
+.p81.p81 { width: 81%; }
+.p82.p82 { width: 82%; }
+.p83.p83 { width: 83%; }
+.p84.p84 { width: 84%; }
+.p85.p85 { width: 85%; }
+.p86.p86 { width: 86%; }
+.p87.p87 { width: 87%; }
+.p88.p88 { width: 88%; }
+.p89.p89 { width: 89%; }
+.p90.p90 { width: 90%; }
+.p91.p91 { width: 91%; }
+.p92.p92 { width: 92%; }
+.p93.p93 { width: 93%; }
+.p94.p94 { width: 94%; }
+.p95.p95 { width: 95%; }
+.p96.p96 { width: 96%; }
+.p97.p97 { width: 97%; }
+.p98.p98 { width: 98%; }
+.p99.p99 { width: 99%; }
+.p100.p100 { width: 100%; }
+
+/* 高度档位：2px 一档（Progress 轨道高度） */
+.h2.h2 { height: 2px; }
+.h4.h4 { height: 4px; }
+.h6.h6 { height: 6px; }
+.h8.h8 { height: 8px; }
+.h10.h10 { height: 10px; }
+.h12.h12 { height: 12px; }
+.h14.h14 { height: 14px; }
+.h16.h16 { height: 16px; }
+.h18.h18 { height: 18px; }
+.h20.h20 { height: 20px; }
+.h22.h22 { height: 22px; }
+.h24.h24 { height: 24px; }
+.h26.h26 { height: 26px; }
+.h28.h28 { height: 28px; }
+.h30.h30 { height: 30px; }
+.h32.h32 { height: 32px; }
+.h34.h34 { height: 34px; }
+.h36.h36 { height: 36px; }
+.h38.h38 { height: 38px; }
+.h40.h40 { height: 40px; }
+
+/* max-height 档位：20px 一档（Table scroll.y） */
+.mh40.mh40 { max-height: 40px; }
+.mh60.mh60 { max-height: 60px; }
+.mh80.mh80 { max-height: 80px; }
+.mh100.mh100 { max-height: 100px; }
+.mh120.mh120 { max-height: 120px; }
+.mh140.mh140 { max-height: 140px; }
+.mh160.mh160 { max-height: 160px; }
+.mh180.mh180 { max-height: 180px; }
+.mh200.mh200 { max-height: 200px; }
+.mh220.mh220 { max-height: 220px; }
+.mh240.mh240 { max-height: 240px; }
+.mh260.mh260 { max-height: 260px; }
+.mh280.mh280 { max-height: 280px; }
+.mh300.mh300 { max-height: 300px; }
+.mh320.mh320 { max-height: 320px; }
+.mh340.mh340 { max-height: 340px; }
+.mh360.mh360 { max-height: 360px; }
+.mh380.mh380 { max-height: 380px; }
+.mh400.mh400 { max-height: 400px; }
+.mh420.mh420 { max-height: 420px; }
+.mh440.mh440 { max-height: 440px; }
+.mh460.mh460 { max-height: 460px; }
+.mh480.mh480 { max-height: 480px; }
+.mh500.mh500 { max-height: 500px; }
+.mh520.mh520 { max-height: 520px; }
+.mh540.mh540 { max-height: 540px; }
+.mh560.mh560 { max-height: 560px; }
+.mh580.mh580 { max-height: 580px; }
+.mh600.mh600 { max-height: 600px; }
+.mh620.mh620 { max-height: 620px; }
+.mh640.mh640 { max-height: 640px; }
+.mh660.mh660 { max-height: 660px; }
+.mh680.mh680 { max-height: 680px; }
+.mh700.mh700 { max-height: 700px; }
+.mh720.mh720 { max-height: 720px; }
+.mh740.mh740 { max-height: 740px; }
+.mh760.mh760 { max-height: 760px; }
+.mh780.mh780 { max-height: 780px; }
+.mh800.mh800 { max-height: 800px; }
+.mh820.mh820 { max-height: 820px; }
+.mh840.mh840 { max-height: 840px; }
+.mh860.mh860 { max-height: 860px; }
+.mh880.mh880 { max-height: 880px; }
+.mh900.mh900 { max-height: 900px; }
+.mh920.mh920 { max-height: 920px; }
+.mh940.mh940 { max-height: 940px; }
+.mh960.mh960 { max-height: 960px; }
+.mh980.mh980 { max-height: 980px; }
+.mh1000.mh1000 { max-height: 1000px; }
+
+/* min-width 档位：100px 一档（Table scroll.x） */
+.mnw400.mnw400 { min-width: 400px; }
+.mnw500.mnw500 { min-width: 500px; }
+.mnw600.mnw600 { min-width: 600px; }
+.mnw700.mnw700 { min-width: 700px; }
+.mnw800.mnw800 { min-width: 800px; }
+.mnw900.mnw900 { min-width: 900px; }
+.mnw1000.mnw1000 { min-width: 1000px; }
+.mnw1100.mnw1100 { min-width: 1100px; }
+.mnw1200.mnw1200 { min-width: 1200px; }
+.mnw1300.mnw1300 { min-width: 1300px; }
+.mnw1400.mnw1400 { min-width: 1400px; }
+.mnw1500.mnw1500 { min-width: 1500px; }
+.mnw1600.mnw1600 { min-width: 1600px; }

@@ -1,0 +1,44 @@
+/* /system/access-log · P2 呈现层（2026-11-05）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   状态色走 .detailErr；字号档位只有两档（.cellXs / .cellSm），与改前的 var(--fs-xs) / var(--fs-sm) 一一对应。 */
+
+/* 面包屑首段弱化色（原内联 color: var(--text-dim)） */
+.crumbDim { color: var(--text-dim); }
+
+/* 「最近 N 次运行」迷你趋势卡（原内联 marginBottom / padding） */
+.sparkPanel { margin-bottom: var(--sp-3); }
+.sparkPad { padding: var(--sp-3); }
+
+/* 单元格字号档位 */
+.cellXs { font-size: var(--fs-xs); }
+.cellSm { font-size: var(--fs-sm); }
+.cellDim { font-size: var(--fs-sm); color: var(--text-dim); }
+.monoSm { font-family: var(--font-mono); font-size: var(--fs-sm); }
+
+/* 行内「展开/收起」：改前是整行可点（style cursor:pointer），换成按钮后键盘同样可达 */
+.rowToggle {
+  margin-left: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.rowToggle:hover { text-decoration: underline; }
+.rowToggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* 展开详情：改前是表内一整行 <td colSpan=6>，字段与文案一字未改 */
+.detailPanel {
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+}
+.detailRow { margin-top: var(--sp-1); }
+.detailRow:first-child { margin-top: 0; }
+.detailErr { color: var(--status-crit); }
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

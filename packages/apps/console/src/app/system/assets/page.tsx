@@ -7,10 +7,13 @@
 //   2. 字段名（mode/fixedTo/存量计数来源）**不进界面**，只留用户能读的那半句；
 //   3. 存量条数取不到时显示"未知"而**不是 0**，且**不阻止切换** ——
 //      「未知」与「没有存量」是两件事，显示 0 等于告诉用户切换零代价。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 page.module.css 的类承载）。
+//   冻结文案与取数（/api/asset-policy、/api/asset-policy/ownerless）一字未改。
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Button, Skeleton, Tag } from "@/components/primitives";
 import { useApi } from "@/lib/api";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 type Kind = "memory" | "knowledge" | "skill";
 
@@ -115,17 +118,20 @@ export default function AssetVisibilityPage() {
       </PageHeader>
 
       {doneMsg ? (
-        <Alert type="success" showIcon title={doneMsg} closable onClose={() => setDoneMsg(null)} style={{ marginBottom: "var(--gap-block)" }} />
+        <div className={styles.alertGap}>
+          <Alert type="success" showIcon title={doneMsg} closable onClose={() => setDoneMsg(null)} />
+        </div>
       ) : null}
 
       {error ? (
-        <Alert
-          type="warning"
-          showIcon
-          title="策略暂时取不到"
-          description="这不影响已有资产的使用；稍后刷新本页即可。"
-          style={{ marginBottom: "var(--gap-block)" }}
-        />
+        <div className={styles.alertGap}>
+          <Alert
+            type="warning"
+            showIcon
+            title="策略暂时取不到"
+            description="这不影响已有资产的使用；稍后刷新本页即可。"
+          />
+        </div>
       ) : null}
 
       <div className="panel">
@@ -137,7 +143,7 @@ export default function AssetVisibilityPage() {
           <Skeleton paragraph={{ rows: 3 }} />
         ) : (
           <>
-            <p className="tiny" style={{ marginTop: 0 }}>
+            <p className={"tiny " + styles.flushTop}>
               平台已将「记忆、知识、技能三类」统一配置为「全平台可见」。单个执行体不能自行更改；如需调整请联系平台管理员。
             </p>
 
@@ -148,19 +154,18 @@ export default function AssetVisibilityPage() {
               return (
                 <div
                   key={k.key}
-                  className="dt-row"
-                  style={{ alignItems: "center", display: "flex", gap: "var(--gap-block)", paddingBlock: "var(--gap-tight)" }}
+                  className={"dt-row " + styles.policyRow}
                 >
-                  <div style={{ width: 96, fontWeight: 600 }}>{k.name}</div>
-                  <div style={{ flex: 1 }}>
+                  <div className={styles.kindName}>{k.name}</div>
+                  <div className={styles.grow}>
                     {selectable ? (
                       <div>
-                        <div style={{ fontWeight: 600, marginBottom: "var(--gap-label)" }}>由你决定</div>
-                        <label style={{ display: "inline-flex", alignItems: "center", gap: 6, marginRight: "var(--gap-block)" }}>
+                        <div className={styles.decideTitle}>由你决定</div>
+                        <label className={styles.radioLabel}>
                           <input type="radio" name={"mode-" + k.key} checked={mode !== "private"} readOnly />
                           公开（全平台可见）
                         </label>
-                        <label style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        <label className={styles.radioLabel}>
                           <input
                             type="radio"
                             name={"mode-" + k.key}
@@ -169,7 +174,7 @@ export default function AssetVisibilityPage() {
                           />
                           私有（仅所属执行体可见）
                         </label>
-                        <div className="tiny" style={{ marginTop: "var(--gap-label)" }}>
+                        <div className={"tiny " + styles.hintTop}>
                           仅在平台允许时可选，默认{/* 默认值取后端给的档位，不自行假定 */}
                           {MODE_LABEL[p?.defaultMode || "public"] ?? "全平台可见"}。
                         </div>
@@ -177,24 +182,13 @@ export default function AssetVisibilityPage() {
                     ) : (
                       <>
                         <Tag color="green">{MODE_LABEL[mode] ?? "全平台可见"}</Tag>
-                        <span className="tiny" style={{ marginLeft: "var(--gap-label)" }}>
+                        <span className={"tiny " + styles.hintLeft}>
                           不可选（平台统一配置）
                         </span>
                         <span
-                          className="tiny"
+                          className={"tiny " + styles.helpDot}
                           title={HELP}
                           aria-label={HELP}
-                          style={{
-                            marginLeft: "var(--gap-label)",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            width: 16,
-                            height: 16,
-                            borderRadius: "50%",
-                            border: "1px solid var(--border)",
-                            cursor: "help",
-                          }}
                         >
                           ?
                         </span>
@@ -209,7 +203,7 @@ export default function AssetVisibilityPage() {
       </div>
 
       {anySelectable ? (
-        <div className="panel" style={{ marginTop: "var(--gap-block)" }}>
+        <div className={"panel " + styles.panelTop}>
           <div className="panel-header">
             <div className="panel-title">切换说明</div>
           </div>
@@ -222,49 +216,40 @@ export default function AssetVisibilityPage() {
           role="dialog"
           aria-modal="true"
           aria-label={`将${dialogKind.name}切换为仅所属执行体可见`}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(16,24,40,.32)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 60,
-          }}
+          className={styles.overlay}
           onClick={() => (saving ? null : setDialog(null))}
         >
           <div
-            className="panel"
-            style={{ width: 560, maxWidth: "92vw", background: "var(--bg-panel, #fff)" }}
+            className={"panel " + styles.dialog}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="panel-header">
               <div className="panel-title">{`将「${dialogKind.name}」切换为「仅所属执行体可见」？`}</div>
             </div>
-            <div style={{ padding: "0 var(--gap-sect) var(--gap-block)" }}>
+            <div className={styles.dialogBody}>
               {dialogCount === null ? (
-                <p style={{ marginTop: 0 }}>
+                <p className={styles.flushTop}>
                   存量条数未知（不影响切换，仅影响提示精度）。切换后，无归属执行体的历史资产仍保持公开（只影响此后新写入）。确认切换？
                 </p>
               ) : (
-                <p style={{ marginTop: 0 }}>
+                <p className={styles.flushTop}>
                   当前存量中有 <b>{fmtNum(dialogCount)}</b> 条历史资产没有归属执行体，切换后它们仍保持公开（只影响此后新写入）。确认切换？
                 </p>
               )}
 
               {ownerless.loading ? <div className="tiny">正在取存量条数…</div> : null}
               {stale && dialogCount !== null ? (
-                <div className="tiny" style={{ marginBottom: "var(--gap-label)" }}>
+                <div className={"tiny " + styles.hintBottom}>
                   数据可能不是最新{doneMsg ? "" : "（上游暂时取不到，显示的是上次结果）"}
                 </div>
               ) : null}
               {dialogCount === null && !ownerless.loading ? (
-                <div className="tiny" style={{ marginBottom: "var(--gap-label)" }}>
+                <div className={"tiny " + styles.hintBottom}>
                   为什么显示「未知」而不是 0：未知与「没有存量」是两件事；显示 0 等于告诉您切换零代价。切换动作不依赖这个数，仍可正常确认。
                 </div>
               ) : null}
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--gap-label)", marginTop: "var(--gap-block)" }}>
+              <div className={styles.dialogActions}>
                 <Button onClick={() => setDialog(null)} disabled={saving}>
                   取消
                 </Button>

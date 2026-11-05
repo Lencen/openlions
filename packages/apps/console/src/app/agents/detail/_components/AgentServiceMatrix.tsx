@@ -1,6 +1,12 @@
 "use client"
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联 style 清零 + 手写 .tbl 表 → 白名单 DataTable。
+//   列仍为：业务服务 / 状态 / 权限 / 操作（含 130px 操作列）；勾选、保存、补发/取消授权等动作
+//   与 confirm 文案一字未改；opMsg 的成功/失败配色改由 data-tone + 属性选择器承载。
 import TableCopyButton from "@/components/TableCopyButton";
 import { DetailSection } from "@/components/detail";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "../page.module.css";
 // agents/detail 页 · 业务授权矩阵面板 (从 page.tsx 抽出)
 export default function AgentServiceMatrix({
   loading,
@@ -32,74 +38,100 @@ export default function AgentServiceMatrix({
   me: any;
   agentId: string;
 }) {
+  const columns: DataColumn<any>[] = [
+    { key: "name", title: "业务服务", render: (s) => <span className="nowrap">{s.name}</span> },
+    {
+      key: "status",
+      title: "状态",
+      render: (s) => {
+        const p = permMap[s.name];
+        const active = !!p && p.status === "ACTIVE";
+        const revoked = !!p && p.status === "REVOKED";
+        return (
+          <span className="nowrap">
+            {active ? <span className="badge badge-green">已授权</span>
+              : revoked ? <span className="badge badge-red">已取消</span>
+              : <span className="badge">未授权</span>}
+          </span>
+        );
+      },
+    },
+    {
+      key: "perms",
+      title: "权限",
+      render: (s) => {
+        const p = permMap[s.name];
+        const active = !!p && p.status === "ACTIVE";
+        if (!active) return <span className={styles.asmPermCell}>{s.available_perms || "-"}</span>;
+        const avail = parseList(s.available_perms);
+        const cur = parseList(p.permissions);
+        const shown = avail.length ? avail : cur;
+        const draftCur = draftOf(s.name, cur);
+        const dirty = draftCur.slice().sort().join(",") !== cur.slice().sort().join(",");
+        return (
+          <div className={styles.asmPermCell}>
+            <div className={styles.asmPerms}>
+              {shown.map((perm: string) => (
+                <label key={perm} className={styles.asmPermLabel}>
+                  <input type="checkbox" checked={draftCur.includes(perm)} disabled={permBusy === s.name}
+                    onChange={() => togglePerm(s.name, cur, perm)} />
+                  <span className="mono">{perm}</span>
+                </label>
+              ))}
+            </div>
+            {dirty && (
+              <div className={styles.asmSaveRow}>
+                <button className={"btn " + styles.asmBtnSm} disabled={permBusy === s.name}
+                  onClick={() => savePerms(s.name, cur)}>
+                  {permBusy === s.name ? "保存中..." : "保存权限(不换 key)"}
+                </button>
+                <span className={styles.asmUnsaved}>未保存</span>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      key: "op",
+      title: "操作",
+      width: 130,
+      render: (s) => {
+        const p = permMap[s.name];
+        const active = !!p && p.status === "ACTIVE";
+        return (
+          <span className="nowrap">
+            {active ? (
+              <button className={"btn " + styles.asmBtnSm + " " + styles.asmBtnDanger} disabled={busySvc === s.name}
+                onClick={() => { if (confirm(`取消 ${me.agent_id || agentId} 对 ${s.name} 的授权？该智能体将立即失去访问密钥`)) actSvc(s.name, "revoke"); }}>
+                {busySvc === s.name ? "..." : "取消授权"}
+              </button>
+            ) : (
+              <button className={"btn " + styles.asmBtnSm} disabled={busySvc === s.name}
+                onClick={() => { if (confirm(`给 ${me.agent_id || agentId} 补发 ${s.name} 业务密钥?`)) actSvc(s.name, "grant"); }}>
+                {busySvc === s.name ? "..." : "补发授权"}
+              </button>
+            )}
+          </span>
+        );
+      },
+    },
+  ];
+
   return (
     <DetailSection title="业务授权矩阵">
-      {opMsg && <div style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-2)", color: opMsg.startsWith("✅") ? "var(--status-ok)" : "var(--status-crit)" }}>{opMsg}</div>}
+      {opMsg && <div className={styles.asmOpMsg} data-tone={opMsg.startsWith("✅") ? "ok" : "crit"}>{opMsg}</div>}
       <TableCopyButton />
-      <table className="tbl"><thead><tr><th>业务服务</th><th>状态</th><th>权限</th><th style={{ width: 130 }}>操作</th></tr></thead><tbody>
-        {services.map((s: any) => {
-          const p = permMap[s.name];
-          const active = !!p && p.status === "ACTIVE";
-          const revoked = !!p && p.status === "REVOKED";
-          return (
-            <tr key={s.name}>
-              <td className="nowrap">{s.name}</td>
-              <td className="nowrap">
-                {active ? <span className="badge badge-green">已授权</span>
-                  : revoked ? <span className="badge badge-red">已取消</span>
-                  : <span className="badge">未授权</span>}
-              </td>
-              <td style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", maxWidth: 300 }}>
-                {active ? (() => {
-                  const avail = parseList(s.available_perms);
-                  const cur = parseList(p.permissions);
-                  const shown = avail.length ? avail : cur;
-                  const draftCur = draftOf(s.name, cur);
-                  const dirty = draftCur.slice().sort().join(",") !== cur.slice().sort().join(",");
-                  return (
-                    <div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--sp-2)" }}>
-                        {shown.map((perm: string) => (
-                          <label key={perm} style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-0-5)", cursor: "pointer" }}>
-                            <input type="checkbox" checked={draftCur.includes(perm)} disabled={permBusy === s.name}
-                              onChange={() => togglePerm(s.name, cur, perm)} />
-                            <span className="mono">{perm}</span>
-                          </label>
-                        ))}
-                      </div>
-                      {dirty && (
-                        <div style={{ marginTop: "var(--sp-1)" }}>
-                          <button className="btn" style={{ fontSize: "var(--fs-sm)", padding: "var(--sp-0-5) var(--sp-2)" }} disabled={permBusy === s.name}
-                            onClick={() => savePerms(s.name, cur)}>
-                            {permBusy === s.name ? "保存中..." : "保存权限(不换 key)"}
-                          </button>
-                          <span style={{ marginLeft: "var(--sp-1-5)", color: "var(--status-warn, #d48806)" }}>未保存</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })() : (s.available_perms || "-")}
-              </td>
-              <td className="nowrap">
-                {active ? (
-                  <button className="btn" style={{ color: "var(--status-crit)", fontSize: "var(--fs-sm)", padding: "var(--sp-0-5) var(--sp-2)" }} disabled={busySvc === s.name}
-                    onClick={() => { if (confirm(`取消 ${me.agent_id || agentId} 对 ${s.name} 的授权？该智能体将立即失去访问密钥`)) actSvc(s.name, "revoke"); }}>
-                    {busySvc === s.name ? "..." : "取消授权"}
-                  </button>
-                ) : (
-                  <button className="btn" style={{ fontSize: "var(--fs-sm)", padding: "var(--sp-0-5) var(--sp-2)" }} disabled={busySvc === s.name}
-                    onClick={() => { if (confirm(`给 ${me.agent_id || agentId} 补发 ${s.name} 业务密钥?`)) actSvc(s.name, "grant"); }}>
-                    {busySvc === s.name ? "..." : "补发授权"}
-                  </button>
-                )}
-              </td>
-            </tr>
-          );
-        })}
-        {/* 2026-10-13 round 76-DY: 加载中 services 还是空数组 -> 显示「暂无可用业务服务」(实测就绪后有数据) -> 假空态。 */}
-        {loading ? <tr><td colSpan={4} style={{ color: "var(--text-muted)" }}>…</td></tr> : services.length === 0 && <tr><td colSpan={4} style={{ color: "var(--text-muted)" }}>暂无可用业务服务</td></tr>}
-      </tbody></table>
-      <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)", marginTop: "var(--sp-1-5)" }}>
+      {/* 2026-10-13 round 76-DY: 加载中 services 还是空数组 -> 原来会显示「暂无可用业务服务」(实测就绪后有数据) -> 假空态。
+          换 DataTable 后由 loading 承担：加载中出骨架行，只有真的为空才出空态。 */}
+      <DataTable
+        columns={columns}
+        rows={services}
+        rowKey={(s) => s.name}
+        loading={loading}
+        empty={{ title: "暂无可用业务服务" }}
+      />
+      <div className={styles.asmLegend}>
         取消授权 = 该智能体立即失去此业务的访问密钥（保留审计记录）；补发授权 = 重新签发。<br />
         调整权限 = 勾选后点「保存权限」: <b>只改权限集合, 不换发密钥</b>, 在跑的客户端无需重启。
       </div>

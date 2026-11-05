@@ -1,0 +1,64 @@
+/* /flywheel/findings · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   展开的行为从「表内一行 colSpan=4」改成表格下方一块详情面板（字段/文案/DiscussionPanel 全保留，
+   触发器从整行可点改成「问题」列里的展开/收起按钮，键盘同样可达）。
+   取数（/api/flywheel-findings、/api/flywheel-stats）与去重逻辑一字未改。 */
+
+.crumbDim { color: var(--text-dim); }
+
+/* 数据时刻行（右对齐弱化，原内联 textAlign/color/marginBottom） */
+.momentRow {
+  text-align: right;
+  color: var(--text-dim);
+  margin-bottom: var(--sp-3);
+}
+
+/* 面板头里的范围说明（原内联 color/ fontWeight） */
+.headNote { color: var(--text-dim); font-weight: 400; }
+
+/* 骨架块的容器内边距（原内联 padding: var(--sp-3)） */
+.pad3 { padding: var(--sp-3); }
+
+/* 单元格：等宽编号 / 截断的「问题」「原因」
+   （原内联 maxWidth:300px + overflow hidden + ellipsis + nowrap） */
+.monoSm { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.clip {
+  display: block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 展开行时「问题」列用主色（原内联三元 color: primary / inherit） */
+.clip[data-active="true"] { color: var(--primary); }
+.dimSm { color: var(--text-dim); font-size: var(--fs-base); }
+
+/* 行内「展开/收起」：改前是整行可点（style cursor:pointer） */
+.rowToggle {
+  margin-left: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.rowToggle:hover { text-decoration: underline; }
+.rowToggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+/* 展开详情（原为表内一行 colSpan=4） */
+.detailPanel {
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--bg-hover);
+  border-radius: var(--radius-md);
+}
+.detailRow { margin-bottom: var(--sp-2); }
+.detailBody { font-size: var(--fs-base); }
+.detailPre { font-size: var(--fs-base); white-space: pre-wrap; }
+.detailFoot { margin-top: var(--sp-1); }
+.detailDiscuss { margin-top: var(--sp-3); }
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

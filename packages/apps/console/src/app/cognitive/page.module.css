@@ -1,0 +1,62 @@
+/* /cognitive · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   动态色（24h 写入主色、数据健康三态、质量条三段色）走 data-tone 属性选择器；
+   动态条宽走 5% 一档的档位类 .p0…​.p100。取数（/api/stats、/api/flywheel-dashboard）未改。 */
+
+/* 趋势卡里的小字说明（原内联 fontSize: var(--fs-sm) + color: var(--text-dim) + marginBottom） */
+.trendCaption {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  margin-bottom: var(--sp-2);
+}
+
+/* 趋势值的主色/三态色（原内联三元 color） */
+.trendVal[data-tone="primary"] { color: var(--primary); }
+.trendVal[data-tone="ok"] { color: var(--status-ok); }
+.trendVal[data-tone="warn"] { color: var(--status-warn); }
+.trendVal[data-tone="dim"] { color: var(--text-dim); }
+
+/* 条宽/条色：容器满宽（原内联 width: 100%），填充按档位 + data-tone */
+.miniBarFull { width: 100%; }
+.miniBarTrack { width: 100%; background: var(--border); }
+.miniBarFill { height: 100%; }
+.miniBarFill[data-tone="ok"] { background: var(--status-ok); }
+.miniBarFill[data-tone="warn"] { background: var(--status-warn); }
+.miniBarFill[data-tone="crit"] { background: var(--status-crit); }
+
+/* 面板头右侧的口径说明（原内联 fontSize: var(--fs-xs) + color） */
+.headNote { font-size: var(--fs-xs); color: var(--text-dim); }
+.warmNote { font-size: var(--fs-xs); color: var(--flow-warm); }
+
+/* 骨架占位块（原内联 margin: var(--sp-5) + height） */
+.skelBlock { margin: var(--sp-5); height: 100px; }
+.skelBlockSm { margin: var(--sp-5); height: 80px; }
+
+/* 质量表三档数值色（高/中/低，改前为逐列固定色） */
+.okText { color: var(--status-ok); }
+.warnText { color: var(--warn); }
+.critText { color: var(--status-crit); }
+.capSm { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 质量概览条的档位宽度（5% 一档） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

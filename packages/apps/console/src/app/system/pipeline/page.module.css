@@ -1,0 +1,22 @@
+/* /system/pipeline 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   运行历史表换成白名单表格组件后，原内联的单元格小字 / 展开详情底色改由本文件的类承担；
+   能复用 .panel / .kpi-grid / .badge / .nowrap / .mono / .tiny 的一律复用。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 右上角复制/导出按钮行（原来是内联 flex + marginBottom） */
+.copyRow { display: flex; justify-content: flex-end; margin-bottom: var(--sp-1-5); }
+
+/* 编号 / 开始时间这类小字等宽单元格 */
+.cellXs { font-size: var(--fs-xs); }
+.cellSm { font-size: var(--fs-sm); }
+.dim { color: var(--text-dim); }
+
+/* 展开详情（原来是详情行 td 上的内联 background + padding） */
+.detail { background: var(--bg-hover); padding: var(--sp-3); }
+.detailMono { font-family: var(--font-mono); font-size: var(--fs-sm); }
+.detailRow { margin-top: var(--sp-1); }
+.detailErr { margin-top: var(--sp-1); color: var(--status-crit); }
+
+/* 页脚相关视图出链 */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

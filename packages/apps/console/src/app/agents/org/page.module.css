@@ -1,0 +1,117 @@
+/* /agents/org · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类。本页无表格。
+   动态项一律 data-*：部门行选中 data-active、消息行成功/失败 data-tone、筛选按钮 data-active。
+   部门树缩进原来用内联 calc(var(--sp-4) * depth)，改成 .indent0…​.indent6 档位类（超 6 级按 6 级）。
+   取数（/api/org GET/POST）与全部文案/动作一字未改。 */
+
+/* 面包屑弱化色 / 通用间距档位 */
+.crumbDim { color: var(--text-dim); }
+.sectionGap { margin-bottom: var(--sp-3); }
+.kpiTight { margin-bottom: var(--sp-3); }
+.panelMb3 { margin-bottom: var(--sp-3); }
+
+/* 操作结果一行（原内联：失败 crit / 成功 ok + marginBottom） */
+.msgLine { margin-bottom: var(--sp-2); }
+.msgLine[data-tone="crit"] { color: var(--status-crit); }
+.msgLine[data-tone="ok"] { color: var(--status-ok); }
+
+/* 部门树：缩进档位（原内联 marginLeft: calc(var(--sp-4) * depth)） */
+.indent0 { margin-left: 0; }
+.indent1 { margin-left: calc(var(--sp-4) * 1); }
+.indent2 { margin-left: calc(var(--sp-4) * 2); }
+.indent3 { margin-left: calc(var(--sp-4) * 3); }
+.indent4 { margin-left: calc(var(--sp-4) * 4); }
+.indent5 { margin-left: calc(var(--sp-4) * 5); }
+.indent6 { margin-left: calc(var(--sp-4) * 6); }
+
+/* 部门节点行（原内联 flex/间距/描边圆角/cursor/字号 + 选中底色） */
+.deptNode {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--sp-1);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--fs-md);
+}
+.deptNode[data-active="true"] { background: var(--primary-dim); }
+
+/* 树里的紧凑链接按钮（原内联 padding: 0 var(--sp-1) / padding: 0）
+   用 :global(.ui-btn) 提高权重，确保压过基础 .ui-btn-* 的内边距 */
+.linkTight:global(.ui-btn) { padding: 0 var(--sp-1); }
+.linkTightDanger:global(.ui-btn) { padding: 0 var(--sp-1); color: var(--status-crit); }
+.linkBare:global(.ui-btn) { padding: 0; }
+.linkBareDanger:global(.ui-btn) { padding: 0; color: var(--status-crit); }
+
+/* 左右两栏：部门树 320px + 详情 */
+.deptLayout {
+  display: grid;
+  gap: var(--sp-4);
+  grid-template-columns: 320px 1fr;
+}
+
+/* 部门信息四格（原内联 auto-fit 200px + gap + marginBottom，并叠加 tiny 类） */
+.deptMeta {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  margin-bottom: var(--sp-3);
+}
+
+/* 部门成员行（原内联 flex/间距/下边框/字号） */
+.memberRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-md);
+}
+.memberActions {
+  margin-left: auto;
+  display: flex;
+  gap: var(--sp-2);
+}
+
+/* 小组卡片与头部 */
+.groupCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+.groupHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.groupName { font-size: var(--fs-md); }
+.groupDesc { margin: var(--sp-2) 0; }
+.memberTags { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.pushRight { margin-left: auto; }
+
+/* 选择智能体弹窗里的列表（原内联 maxHeight/overflow） */
+.pickList { max-height: 320px; overflow: auto; }
+.pickRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-md);
+}
+
+/* 添加小组表单 */
+.formGrid { display: grid; gap: var(--sp-2); }
+.condGrid {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 徽标贴边（原来是 Tag 上的内联 marginInlineEnd: 0） */
+.tagFlush:global(.ui-tag) { margin-inline-end: 0; }
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

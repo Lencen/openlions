@@ -1,0 +1,150 @@
+/* /system/guards · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   层色（L1–L6）原来是 JS 里拼 color-mix 字符串再内联，改成 [data-layer] 属性选择器；
+   配色算式与改前逐字一致：底 = 层色 13% 混透明，墨 = 层色 45% 混当前主题文字色。
+   取数（/guard-registry.json）与 ?layer=/?q=/?open= 的 URL 语义一字未改。 */
+
+.crumbDim { color: var(--text-dim); }
+.critTitle { color: var(--status-crit); }
+.pad3 { padding: var(--sp-3); }
+
+/* 按层直达链接一行（原内联 flex + gap + wrap + marginBottom） */
+.layerLinks {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-3);
+}
+
+/* 左目录 260px + 右清单 */
+.split {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--sp-3);
+  margin-top: var(--sp-1);
+}
+.fitContent { height: fit-content; }
+
+/* 分层目录按钮（原内联一长串：满宽/左对齐/padding/无边框/左侧 3px 指示条/cursor/字色/字号） */
+.navBtn {
+  width: 100%;
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: var(--fs-base);
+}
+.navBtn[data-active="true"] { color: var(--text); }
+/* 「ALL」项的选中态（原内联：主色淡底 + 主色指示条） */
+.navBtnAll[data-active="true"] {
+  background: var(--primary-dim);
+  border-left-color: var(--primary);
+}
+.navBadge { margin-right: var(--sp-1-5); }
+.navName { font-weight: 500; }
+.countRight { float: right; }
+.navTrigger {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  margin-top: var(--sp-0-5);
+}
+
+/* 层徽标 / 选中项的层色：底 13% + 墨 45%（同改前 layerBg / layerInk 的算式） */
+.layerBadge[data-layer="L1"], .navBtn[data-active="true"][data-layer="L1"] {
+  background: color-mix(in srgb, var(--layer-l1) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l1) 45%, var(--text));
+}
+.layerBadge[data-layer="L2"], .navBtn[data-active="true"][data-layer="L2"] {
+  background: color-mix(in srgb, var(--layer-l2) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l2) 45%, var(--text));
+}
+.layerBadge[data-layer="L3"], .navBtn[data-active="true"][data-layer="L3"] {
+  background: color-mix(in srgb, var(--layer-l3) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l3) 45%, var(--text));
+}
+.layerBadge[data-layer="L4"], .navBtn[data-active="true"][data-layer="L4"] {
+  background: color-mix(in srgb, var(--layer-l4) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l4) 45%, var(--text));
+}
+.layerBadge[data-layer="L5"], .navBtn[data-active="true"][data-layer="L5"] {
+  background: color-mix(in srgb, var(--layer-l5) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l5) 45%, var(--text));
+}
+.layerBadge[data-layer="L6"], .navBtn[data-active="true"][data-layer="L6"] {
+  background: color-mix(in srgb, var(--layer-l6) 13%, transparent);
+  color: color-mix(in srgb, var(--layer-l6) 45%, var(--text));
+}
+/* 选中项左侧指示条用层色本体 */
+.navBtn[data-active="true"][data-layer="L1"] { border-left-color: var(--layer-l1); }
+.navBtn[data-active="true"][data-layer="L2"] { border-left-color: var(--layer-l2); }
+.navBtn[data-active="true"][data-layer="L3"] { border-left-color: var(--layer-l3); }
+.navBtn[data-active="true"][data-layer="L4"] { border-left-color: var(--layer-l4); }
+.navBtn[data-active="true"][data-layer="L5"] { border-left-color: var(--layer-l5); }
+.navBtn[data-active="true"][data-layer="L6"] { border-left-color: var(--layer-l6); }
+
+/* 清单头部右侧工具组（原内联 marginLeft:auto + flex + gap + 居中） */
+.headTools {
+  margin-left: auto;
+  display: flex;
+  gap: var(--sp-1-5);
+  align-items: center;
+}
+.w220 { width: 220px; }
+.showCmdLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* 生成时间一行（原内联 padding/字号/字色） */
+.genRow {
+  padding: var(--sp-1-5);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* 表格单元格档位 */
+.nameB { font-size: var(--fs-base); }
+.note {
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  max-width: 420px;
+}
+.cellXs { font-size: var(--fs-xs); }
+.cellXsMono { font-family: var(--font-mono); font-size: var(--fs-xs); }
+.cmdCell {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+  max-width: 280px;
+  word-break: break-all;
+}
+
+/* 行可点（改前 tr 上的内联 cursor:pointer；DataTable 没有 onRow，事件在页面层委托）
+   空/错误态那一行是 .dt-state-row，不给手型 */
+.clickable tbody tr:not(.dt-state-row) { cursor: pointer; }
+
+/* 「显示更多」条（原内联 padding/居中/上边框） */
+.moreBar {
+  padding: var(--sp-3);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+
+/* 「如何复算 / 防漂移」区块 */
+.howBody { padding: var(--sp-3); font-size: var(--fs-base); line-height: 1.8; }
+.details { margin-top: var(--sp-2); }
+.summary { cursor: pointer; font-size: var(--fs-sm); }
+.pre {
+  font-size: var(--fs-sm);
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow-x: auto;
+  margin: var(--sp-2) 0 0;
+}

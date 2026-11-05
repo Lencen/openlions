@@ -1,0 +1,35 @@
+/* components/cognitive/ReflectionDetailBody · P2 呈现层（批4/5）：内联 style 清零
+   声明值逐项照搬（字号/行高/最大高/滚动/留白）；面板与字段栅格仍用 globals 与 detail 组件。 */
+
+/* JSON 预览块（原来是内联在 <pre> 上） */
+.json {
+  font-size: var(--fs-sm);
+  white-space: pre-wrap;
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+}
+
+/* 面板内边距（原来是内联 padding: var(--sp-5)） */
+.padLg { padding: var(--sp-5); }
+/* 「未找到」提示（原来是内联 padding + color） */
+.padLgDim { padding: var(--sp-5); color: var(--text-muted); }
+
+/* 结构化改进（原来是内联 fontSize + lineHeight） */
+.siBox { font-size: var(--fs-base); line-height: 1.8; }
+.siRow { margin-bottom: var(--sp-1-5); }
+.dim { color: var(--text-dim); }
+
+/* 覆盖缺口 / 改进建议 的逐条（原来是内联 fontSize + marginBottom） */
+.listRow { font-size: var(--fs-base); margin-bottom: var(--sp-1); }
+
+/* 冲突条目（原来是内联 fontSize + marginBottom: var(--sp-1-5)） */
+.conflictRow { font-size: var(--fs-base); margin-bottom: var(--sp-1-5); }
+/* 徽标后的小字留白（原来是内联 marginLeft: var(--sp-1-5)） */
+.gapLeft { margin-left: var(--sp-1-5); }
+
+/* 结构化发现条目（原来是内联 marginBottom/borderBottom/paddingBottom） */
+.finding { margin-bottom: var(--gap-tight); border-bottom: 1px solid var(--border); padding-bottom: var(--sp-1-5); }
+.findingHead { font-size: var(--fs-base); }
+.findingBody { font-size: var(--fs-base); margin-top: var(--sp-0-5); white-space: pre-wrap; }
+.findingWhy { margin-top: var(--sp-0-5); }

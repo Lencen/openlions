@@ -1,17 +1,26 @@
 "use client";
 // 2026-10-22 会话线（Session Principal）三查询：**已接真接口**（console BFF 代理，服务端持 token）。
 //   接口不可用时回退骨架数据，并在标题旁明确标注原因（不静默归零）。
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 三张手写 .tbl 表 → 白名单 DataTable。
+//   列/字段/文案一字未改；「两态」药丸的动态色从内联 TONE（var(--status-*)）改成 data-tone 属性选择器；
+//   列表限高（maxHeight 180/200）走 .stream180 / .stream200 两档。
+//   取数（session-inbox / conversations / overview / agent-level / sync）一字未改。
 import { useEffect, useState } from "react";
 import { PageHero } from "@/components/ui";
 import { useApi } from "@/lib/api";
 import { MOCK_CONVERSATIONS, MOCK_OVERVIEW, MOCK_SYNC } from "../_contract/mock";
-import type { SessionConversationsResponse, SessionsOverviewResponse, SyncResponse } from "../_contract/session";
+import type { SessionConversationsResponse, SyncResponse } from "../_contract/session";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "./page.module.css";
 
-const TONE: Record<string, string> = {
-  delivered: "var(--status-ok)", read: "var(--status-ok)", replied: "var(--status-ok)",
-  pending: "var(--status-warn)", queued: "var(--status-warn)", brain_timeout: "var(--status-crit)",
-  failed: "var(--status-crit)", expired: "var(--status-crit)", rate_limited: "var(--status-warn)",
+// 传输态 → 语义档位（改前是 TONE: 状态 → var(--status-*)；这里只换表达，映射一一对应）
+const TONE_LEVEL: Record<string, string> = {
+  delivered: "ok", read: "ok", replied: "ok",
+  pending: "warn", queued: "warn", brain_timeout: "crit",
+  failed: "crit", expired: "crit", rate_limited: "warn",
 };
+const toneOf = (s?: string | null) => TONE_LEVEL[String(s || "").toLowerCase()];
 const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleString("zh-CN", { hour12: false }) : "—");
 
 // 2026-10-22 五态统一（目标⑤）：把散落的 delivery_status 字符串收敛成同一套语义 chip。
@@ -50,6 +59,80 @@ const STATE_LEGEND: Array<{ s: string; hint: string }> = [
   { s: "delivered", hint: "已送达对端" },
   { s: "processing", hint: "模型侧正在处理" },
   { s: "stale", hint: "心跳超过阈值，状态可能滞后" },
+];
+
+/** 三张表的列定义（与改前 <thead> 逐列对应，顺序不变） */
+const convColumns: DataColumn<any>[] = [
+  { key: "cid", title: "会话", render: (c) => <span className={styles.monoCell}>{c.conversation_id}</span> },
+  { key: "participants", title: "参与者", render: (c) => c.participant_display.join(" ↔ ") },
+  { key: "last", title: "最后消息", render: (c) => <span title={c.last_message?.text || ""}>{c.last_message?.text || "—"}</span> },
+  {
+    key: "states",
+    title: "两态",
+    render: (c) => (
+      <>
+        <span className={"msg-pill " + styles.pillTone} data-tone={toneOf(c.last_message?.transport_status || "queued")}>
+          {c.last_message?.transport_status || "—"}
+        </span>{" "}
+        <span className="msg-pill">{c.last_message?.processing_state || "—"}</span>
+      </>
+    ),
+  },
+  { key: "unread", title: "未读/提及", render: (c) => <>{c.unread_count} / {c.mention_count}</> },
+  { key: "pending", title: "待处理", render: (c) => <>{(c as any).pending_count ?? "—"}</> },
+  { key: "claim", title: "认领", render: (c) => <span className={styles.monoCell}>{c.claim ? c.claim.session_id : "—"}</span> },
+];
+
+const syncColumns: DataColumn<any>[] = [
+  { key: "at", title: "时间", render: (m) => <span className={styles.monoCell}>{fmt(m.created_at)}</span> },
+  { key: "dir", title: "方向", render: (m) => <>{m.direction === "in" ? "入" : "出"}</> },
+  { key: "text", title: "消息", render: (m) => <span title={m.text}>{m.text}</span> },
+  {
+    key: "states",
+    title: "两态",
+    render: (m) => (
+      <>
+        <span className={"msg-pill " + styles.pillTone} data-tone={toneOf(m.transport_status)}>{m.transport_status}</span>{" "}
+        <span className="msg-pill">{m.processing_state}</span>
+      </>
+    ),
+  },
+  {
+    key: "refs",
+    title: "引用/客户端",
+    render: (m) => <span className={styles.monoCell}>{m.reply_to_id ? "有引用" : "—"} / {m.client_message_id ? "有" : "—"}</span>,
+  },
+  {
+    key: "events",
+    title: "事件",
+    render: (m) => (
+      <span className={styles.monoCell}>
+        {(m.events || []).map((e: any) => e.event_type + (e.actor ? "(" + e.actor + ")" : "")).join(" → ")}
+      </span>
+    ),
+  },
+];
+
+const overviewColumns: DataColumn<any>[] = [
+  {
+    key: "session",
+    title: "会话线",
+    render: (s) => <>{s.label}<div className={"tiny " + styles.monoCell}>{s.session_id}</div></>,
+  },
+  {
+    key: "online",
+    title: "在线",
+    render: (s) => (
+      <>
+        {s.online ? "在线" : "离线"}
+        {s.stale ? <> <StateChip state="stale" title={staleText(s.stale_reason)} /></> : null}
+      </>
+    ),
+  },
+  { key: "hb", title: "心跳", render: (s) => <span className={styles.monoCell}>{fmt(s.last_heartbeat_at)}</span> },
+  { key: "pending", title: "待处理", render: (s) => <>{s.pending_count}</> },
+  { key: "oldest", title: "最老待处理", render: (s) => <span className={styles.monoCell}>{fmt(s.oldest_pending_at)}</span> },
+  { key: "stale", title: "stale 原因", render: (s) => <span title={s.stale_reason || ""}>{staleText(s.stale_reason)}</span> },
 ];
 
 export default function SessionPage() {
@@ -108,7 +191,7 @@ export default function SessionPage() {
         </div>
         <div className="metric-card">
           <div className="m-label">传输层待处理</div>
-          <div className="m-value" style={{ color: (inbox?.pendingDelivery ?? 0) > 0 ? "var(--status-crit)" : undefined }}>{inbox?.pendingDelivery ?? "—"}</div>
+          <div className={"m-value " + styles.metricValue} data-tone={(inbox?.pendingDelivery ?? 0) > 0 ? "crit" : undefined}>{inbox?.pendingDelivery ?? "—"}</div>
           <div className="tiny">SLO 看这个口径</div>
         </div>
         <div className="metric-card">
@@ -131,29 +214,29 @@ export default function SessionPage() {
       </div>
 
       {inbox?.items?.length ? (
-        <div className="panel" style={{ padding: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-          <div className="msg-col-title" style={{ marginBottom: "var(--sp-2)" }}>本线未确认消息（真实 · watcher 镜像）</div>
+        <div className={"panel " + styles.panelPad}>
+          <div className={"msg-col-title " + styles.colTitle}>本线未确认消息（真实 · watcher 镜像）</div>
           {/* 2026-10-22 a11y：可滚动列表必须能键盘聚焦（axe: scrollable-region-focusable） */}
-          <ul className="msg-stream" style={{ maxHeight: 180 }} tabIndex={0}>
+          <ul className={"msg-stream " + styles.stream180} tabIndex={0}>
             {inbox.items.map((m: any) => (
               <li key={m.message_id} className="tiny">
-                <span className="td-mono">{m.message_id}</span> · <StateChip state={stateOf(m.delivery_status, m.processing_state)} /> · {(m.text || "").slice(0, 70)}
+                <span className={styles.monoCell}>{m.message_id}</span> · <StateChip state={stateOf(m.delivery_status, m.processing_state)} /> · {(m.text || "").slice(0, 70)}
               </li>
             ))}
           </ul>
         </div>
       ) : null}
 
-      <div className="panel" style={{ padding: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-        <div className="msg-col-title" style={{ marginBottom: "var(--sp-2)" }}>
+      <div className={"panel " + styles.panelPad}>
+        <div className={"msg-col-title " + styles.colTitle}>
           同智能体会话最近消息 {badge(!!agentLevel?.ok, agentLevel?.error)}
           <span className="msg-tag">未定向到本线</span>
         </div>
         {agentLevel?.messages?.length ? (
-          <ul className="msg-stream" style={{ maxHeight: 200 }} tabIndex={0}>
+          <ul className={"msg-stream " + styles.stream200} tabIndex={0}>
             {agentLevel.messages.map((m: any) => (
               <li key={m.message_id} className="tiny">
-                <span className="td-mono">{fmt(m.created_at)}</span> · {m.sender_id} · {m.delivery_status} · {(m.text || "").slice(0, 90)}
+                <span className={styles.monoCell}>{fmt(m.created_at)}</span> · {m.sender_id} · {m.delivery_status} · {(m.text || "").slice(0, 90)}
               </li>
             ))}
           </ul>
@@ -162,74 +245,37 @@ export default function SessionPage() {
         )}
       </div>
 
-      <div className="panel" style={{ padding: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-        <div className="msg-col-title" style={{ marginBottom: "var(--sp-2)" }}>a) 按线的会话列表 {badge(convReal, convData?.error)}</div>
-        <table className="tbl">
-          <thead><tr><th>会话</th><th>参与者</th><th>最后消息</th><th>两态</th><th>未读/提及</th><th>待处理</th><th>认领</th></tr></thead>
-          <tbody>
-            {convs.map((c) => (
-              <tr key={c.conversation_id}>
-                <td className="td-mono">{c.conversation_id}</td>
-                <td>{c.participant_display.join(" ↔ ")}</td>
-                <td className="td-clip" title={c.last_message?.text || ""}>{c.last_message?.text || "—"}</td>
-                <td>
-                  <span className="msg-pill" style={{ color: TONE[c.last_message?.transport_status || "queued"] }}>{c.last_message?.transport_status || "—"}</span>{" "}
-                  <span className="msg-pill">{c.last_message?.processing_state || "—"}</span>
-                </td>
-                <td>{c.unread_count} / {c.mention_count}</td>
-                <td>{(c as any).pending_count ?? "—"}</td>
-                <td className="td-mono">{c.claim ? c.claim.session_id : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={"panel " + styles.panelPad}>
+        <div className={"msg-col-title " + styles.colTitle}>a) 按线的会话列表 {badge(convReal, convData?.error)}</div>
+        <DataTable
+          columns={convColumns}
+          rows={convs}
+          rowKey={(c: any, i: number) => c.conversation_id || i}
+          empty={{ title: "—" }}
+        />
       </div>
 
-      <div className="panel" style={{ padding: "var(--sp-3)", marginBottom: "var(--sp-4)" }}>
-        <div className="msg-col-title" style={{ marginBottom: "var(--sp-2)" }}>
+      <div className={"panel " + styles.panelPad}>
+        <div className={"msg-col-title " + styles.colTitle}>
           b) 会话同步历史 {badge(syncReal, syncErr)}
           {firstCid ? <span className="msg-tag">{firstCid}</span> : null}
         </div>
-        <table className="tbl">
-          <thead><tr><th>时间</th><th>方向</th><th>消息</th><th>两态</th><th>引用/客户端</th><th>事件</th></tr></thead>
-          <tbody>
-            {syncRows.map((m) => (
-              <tr key={m.message_id}>
-                <td className="td-mono">{fmt(m.created_at)}</td>
-                <td>{m.direction === "in" ? "入" : "出"}</td>
-                <td className="td-clip" title={m.text}>{m.text}</td>
-                <td>
-                  <span className="msg-pill" style={{ color: TONE[m.transport_status] }}>{m.transport_status}</span>{" "}
-                  <span className="msg-pill">{m.processing_state}</span>
-                </td>
-                <td className="td-mono">{m.reply_to_id ? "有引用" : "—"} / {m.client_message_id ? "有" : "—"}</td>
-                <td className="td-mono">{(m.events || []).map((e) => e.event_type + (e.actor ? "(" + e.actor + ")" : "")).join(" → ")}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <DataTable
+          columns={syncColumns}
+          rows={syncRows}
+          rowKey={(m: any, i: number) => m.message_id || i}
+          empty={{ title: "—" }}
+        />
       </div>
 
-      <div className="panel" style={{ padding: "var(--sp-3)" }}>
-        <div className="msg-col-title" style={{ marginBottom: "var(--sp-2)" }}>c) 跨线聚合 {badge(ovReal, ovData?.error)}</div>
-        <table className="tbl">
-          <thead><tr><th>会话线</th><th>在线</th><th>心跳</th><th>待处理</th><th>最老待处理</th><th>stale 原因</th></tr></thead>
-          <tbody>
-            {overview.map((s) => (
-              <tr key={s.session_id}>
-                <td>{s.label}<div className="tiny td-mono">{s.session_id}</div></td>
-                <td>
-                  {s.online ? "在线" : "离线"}
-                  {s.stale ? <> <StateChip state="stale" title={staleText(s.stale_reason)} /></> : null}
-                </td>
-                <td className="td-mono">{fmt(s.last_heartbeat_at)}</td>
-                <td>{s.pending_count}</td>
-                <td className="td-mono">{fmt(s.oldest_pending_at)}</td>
-                <td title={s.stale_reason || ""}>{staleText(s.stale_reason)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className={"panel " + styles.panelPad}>
+        <div className={"msg-col-title " + styles.colTitle}>c) 跨线聚合 {badge(ovReal, ovData?.error)}</div>
+        <DataTable
+          columns={overviewColumns}
+          rows={overview}
+          rowKey={(s: any, i: number) => s.session_id || i}
+          empty={{ title: "—" }}
+        />
       </div>
     </main>
   );

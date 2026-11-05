@@ -1,0 +1,120 @@
+/* /flywheel/llm-usage · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类。动态色（在转/停转）走 data-tone 属性选择器；
+   动态宽/高（占比条、小时柱）走 5% 一档的档位类 .p0…​.p100 / .bh0…​.bh100（与 DataTable 同口径）。
+   取数（/api/llm-usage）与文案未改。 */
+
+/* 指标带：改前内联 repeat(auto-fit, minmax(180px, 1fr)) —— 不是 kpi-grid 的 minmax(0,180px)，单列一支 */
+.statGrid {
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  margin-bottom: var(--sp-4);
+}
+
+/* 大数值（原内联 fontSize: var(--fs-3xl) + fontWeight: 700） */
+.bigValue { font-size: var(--fs-3xl); font-weight: 700; }
+.bigValue[data-tone="primary"] { color: var(--primary); }
+.bigValue[data-tone="ok"] { color: var(--status-ok); }
+.bigValue[data-tone="crit"] { color: var(--status-crit); }
+
+/* 「24 小时调用按入口」占比条：行 = 名称 / 轨道 / 次数 / 标记数 */
+.entryRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-base);
+  padding: 3px 0;
+}
+.entryName { width: 220px; font-family: var(--font-mono); }
+.entryTrack {
+  flex: 1;
+  height: 14px;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface2);
+}
+.entryFill { height: 100%; background: var(--primary); }
+.entryCalls { width: 90px; text-align: right; }
+.entryTokens { width: 120px; text-align: right; color: var(--text-dim); }
+
+/* 「按模型 / 按小时」两列区 */
+.twoCols {
+  margin-top: var(--sp-3);
+  display: grid;
+  gap: var(--sp-3);
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+}
+.modelRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 4px 0;
+  font-size: var(--fs-base);
+}
+
+/* 小时柱状条：柱高 = 调用数 / 峰值（5% 一档）；0 次的柱改成弱化态 */
+.bars {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-0-5);
+  height: 80px;
+  padding: 4px 0;
+}
+.bar {
+  flex: 1;
+  min-height: 2px;
+  border-radius: var(--radius-xs);
+  background: var(--primary);
+}
+.bar[data-empty] { min-height: 0; opacity: 0.2; }
+.barHint { margin-top: var(--sp-1); }
+
+/* 页脚「相关视图」出链行（与其它 P2 页一致） */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+
+/* 占比档位（5% 一档） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }
+
+/* 柱高档位（5% 一档） */
+.bh0 { height: 0%; }
+.bh5 { height: 5%; }
+.bh10 { height: 10%; }
+.bh15 { height: 15%; }
+.bh20 { height: 20%; }
+.bh25 { height: 25%; }
+.bh30 { height: 30%; }
+.bh35 { height: 35%; }
+.bh40 { height: 40%; }
+.bh45 { height: 45%; }
+.bh50 { height: 50%; }
+.bh55 { height: 55%; }
+.bh60 { height: 60%; }
+.bh65 { height: 65%; }
+.bh70 { height: 70%; }
+.bh75 { height: 75%; }
+.bh80 { height: 80%; }
+.bh85 { height: 85%; }
+.bh90 { height: 90%; }
+.bh95 { height: 95%; }
+.bh100 { height: 100%; }

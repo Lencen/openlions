@@ -1,0 +1,45 @@
+/* /workbench · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类。本页只有一张占位卡 + 驾驶舱，无表格。
+   灰度开关（NEXT_PUBLIC_UI_V2）与 /api/overview 取数一字未改。 */
+
+/* 占位卡：主句与补句（原内联 fontSize/color/marginBottom） */
+.placeholderLead {
+  font-size: var(--fs-md);
+  color: var(--text);
+  margin-bottom: var(--sp-2);
+}
+.placeholderHint { margin-bottom: var(--sp-3); }
+
+/* 降级提示的上边距（原内联在 <Alert style> 上；Alert 只吃 style，改由外层容器给） */
+.alertRow { margin-bottom: var(--sp-4); }
+
+/* 「会话流入趋势」的一行小指标（原内联 flex + gap + wrap） */
+.metricRowInline {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+/* 「实时活动」列表（原内联 paddingLeft / margin / 行距） */
+.activityList { padding-left: var(--sp-4); margin: 0; }
+.activityItem { margin-bottom: var(--sp-1); }
+
+/* 三级文字色（改前内联 var(--text-3)） */
+.dim3 { color: var(--text-3); }
+
+/* 智能体运行矩阵：自适应格子（原内联 repeat(auto-fill, minmax(180px, 1fr))） */
+.agentGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: var(--sp-3);
+}
+.agentCell {
+  padding: var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.agentNum {
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  margin-top: var(--sp-1);
+}

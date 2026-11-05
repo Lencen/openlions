@@ -1,12 +1,17 @@
 "use client";
+// 飞轮执行数据记录 (2026-09-01 重构) — 业务审计
+// 时间线: 什么时间扫描/提炼/反思/改进 + 错误记录
+// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 两张手写 .tbl 表 → 白名单 DataTable。
+//   列/字段/文案不变；阶段徽标底色从内联 STAGE_COLORS 改成 [data-stage] 属性选择器（默认底仍是 --text-3）。
+//   取数（/api/flywheel-audit?limit=50&stage=…）、15s 轮询与 AbortController 一字未改。
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { t } from "@/i18n";
 import TableCopyButton from "@/components/TableCopyButton";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-
-// 飞轮执行数据记录 (2026-09-01 重构) — 业务审计
-// 时间线: 什么时间扫描/提炼/反思/改进 + 错误记录
+import styles from "./page.module.css";
 
 interface AuditData {
   events: Array<{ stage: string; sourceType: string; sourceTitle: string; createdAt: number }>;
@@ -18,11 +23,13 @@ interface AuditData {
 
 // 2026-10-13 round 76-CU: 徽标文字原来写死深色墨 #0a0e1a —— 亮色主题下压在 --brand(#0B6E82) 上只有 ~3.1,
 //   暗色下才勉强对。改用通用墨色令牌 --on-accent(亮 #fff / 暗 #0a0e14 / hc #000), 三主题都对。
-const STAGE_COLORS: Record<string, string> = {
-  MEMORIZE: "var(--table-memory)", KNOWLEDGE: "var(--brand)", REFLECT: "var(--status-crit)", PRACTICE: "var(--warn)",
-  EVALUATE: "var(--info)", LEARN: "var(--info)", CALL_LLM: "var(--text-3)", OUTCOME: "var(--status-ok)",
-  REFLECTION_TO_TASK: "var(--warn)",
-};
+// 2026-11-05 P2：底色不再走内联 map —— 这里只保留「有哪些阶段」（顺序 = 改前 map 的键顺序），
+//   每个阶段的底色在 page.module.css 的 .stageBadge[data-stage="…"] 里。
+const STAGE_KEYS = [
+  "MEMORIZE", "KNOWLEDGE", "REFLECT", "PRACTICE",
+  "EVALUATE", "LEARN", "CALL_LLM", "OUTCOME",
+  "REFLECTION_TO_TASK",
+];
 
 const fmtTime = (ms: number) => {
   const d = new Date(ms);
@@ -30,6 +37,28 @@ const fmtTime = (ms: number) => {
   return d.toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" }) + " " +
     d.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
 };
+
+type EventRow = AuditData["events"][number];
+type ErrorRow = AuditData["errors"][number];
+
+const eventColumns: DataColumn<EventRow>[] = [
+  { key: "createdAt", title: "时间", render: (e) => <span className={"nowrap mono " + styles.cellSm}>{fmtTime(e.createdAt)}</span> },
+  {
+    key: "stage",
+    title: "阶段",
+    render: (e) => <span className={"badge " + styles.stageBadge + " " + styles.stageBadgeSm} data-stage={e.stage}>{e.stage}</span>,
+  },
+  { key: "sourceType", title: "来源", render: (e) => <span className={styles.cellBase}>{e.sourceType}</span> },
+  { key: "sourceTitle", title: "详情", render: (e) => <span className={styles.cellDim}>{(e.sourceTitle || "").slice(0, 60)}</span> },
+];
+
+const errorColumns: DataColumn<ErrorRow>[] = [
+  { key: "occurredAt", title: "时间", render: (e) => <span className={"nowrap mono " + styles.cellSm}>{fmtTime(e.occurredAt)}</span> },
+  { key: "errorType", title: "类型", render: (e) => <span className="badge badge-red">{e.errorType}</span> },
+  { key: "stage", title: "阶段", render: (e) => <>{e.stage}</> },
+  { key: "sessionId", title: t('common.session'), render: (e) => <span className={"mono " + styles.cellSm}>{(e.sessionId || "").slice(0, 30)}</span> },
+  { key: "message", title: "消息", render: (e) => <span className={styles.cellDim}>{(e.message || "").slice(0, 60)}</span> },
+];
 
 export default function AuditPage() {
   const [data, setData] = useState<AuditData | null>(null);
@@ -62,36 +91,36 @@ export default function AuditPage() {
 
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <div className="breadcrumb"><span style={{color:"var(--text-dim)"}}>飞轮引擎</span><span className="sep">/</span><span className="current">执行数据记录</span></div>
+      <div className="breadcrumb"><span className={styles.crumbDim}>飞轮引擎</span><span className="sep">/</span><span className="current">执行数据记录</span></div>
       <PageHeader><PageTitle>执行数据记录（业务审计）</PageTitle>
         <div className="page-subtitle">今日事件 {data?.todayEvents ?? "-"} · 错误 {data?.todayErrors ?? "-"} · 15s 刷新</div>
       </PageHeader>
-      {error && <div style={{ color: "var(--status-crit)", marginBottom: "var(--sp-2)" }}>⚠ {error}</div>}
+      {error && <div className={styles.errLine}>⚠ {error}</div>}
 
       {/* 今日各阶段统计 */}
       <div className="panel">
         <div className="panel-header"><span className="panel-title">今日执行分布</span></div>
-        <div style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap" }}>
+        <div className={styles.stageRow}>
           {byStage.map((s) => (
-            <div key={s.stage} style={{ fontSize: "var(--fs-md)" }}>
-              <span className="badge" style={{ background: STAGE_COLORS[s.stage] || "var(--text-3)", color: "var(--on-accent)" }}>{s.stage}</span>{" "}
+            <div key={s.stage} className={styles.stageItem}>
+              <span className={"badge " + styles.stageBadge} data-stage={s.stage}>{s.stage}</span>{" "}
               <strong>{s.c}</strong>
             </div>
           ))}
-          {loading && <span style={{ color: "var(--text-dim)" }}>加载中…</span>}
-          {!loading && byStage.length === 0 && <span style={{ color: "var(--text-dim)" }}>今日暂无</span>}
+          {loading && <span className={styles.dimText}>加载中…</span>}
+          {!loading && byStage.length === 0 && <span className={styles.dimText}>今日暂无</span>}
         </div>
       </div>
 
       {/* 阶段过滤 + 错误切换 */}
-      <div className="panel" style={{ marginBottom: "var(--sp-3)" }}>
-        <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
-          <button onClick={() => setStage("")} style={{ padding: "var(--sp-1) var(--sp-2-5)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: stage === "" ? "var(--primary)" : "transparent", color: stage === "" ? "var(--on-primary)" : "var(--text)", fontWeight: stage === "" ? 600 : 400, cursor: "pointer", fontSize: "var(--fs-base)" }}>全部</button>
-          {Object.keys(STAGE_COLORS).map((s) => (
-            <button key={s} onClick={() => setStage(stage === s ? "" : s)} style={{ padding: "var(--sp-1) var(--sp-2-5)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: stage === s ? "var(--primary)" : "transparent", color: stage === s ? "var(--on-primary)" : "var(--text)", fontWeight: stage === s ? 600 : 400, cursor: "pointer", fontSize: "var(--fs-base)" }}>{s}</button>
+      <div className={"panel " + styles.panelMb3}>
+        <div className={styles.filterRow}>
+          <button onClick={() => setStage("")} className={styles.filterBtn} data-active={stage === "" ? "true" : undefined}>全部</button>
+          {STAGE_KEYS.map((s) => (
+            <button key={s} onClick={() => setStage(stage === s ? "" : s)} className={styles.filterBtn} data-active={stage === s ? "true" : undefined}>{s}</button>
           ))}
-          <span style={{ marginLeft: "auto" }}>
-            <button onClick={() => setShowErrors(!showErrors)} style={{ padding: "var(--sp-1) var(--sp-2-5)", borderRadius: "var(--radius-sm)", border: "1px solid var(--status-crit)", background: showErrors ? "var(--status-crit)" : "transparent", color: showErrors ? "var(--on-accent)" : "var(--status-crit)", cursor: "pointer", fontSize: "var(--fs-base)" }}>错误记录 ({errors.length})</button>
+          <span className={styles.pushRight}>
+            <button onClick={() => setShowErrors(!showErrors)} className={styles.filterBtn + " " + styles.filterBtnCrit} data-active={showErrors ? "true" : undefined}>错误记录 ({errors.length})</button>
           </span>
         </div>
       </div>
@@ -101,40 +130,30 @@ export default function AuditPage() {
         <div className="panel">
           <div className="panel-header"><span className="panel-title">执行时间线 (最近 50 条)</span></div>
           <TableCopyButton />
-          <table className="tbl"><thead><tr><th>时间</th><th>阶段</th><th>来源</th><th>详情</th></tr></thead><tbody>
-            {events.map((e, i) => (
-              <tr key={i}>
-                <td className="nowrap mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(e.createdAt)}</td>
-                <td><span className="badge" style={{ background: STAGE_COLORS[e.stage] || "var(--text-3)", color: "var(--on-accent)", fontSize: "var(--fs-sm)" }}>{e.stage}</span></td>
-                <td style={{ fontSize: "var(--fs-base)" }}>{e.sourceType}</td>
-                <td style={{ fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>{(e.sourceTitle || "").slice(0, 60)}</td>
-              </tr>
-            ))}
-            {/* 2026-10-13 round 76-DY: 加载中 events 还是空数组 -> 会显示「暂无事件」(实测就绪后有事件) -> 假空态。
-                同页上方那处 [今日暂无] 早就用 loading 守卫了, 表格这处漏了。 */}
-            {loading ? <tr><td colSpan={4} style={{ padding: "var(--sp-4)", color: "var(--text-dim)", textAlign: "center" }}>…</td></tr> : events.length === 0 && <tr><td colSpan={4} style={{ padding: "var(--sp-4)", color: "var(--text-dim)", textAlign: "center" }}>暂无事件</td></tr>}
-          </tbody></table>
+          {/* 2026-10-13 round 76-DY: 加载中 events 还是空数组 -> 会显示「暂无事件」(实测就绪后有事件) -> 假空态。
+              同页上方那处 [今日暂无] 早就用 loading 守卫了, 表格这处漏了 —— 这里由 DataTable 的 loading 槽承接。 */}
+          <DataTable
+            columns={eventColumns}
+            rows={events}
+            rowKey={(_e, i) => i}
+            loading={loading}
+            empty={{ title: "暂无事件" }}
+          />
         </div>
       ) : (
         <div className="panel">
           <div className="panel-header"><span className="panel-title">错误记录 (最近 20 条)</span></div>
           <TableCopyButton />
-          <table className="tbl"><thead><tr><th>时间</th><th>类型</th><th>阶段</th><th>{t('common.session')}</th><th>消息</th></tr></thead><tbody>
-            {errors.map((e, i) => (
-              <tr key={i}>
-                <td className="nowrap mono" style={{ fontSize: "var(--fs-sm)" }}>{fmtTime(e.occurredAt)}</td>
-                <td><span className="badge badge-red">{e.errorType}</span></td>
-                <td>{e.stage}</td>
-                <td className="mono" style={{ fontSize: "var(--fs-sm)" }}>{(e.sessionId || "").slice(0, 30)}</td>
-                <td style={{ fontSize: "var(--fs-base)", color: "var(--text-dim)" }}>{(e.message || "").slice(0, 60)}</td>
-              </tr>
-            ))}
-            {errors.length === 0 && <tr><td colSpan={5} style={{ padding: "var(--sp-4)", color: "var(--status-ok)", textAlign: "center" }}>✅ 无错误</td></tr>}
-          </tbody></table>
+          <DataTable
+            columns={errorColumns}
+            rows={errors}
+            rowKey={(_e, i) => i}
+            empty={{ title: "✅ 无错误" }}
+          />
         </div>
       )}
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.related}>
         <span>相关视图：</span>
         <Link href="/flywheel/tasks">被审任务 →</Link>
         <Link href="/system/guards">守门规则 →</Link>

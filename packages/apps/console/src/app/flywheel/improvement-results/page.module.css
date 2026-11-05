@@ -1,0 +1,31 @@
+/* /flywheel/improvement-results 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
+   改进结果表换成白名单 DataTable 后，只剩筛选条、单元格小字与页脚出链需要落类；
+   能复用 .panel / .kpi-grid / .tiny / .mono / .badge 的一律复用。 */
+
+/* 面板/指标带之间的竖向间距（原来是内联 marginBottom: var(--sp-3)） */
+.irMb3 { margin-bottom: var(--sp-3); }
+
+/* 筛选条：标签右边距 / 输入框宽度 / 查询按钮左边距（原来是内联） */
+.irFilterLabel { margin-right: var(--sp-2); }
+.irSourceInput { width: 260px; }
+.irBtnGap { margin-left: var(--sp-2); }
+
+/* 条内的汇总小字（原来是内联 marginLeft + 内联色） */
+.irSumGap { margin-left: var(--sp-3); }
+.irOk { color: var(--status-ok); }
+.irCrit { color: var(--status-crit); }
+
+/* 「待判定」徽章底色（原来是内联 background: var(--bg-surface2)） */
+.irBadgePend { background: var(--bg-surface2); }
+
+/* 升级任务逐行（原来是内联 marginBottom: var(--sp-0-5)） */
+.irTaskRow { margin-bottom: var(--sp-0-5); }
+
+/* 证据锚点单元格：限制宽度并保留换行（原来是内联 maxWidth / whiteSpace） */
+.irEvid { display: block; max-width: 320px; white-space: pre-wrap; }
+
+/* 空态外框（原来是内联 padding: var(--sp-5)） */
+.irEmptyPad { padding: var(--sp-5); }
+
+/* 页脚相关视图出链 */
+.irFootLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

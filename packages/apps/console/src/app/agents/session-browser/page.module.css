@@ -1,0 +1,87 @@
+/* /agents/session-browser · P2 呈现层（2026-11-05 批 4/5）
+   内联 style → 类。本页无表格。
+   动态态一律 data-*：选中会话行 data-active、消息角色 data-role、加载更多按钮 data-busy。
+   取数（session-service-list / session-detail）与分页语义一字未改。 */
+
+/* 面包屑首段弱化色 */
+.crumbDim { color: var(--text-dim); }
+
+/* 指标带下间距（原内联 marginBottom: var(--sp-3)） */
+.kpiTight { margin-bottom: var(--sp-3); }
+
+/* 左右分栏：左列表 / 右详情，整屏高（原内联 1fr 1.5fr + calc(100vh - 180px)） */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: var(--sp-4);
+  height: calc(100vh - 180px);
+}
+
+/* 两侧面板内部滚动（原内联 overflow: auto; margin: 0） */
+.panelScroll { overflow: auto; margin: 0; }
+
+/* 面板头里的智能体筛选下拉（原内联 padding/背景/文字/描边/圆角） */
+.select {
+  padding: var(--sp-1) var(--sp-2);
+  background: var(--bg-surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
+/* 空态/错误态（原内联 padding: var(--sp-5) + 字色） */
+.stateCrit { padding: var(--sp-5); color: var(--status-crit); }
+.stateMuted { padding: var(--sp-5); color: var(--text-muted); }
+.muted { color: var(--text-muted); }
+.crit { color: var(--status-crit); }
+
+/* 会话列表行：选中态由 data-active 决定（原内联三元背景色） */
+.sessionItem {
+  padding: var(--sp-2-5) var(--sp-3-5);
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  background: transparent;
+}
+.sessionItem[data-active="true"] { background: var(--bg-hover); }
+.itemTitle { font-size: var(--fs-md); font-weight: 500; }
+.itemMeta { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1); }
+
+/* 「加载更多」 */
+.moreWrap { padding: var(--sp-3) var(--sp-3-5); text-align: center; }
+.moreBtn {
+  padding: var(--sp-1-5) var(--sp-4);
+  background: var(--bg-surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-size: var(--fs-base);
+}
+.moreBtn[data-busy="true"] { cursor: wait; }
+
+/* 详情区 */
+.pad35 { padding: var(--sp-3-5); }
+.metaSm { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 消息块：角色配色由 data-role 决定（原内联三元：user → surface2/info，其余 → hover/ok） */
+.msg {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-2-5);
+  border-radius: var(--radius-sm);
+  background: var(--bg-hover);
+  border-left: 3px solid var(--status-ok);
+}
+.msg[data-role="user"] {
+  background: var(--bg-surface2);
+  border-left-color: var(--info);
+}
+.msgMeta { font-size: var(--fs-sm); color: var(--text-dim); margin-bottom: var(--sp-1); }
+.msgBody {
+  font-size: var(--fs-md);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, monospace;
+}
+
+/* 页脚「相关视图」出链行 */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

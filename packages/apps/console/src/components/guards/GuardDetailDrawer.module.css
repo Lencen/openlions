@@ -1,0 +1,94 @@
+/* components/guards/GuardDetailDrawer（P2 批 4/5，2026-11-05）
+   内联 style → 类；手写 .tbl 表 → 白名单 DataTable（列/字段/文案不变）。
+   最近一次跑结果的 OK/FAIL 配色从内联三元改成 data-tone 属性选择器（色值仍是改前的 color-mix 令牌派生）。 */
+
+/* 加载/失败/不存在三态（原内联 padding + fontSize，色按态） */
+.stateMsg { padding: var(--sp-3); font-size: var(--fs-base); }
+.stateMsg[data-tone="dim"] { color: var(--text-dim); }
+.stateMsg[data-tone="crit"] { color: var(--status-crit); }
+
+/* 分段标题：第一段只给下间距，其余给上间距 */
+.sectionTitle { font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+.sectionFirst { margin-bottom: var(--sp-2); }
+.section { margin: var(--sp-4) 0 var(--sp-2); }
+
+/* 「标签 → 值」行（原内联 Row 组件里的 flex/宽度/断词） */
+.row {
+  display: flex;
+  padding: var(--sp-1) 0;
+  font-size: var(--fs-base);
+  border-bottom: 1px solid var(--border);
+}
+.rowLabel { width: 96px; color: var(--text-dim); flex-shrink: 0; }
+.rowValue { word-break: break-all; flex: 1; }
+
+/* 复制小按钮（叠加 globals 的 .badge） */
+.copyBtn { margin-left: var(--sp-1-5); cursor: pointer; }
+
+/* 复算命令代码块（原内联 background/border/radius/padding/fontSize/fontFamily/position） */
+.codeBox {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: var(--sp-2);
+  font-size: var(--fs-sm);
+  font-family: var(--font-mono, monospace);
+  position: relative;
+}
+.codeText { word-break: break-all; white-space: pre-wrap; }
+.copyWrap { position: absolute; top: 6px; right: 6px; }
+
+/* 最近一次跑的结果：PASS 绿 / FAIL 红，色值同改前（状态令牌派生） */
+.lastRun { border-radius: var(--radius-xs); padding: var(--sp-2-5); }
+.lastRun[data-tone="ok"] {
+  background: color-mix(in srgb, var(--status-ok) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-ok) 40%, transparent);
+}
+.lastRun[data-tone="crit"] {
+  background: color-mix(in srgb, var(--status-crit) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--status-crit) 40%, transparent);
+}
+.lastRunHead {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-1-5);
+}
+.passBadge[data-tone="ok"] { background: var(--status-ok); color: var(--on-accent); }
+.passBadge[data-tone="crit"] { background: var(--status-crit); color: var(--on-accent); }
+.metaSm { font-size: var(--fs-sm); color: var(--text-dim); }
+.detailText { font-size: var(--fs-base); word-break: break-all; }
+
+/* 事件表的字号（改前内联 fontSize: var(--fs-sm) 写在整张表上） */
+.eventsWrap table { font-size: var(--fs-sm); }
+
+/* 空态块（原两种：带框 / 纯文字） */
+.mutedBox {
+  padding: var(--sp-2);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+.plainMuted { padding: var(--sp-2); font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 出处（git commit）行 */
+.fileLine { font-size: var(--fs-sm); color: var(--text-dim); margin-bottom: var(--sp-1-5); }
+.provRow {
+  padding: var(--sp-1) 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-sm);
+}
+.provHash { color: var(--primary); }
+.provMeta { margin-left: var(--sp-2); color: var(--text-dim); }
+.provSubject { margin-top: var(--sp-0-5); }
+
+/* 抽屉底部：总表生成时间 / fingerprint / 防漂移命令 */
+.footer {
+  margin-top: var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-top: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
