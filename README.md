@@ -87,9 +87,10 @@ LIONS 把“会话”变成“资产”，再把“资产”变成“任务”�
 
 ---
 
-## 5 分钟安装（PG 随介质）
+## 安装（PG 随介质，首次约 15 分钟）
 
 前提：Linux + systemd --user + Node 20+；Docker 可选（介质内有 PG 时用 Docker 拉起）。
+实测干净环境一次装完约 15 分钟（依赖安装 + 5 个应用构建占大头，取决于网络与机器）。
 
     # 1. 解开发布介质
     mkdir -p /tmp/lions && tar -xzf lions-0.4.28.tar.gz -C /tmp/lions
