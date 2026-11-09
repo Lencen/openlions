@@ -1,0 +1,96 @@
+/* /agents-live · Agent 卡片网格（AgentCardGrid）呈现层 —— 2026-11-05 P2 批12
+   内联 style 清零（25 -> 0），全部下沉到这里。本文件无数据卡，只改结构，字段/文案一字未改。
+   动态值走 data-*：任务范围色（data-scope，取值与 config/taskScopes 同源）、
+   质量分四档色（data-tone，取 qualityTone().cls）、名下待办强调（data-open）、失败数（data-tone）。
+   宽高/间距一律复用 globals 既有类与令牌，不新增全局类、不改 globals.css。 */
+
+/* 卡片标题行（原内联 display: inline-flex + alignItems + gap + flexWrap） */
+.cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* "执行体 / 未接入" 药丸的字号（原内联 fontSize: var(--fs-xs)，叠加在 globals 的 .pill 上）。
+   双类名是为了压过 globals 的 .pill 字号（同权重就要比源顺序，不稳）—— 同 AgentCard.module.css 的做法。 */
+.pillXs.pillXs { font-size: var(--fs-xs); }
+
+/* 卡片正文列（原内联 display: flex + flexDirection: column + gap + fontSize: var(--fs-base)） */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-base);
+}
+
+/* 渠道 / 主机 / 角色 一行（原内联 display: flex + gap + flexWrap） */
+.metaRow {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* 靠右（原内联 marginLeft: auto：最近露面、产出质量） */
+.pushRight { margin-left: auto; }
+
+/* 分区（原内联 borderTop: 1px solid var(--border) + paddingTop: var(--sp-2)） */
+.section {
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-2);
+}
+
+/* 分区小标题的下间距（原内联 marginBottom: var(--sp-0-5)，叠加在 .tiny 上） */
+.titleGap { margin-bottom: var(--sp-0-5); }
+
+/* 分区正文（原内联 fontSize: var(--fs-base)：当前任务/最近执行/失败原因） */
+.baseText { font-size: var(--fs-base); }
+
+/* 卡住原因（原内联 color: var(--status-crit)，与 .baseText 同用） */
+.critText { color: var(--status-crit); }
+
+/* 当前任务的范围名（原内联 color: sd.color + fontWeight: 600 + marginRight: var(--sp-1)） */
+.scope {
+  font-weight: 600;
+  margin-right: var(--sp-1);
+  color: var(--primary);
+}
+/* 与 config/taskScopes 的 color 同值；OTHER 的 #64748b 用中性令牌替代表达（同 / 首页 rcScope 口径） */
+.scope[data-scope="MECHANISM"] { color: var(--status-warn); }
+.scope[data-scope="VERIFY"] { color: var(--table-knowledge); }
+.scope[data-scope="DISCUSSION"] { color: var(--table-memory); }
+.scope[data-scope="OTHER"] { color: var(--text-muted); }
+
+/* 质量分数字色：qualityTone().cls -> data-tone（原内联 color: qualityTone(...).color） */
+.qNum { color: var(--text-muted); }
+.qNum[data-tone="ok"] { color: var(--status-ok); }
+.qNum[data-tone="warn"] { color: var(--status-warn); }
+.qNum[data-tone="crit"] { color: var(--status-crit); }
+.qNum[data-tone="mute"] { color: var(--text-muted); }
+
+/* 底部统计行（原内联 display: flex + gap: var(--sp-3) + borderTop + paddingTop + flexWrap） */
+.statRow {
+  display: flex;
+  gap: var(--sp-3);
+  border-top: 1px solid var(--border);
+  padding-top: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+/* 失败数：仅在有失败时着红（原内联 color: a.taskStats?.failed ? var(--status-crit) : undefined） */
+.failNum { color: inherit; }
+.failNum[data-tone="crit"] { color: var(--status-crit); }
+
+/* 独占一行（原内联 flexBasis: 100%：完成拆分、名下待办） */
+.fullRow { flex-basis: 100%; }
+
+/* 名下待办数链接：有未完成时警示色加粗（原内联 color + fontWeight 两个三元） */
+.todoLink { color: var(--text-dim); font-weight: 400; }
+.todoLink[data-open="true"] { color: var(--status-warn); font-weight: 600; }
+
+/* "（已完成 N）"（原内联 color: var(--text-muted)） */
+.mutedText { color: var(--text-muted); }
+
+/* 紧上间距（原内联 marginTop: var(--sp-0-5) 已派单待开始；var(--sp-1) 最近产出质量） */
+.topSm { margin-top: var(--sp-0-5); }
+.topMd { margin-top: var(--sp-1); }

@@ -1,0 +1,49 @@
+/* /system/automation 页内样式（2026-11-05 P2 批6 呈现层改造：内联 style 清零）
+   两张表都改由白名单 @/components/DataTable 渲染（.dt 系列表格样式在 globals.css），
+   能复用全局 .panel / .kpi-grid / .nowrap / .mono / .badge / .tiny 的一律复用。 */
+
+/* 面包屑里的「业务与系统」灰字（原来是内联 color） */
+.bcDim { color: var(--text-dim); }
+
+/* 小字 / 小字 + 暗色 / 更小字（原来是内联 fontSize / fontSize+color） */
+.sm { font-size: var(--fs-sm); }
+.smDim { font-size: var(--fs-sm); color: var(--text-dim); }
+.xs { font-size: var(--fs-xs); }
+
+/* 执行记录「展开/收起」按钮：视觉等同原来的表格文字（无边框、无底色、继承字号），
+   但保留原生 <button> 的可聚焦与 Enter/Space —— 白名单 DataTable 不能在 <tr> 上挂 onRow/tabIndex，
+   键盘可达靠这个按钮，鼠标整行点击靠页面层事件委托。 */
+.rowToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+/* 展开指示（2026-11-05 P2 批6：新增，替代原来"整行可点但没有提示"的状态；
+   选中态用 data-open 属性选择器，不再写行内 style） */
+.caret { display: inline-block; color: var(--text-dim); transition: transform 0.15s ease; }
+.rowToggle[data-open="true"] .caret { transform: rotate(90deg); }
+
+/* 整行可点（原来是把 cursor:pointer 内联挂在 tr 上）：DataTable 不接受 tr 上的样式，
+   改由包裹容器的后代选择器承载；空态/错误态那一行不可点。 */
+.logList tbody tr { cursor: pointer; }
+.logList tbody tr:global(.dt-state-row) { cursor: default; }
+
+/* 展开的详情块（原来是折叠 tr 里 td 的 background:var(--bg-hover) + padding:var(--sp-3)） */
+.detailBox {
+  margin-top: var(--sp-2);
+  padding: var(--sp-3);
+  background: var(--bg-hover);
+  border-radius: var(--radius-sm);
+}
+.detailLine { margin-top: var(--sp-1); }
+
+/* 页脚相关视图出链（原来是内联 flex + gap + wrap + marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

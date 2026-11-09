@@ -1,0 +1,20 @@
+/* CostAgentTable · P2 批8 呈现层（2026-11-05）
+   按智能体聚合表的展开区与两处单元格态：字号/行高、告警色、任务链接左间距、
+   估算列「有值/无值」两态色。估算列颜色原为内联三元表达式，现改 data-est 属性选择器。
+   不新增全局类、不改 globals.css。 */
+
+/* 展开行正文（原内联 fontSize: var(--fs-sm) / lineHeight: 1.9） */
+.expandBody { font-size: var(--fs-sm); line-height: 1.9; }
+
+/* 估算（未并入）提示色：模型分布(估算) 与 估算任务 两处共用 */
+.warnText { color: var(--status-warn); }
+
+/* 展开区里的任务直达链接（原内联 marginLeft: var(--sp-2)） */
+.taskLink { margin-left: var(--sp-2); }
+
+/* 智能体 ID 链接（原内联 fontSize: var(--fs-base)） */
+.agentLink { font-size: var(--fs-base); }
+
+/* 估算 token 列：有值为告警色、无值为弱化色（原内联三元 color） */
+.estCell[data-est="true"] { color: var(--status-warn); }
+.estCell[data-est="false"] { color: var(--text-muted); }

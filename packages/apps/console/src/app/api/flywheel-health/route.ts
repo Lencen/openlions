@@ -4,6 +4,14 @@ import { openMind, one } from "@/lib/server/lions-db";
 
 export const dynamic = "force-dynamic";
 
+// ── 2026-11-06 · 0.4.32-03 · 数据卡 9 指标带（/flywheel）─────────────────────
+// 口径唯一来源：docs/design/uiux-bento-2026-11/data-cards/card-9-flywheel.md
+//   第 15 行「指标（≤4）」+ 第 26-73 行「异常判据（可复跑，2026-11-06 标定；platform-data 已签）」。
+//   · SQL 与判据逐字一致（表名 / 状态值 / 时间窗），不另立口径；
+//   · 未知不填 0：查询失败或分母为 0 -> value=null + reason；只有真 0 才给 0；
+//   · 六段覆盖率 = 缺口 G1（字典未定义分子/分母/来源表）-> 固定 null + reason，不猜。
+
+
 // GET /api/flywheel-health — 平台自我提升体检(诊断卡) 2026-09-08
 // 2026-10-21 Phase 2: 改走 PG 连接池（lions-db）
 export async function GET() {
@@ -40,6 +48,7 @@ export async function GET() {
     const reflOk = (await oneRow("SELECT COUNT(*) c FROM Reflection WHERE score >= 0.6")).c || 0;
     const reflFail = reflTotal - reflOk;
     const fiveSum = Object.values(five24).reduce((a: number, b: any) => a + (b || 0), 0);
+
     const verdict: { level: string; text: string }[] = [];
     const fmtT = (ms: number) => { try { return new Date(ms).toLocaleString("zh-CN", { hour12: false }); } catch { return "-"; } };
     if (gapDays > 7) verdict.push({ level: "crit", text: "改进任务执行器已停 " + gapDays + " 天(最后一次执行 " + fmtT(execLastMs) + ") — PENDING 任务堆积 " + tasks.pending.toLocaleString() + " 条" });
@@ -49,6 +58,8 @@ export async function GET() {
     if (fiveSum < 10) verdict.push({ level: "warn", text: "近 24h 产物仅 " + fiveSum + " 条 — 提炼链路可能停了" });
     return NextResponse.json({
       asOf: new Date().toISOString(),
+      // 2026-11-06：数据卡 9 的指标已改由 /api/flywheel/card9 提供（唯一数据源），本路由不再重复算一份，
+      //   上面这些既有字段与语义一行未改。
       five24, seven, lastWriteMs, tasks, exec: { total: execTotal, ok: execOk, fail: execFail, gapDays, lastMs: execLastMs },
       reflection: { total: reflTotal, ok: reflOk, fail: reflFail },
       verdict,

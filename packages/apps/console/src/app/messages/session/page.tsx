@@ -6,7 +6,7 @@
 //   列表限高（maxHeight 180/200）走 .stream180 / .stream200 两档。
 //   取数（session-inbox / conversations / overview / agent-level / sync）一字未改。
 import { useEffect, useState } from "react";
-import { PageHero } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { useApi } from "@/lib/api";
 import { MOCK_CONVERSATIONS, MOCK_OVERVIEW, MOCK_SYNC } from "../_contract/mock";
 import type { SessionConversationsResponse, SyncResponse } from "../_contract/session";
@@ -170,7 +170,11 @@ export default function SessionPage() {
 
   return (
     <main className="page">
-      <PageHero title="会话线" subtitle="同一智能体的多条并行会话：谁在线、有什么没确认、消息在哪条线上。" />
+      <div className="breadcrumb"><span className={styles.crumbDim}>服务</span><span className="sep">/</span><span className={styles.crumbDim}>消息</span><span className="sep">/</span><span className="current">会话</span></div>
+      <PageHeader>
+        <PageTitle>会话详情</PageTitle>
+        <div className="page-subtitle">单会话的消息流与投递状态</div>
+      </PageHeader>
 
       {/* 2026-10-22 五态图例：让「未读/已读/送达/处理中/陈旧」一眼可辨，颜色与语义一一对应 */}
       <div className="msg-legend" role="note" aria-label="状态图例">

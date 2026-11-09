@@ -55,3 +55,61 @@
 /* 空态（原来是内联 padding sp-7 + 居中 + 提示行） */
 .patEmpty { padding: var(--sp-7); text-align: center; color: var(--text-muted); }
 .patEmptyHint { margin-top: var(--sp-2); font-size: var(--fs-base); }
+
+/* ── 批6（page.tsx 本体：KPI 带 / 一次性领取券 / 页脚出链）2026-11-05 ───────────
+   原来这 13 处是内联 style；能复用 .kpi-grid / .tiny / .badge 的仍然复用，这里只补差量。 */
+
+/* KPI 带：原来是内联 marginBottom: var(--sp-3)（.kpi-grid 自带 --gap-sect，这里保留改前值）。
+   双类名：确保压过 globals.css 的 .kpi-grid，与改前内联的优先级等价。 */
+.aprKpi.aprKpi { margin-bottom: var(--sp-3); }
+
+/* 一次性领取券卡片（原来内联 margin/padding/圆角/底色/主色描边） */
+.aprTicket {
+  margin: var(--sp-3) 0;
+  padding: var(--sp-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--primary);
+}
+.aprTicketTitle { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-1-5); }
+.aprTicketRow { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-1-5); }
+
+/* 券值代码块：长券值不撑破布局（原来内联 wordBreak: break-all） */
+.aprTicketCode {
+  flex: 1;
+  font-size: var(--fs-base);
+  word-break: break-all;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-xs);
+  background: var(--bg);
+}
+
+/* 「复制 / 收起」按钮（原来内联 padding/字号/圆角/光标/底色/描边/前景色） */
+.aprTicketBtn {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: var(--fs-sm);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.aprTicketNote { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* 命令折叠区（原文一字未删，只把内联样式换成类） */
+.aprTicketDetails { margin-top: var(--sp-1-5); }
+.aprTicketSummary { cursor: pointer; font-size: var(--fs-sm); }
+.aprTicketPre {
+  font-size: var(--fs-sm);
+  padding: var(--sp-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  overflow-x: auto;
+  margin: var(--sp-1-5) 0 0;
+}
+.aprTicketHint { font-size: var(--fs-sm); color: var(--text-muted); margin-top: var(--sp-1); }
+
+/* 页脚「相关视图」出链行（与 .tiny 组合使用） */
+.aprLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+

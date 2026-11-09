@@ -39,16 +39,21 @@ export default function FeatureGate({
   feature,
   label,
   children,
+  header,
 }: {
   /** 与后端 feature key 完全一致（如 security.audit / console.analytics），前端不拼字符串 */
   feature: string;
   /** 业务名，用来说明"哪个功能需要授权" */
   label: string;
   children: React.ReactNode;
+  /** 2026-11-06 D-03：门禁**未放行前**要先渲染的页头（标题先出、数据后到）。
+   *  只用在 loading / 未授权两个分支；放行后只渲染 children，不会与页面自己的页头重复。
+   *  为什么需要：layout 级门禁把整棵子树包住时，SSR 首屏只剩骨架 —— 用户先看到一片空白。 */
+  header?: React.ReactNode;
 }) {
   const { data, loading, error } = useApi<LicenseResp>("/api/license", { pollMs: 60000 });
 
-  if (loading) return <Skeleton paragraph={{ rows: 3 }} />;
+  if (loading) return <>{header}<Skeleton paragraph={{ rows: 3 }} /></>;
 
   const state = error ? "unknown" : data?.state ?? "unknown";
   const f = data?.features?.find((x) => x.key === feature);
@@ -61,6 +66,8 @@ export default function FeatureGate({
   const reason = error ? "授权服务暂时取不到" : f?.reason || (unknown ? "授权服务未返回该功能状态" : "该功能未授权");
 
   return (
+    <>
+    {header}
     <div className="panel" role="status">
       <div className="panel-header">
         <div className="panel-title">{label}需要 Pro 授权</div>
@@ -79,5 +86,6 @@ export default function FeatureGate({
         </div>
       </div>
     </div>
+    </>
   );
 }

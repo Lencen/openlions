@@ -1,0 +1,144 @@
+/* /system/comm · 通信服务（2026-11-05 P2 批10 呈现层）
+   改动：本页 50 处内联 style 全部下沉到这里；动态态改由 data-* 属性选择器承载
+   （状态块 data-tone、通讯录选中卡 data-selected、视角按钮 data-active、气泡左右 data-mine），
+   行级动态底色用 .convRowActive（DataTable 的 onRow 只能给 className，给不了 data-*）。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+/* 面包屑上级段（原内联 color: var(--text-dim)） */
+.crumbDim { color: var(--text-dim); }
+
+/* 自动回复说明行（原内联 fontSize / color / marginBottom） */
+.autoReply { font-size: var(--fs-base); color: var(--text-muted); margin-bottom: var(--sp-2); }
+
+/* 四态提示块（原内联 marginBottom / padding / borderRadius / border / color；错误态原为三元表达式） */
+.stateBox {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-muted);
+}
+.stateBox[data-tone="error"] { border-color: var(--status-crit); color: var(--status-crit); }
+.stateTitle { font-weight: 600; }
+.stateHint { font-size: var(--fs-sm); margin-top: 4px; }
+
+/* 页签条与底部相关视图（.related 只加布局，字号仍由 globals 的 .tiny 承担） */
+.tabBar { margin-bottom: var(--sp-3); }
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+
+/* 智能体表：id 列（原内联 fontSize: var(--fs-base)，元素同时带 globals 的 .mono）。
+   选择器写两遍是同名类叠加：globals 里有 .mono.mono 的 18px 档，单类压不住它。 */
+.agentId { font-size: var(--fs-base); }
+/* 表内时间列（原内联 fontSize: var(--fs-xs)，同样带 .mono） */
+.dateXs { font-size: var(--fs-xs); }
+
+/* 通信服务统计 */
+.statsRow { font-size: var(--fs-md); padding: var(--sp-1) 0; }
+.statsNote { color: var(--text-dim); font-size: var(--fs-base); }
+.statsPre { font-size: var(--fs-sm); color: var(--text-dim); white-space: pre-wrap; margin: 0; }
+
+/* 通讯录 */
+.contactIntro { font-size: var(--fs-base); color: var(--text-dim); margin-bottom: var(--sp-2-5); }
+/* 叠加两遍：要压过 globals 的 .badge 同属性（padding / border-radius） */
+.identityBadge.identityBadge { background: var(--bg-surface2); padding: var(--sp-0-5) var(--sp-1-5); border-radius: var(--radius-md); }
+.contactGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: var(--sp-2-5); }
+.agentCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5);
+  cursor: pointer;
+}
+.agentCard[data-selected="true"] { border-color: var(--primary); background: var(--bg-hover); }
+.agentCardHead { display: flex; gap: var(--sp-2); align-items: center; }
+.avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--primary); color: var(--on-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: var(--fs-lg);
+}
+.agentNameWrap { min-width: 0; }
+.agentName { font-weight: 600; font-size: var(--fs-md); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* agent id 小字（原内联 fontSize: var(--fs-xs) + color，元素带 .mono -> 同名类叠加） */
+.agentIdSm { font-size: var(--fs-xs); color: var(--text-dim); }
+.agentCardFoot { margin-top: var(--sp-1-5); font-size: var(--fs-sm); display: flex; justify-content: space-between; }
+.channel { color: var(--text-dim); }
+.emptyPad { color: var(--text-muted); padding: var(--sp-5); }
+
+/* 发起会话 */
+.compose { margin-top: var(--sp-3); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3); }
+.composeHead { font-size: var(--fs-md); margin-bottom: var(--sp-2); }
+.composeInput {
+  width: 100%; min-height: 70px; box-sizing: border-box;
+  border-radius: var(--radius-md); border: 1px solid var(--border);
+  padding: var(--sp-2); font-size: var(--fs-md); resize: vertical; background: var(--bg);
+}
+.composeActions { margin-top: var(--sp-2); display: flex; gap: var(--sp-2); align-items: center; }
+.sendBtn {
+  padding: var(--sp-2) var(--sp-4); border-radius: var(--radius-md); border: none;
+  background: var(--primary); color: var(--on-primary);
+  font-weight: 600; cursor: pointer; font-size: var(--fs-md);
+}
+.sendNote { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 沟通记录：左列表 + 右消息区 */
+.convsLayout { display: flex; gap: var(--sp-4); align-items: flex-start; }
+.convsCol { flex: 0 0 46%; min-width: 0; }
+.convRow { cursor: pointer; }
+/* 选中会话的行底色。globals 的 .dt tbody tr:nth-child(even)（0,2,2）比单类（0,1,0）更高，
+   而 DataTable 的 onRow 只能给 className、给不了 data-*，所以这一处保留 !important
+   （与 globals 既有 .dt-row-click:hover 的做法一致）。 */
+.convRowActive { background: var(--bg-hover) !important; }
+
+/* 参与方单元格里的原生按钮：外观与纯文本一致，只为保留键盘可达（Tab / Enter / Space）。
+   原先键盘入口是 tr 上的 interactiveProps；DataTable 的 tr 不进 Tab 序列，故下沉到按钮。 */
+/* 键盘焦点（uiux 批10 提醒）：行内按钮接管了原 tr 的键盘入口，必须给可见焦点环，
+   否则键盘用户看不到当前位置。用 :focus-visible 只在键盘态显示，不污染鼠标点击。 */
+.rowBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-xs); }
+.rowBtn {
+  background: none; border: 0; padding: 0; margin: 0;
+  font: inherit; font-size: var(--fs-sm);
+  color: inherit; text-align: left; white-space: nowrap; cursor: pointer;
+}
+
+/* 消息数（原 td.num：等宽数字 + 右对齐；右对齐由 DataTable 的 align="right" 给） */
+.numMono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+/* 最后消息预览（原内联 fontSize / color / maxWidth:160 / 单行省略） */
+.preview { display: block; max-width: 160px; font-size: var(--fs-sm); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.convsSide {
+  flex: 0 0 54%; min-width: 0; display: flex; flex-direction: column;
+  border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden;
+}
+.viewBar {
+  padding: var(--sp-1-5) var(--sp-2-5); border-bottom: 1px solid var(--border);
+  background: var(--bg-surface2); display: flex; gap: var(--sp-1-5); align-items: center;
+  flex-wrap: wrap; font-size: var(--fs-sm);
+}
+.viewLabel { color: var(--text-dim); }
+.viewBtn {
+  padding: var(--sp-0-5) var(--sp-2); border-radius: var(--radius-md); border: 1px solid var(--border);
+  background: transparent; color: var(--text); cursor: pointer; font-weight: 400; font-size: var(--fs-sm);
+}
+.viewBtn[data-active="true"] { background: var(--primary); color: var(--on-primary); font-weight: 600; }
+.msgEmpty { color: var(--text-muted); }
+.msgScroll { flex: 1; overflow-y: auto; max-height: 520px; padding: var(--sp-3); background: var(--bg); }
+.msgLoading { color: var(--text-dim); font-size: var(--fs-base); }
+.msgHint { color: var(--text-muted); font-size: var(--fs-base); text-align: center; padding: var(--sp-7); }
+
+/* 消息气泡：左右与配色由 data-mine 决定（原为内联三目表达式） */
+.msgRow { display: flex; justify-content: flex-start; margin-bottom: var(--sp-2-5); }
+.msgRow[data-mine="true"] { justify-content: flex-end; }
+.msgBody { max-width: 76%; }
+.msgMeta { font-size: var(--fs-xs); color: var(--text-muted); margin-bottom: var(--sp-0-5); text-align: left; }
+.msgMeta[data-mine="true"] { text-align: right; }
+.bubble {
+  font-size: var(--fs-base); white-space: pre-wrap; word-break: break-word;
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-md);
+  border-top-left-radius: 2px; border-top-right-radius: 10px;
+  background: var(--bg-surface2); color: var(--text);
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+}
+.bubble[data-mine="true"] {
+  background: var(--primary); color: var(--on-primary);
+  border-top-left-radius: 10px; border-top-right-radius: 2px;
+}

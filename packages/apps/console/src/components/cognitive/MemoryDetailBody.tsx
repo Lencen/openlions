@@ -11,6 +11,14 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { DetailFields, DetailProse, DetailSection, DetailTech } from "@/components/detail";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "./MemoryDetailBody.module.css";
+
+// 2026-11-05 P2 批8 呈现层：本文件 5 处内联 style 清零（下沉到同名 CSS Module），
+//   并把「同主题记忆」的手写 .tbl 表换成白名单 DataTable。
+//   本文件是客户端组件（"use client"），所以列里可以用 render 与 rowKey 函数；
+//   解析 / 取数（/api/memory-detail + 同主题 /api/memories）/ 字段 / 文案均未动。
 
 
 export default function MemoryDetailBody({
@@ -29,20 +37,30 @@ export default function MemoryDetailBody({
   if (related && Array.isArray(related.items)) {
     relatedItems = related.items.filter(function (r: any) { return r.id !== m.id; }).slice(0, 5);
   }
+
+  // 2026-11-05 P2 批8：「同主题记忆」的列定义与原 <thead> 逐列对应（标题 / 类型 / 质量分 / 更新时间）。
+  //   链接色与「年月日」小字原来挂在 <a>/<td> 的内联样式上，现在由单元格内的 span/a 类承担。
+  const relatedColumns: DataColumn<any>[] = [
+    { key: "title", title: "标题", render: (r) => <a href={"/cognitive/memory/detail?id=" + r.id} className={styles.rowLink}>{r.title || r.id}</a> },
+    { key: "type", title: "类型", render: (r) => <span className="nowrap">{r.type || "-"}</span> },
+    { key: "qualityScore", title: "质量分", align: "right", render: (r) => (r.qualityScore != null ? Number(r.qualityScore).toFixed(2) : "-") },
+    { key: "updatedAt", title: "更新时间", render: (r) => <span className={"nowrap mono " + styles.monoSm}>{r.updatedAt ? String(r.updatedAt).slice(0, 10) : "-"}</span> },
+  ];
+
   if (loading && !m.id) {
     return (<div>{renderHeader ? renderHeader(m, true) : null}<StateBlock loading rows={4} /></div>);
   }
   if (error) {
-    return (<div>{renderHeader ? renderHeader(m, false) : null}<div className="panel" style={{ padding: "var(--sp-5)" }}><Alert type="error" message="记忆详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
+    return (<div>{renderHeader ? renderHeader(m, false) : null}<div className={"panel " + styles.padLg}><Alert type="error" message="记忆详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
   }
   return (
     <div>
       {renderHeader ? renderHeader(m, loading) : null}
-      {!m.id && <div className="panel"><div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>未找到这条记忆（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
+      {!m.id && <div className="panel"><div className={styles.padLgDim}>未找到这条记忆（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
       {m.id && (
         <div className="dt-stack">
           {/* 2026-10-26：改用统一详情解剖（DetailFields/DetailProse/DetailTech）——
-              原来是两张 <table class="tbl"> 定义表（带表头重、列宽不可控），与其它详情页各写一套。 */}
+              原来是两张手写 .tbl 定义表（带表头重、列宽不可控），与其它详情页各写一套。 */}
           <div className="dt-grid-2">
             <DetailFields
               title="基础信息"
@@ -84,12 +102,8 @@ export default function MemoryDetailBody({
           {theme ? (
             <DetailSection title={`同主题记忆（「${theme}」，最多 5 条）`}>
               {relatedItems.length > 0 ? (
-                <table className="tbl"><thead><tr><th>标题</th><th>类型</th><th>质量分</th><th>更新时间</th></tr></thead><tbody>
-                  {relatedItems.map(function (r: any) {
-                    return (<tr key={r.id}><td><a href={"/cognitive/memory/detail?id=" + r.id} style={{ color: "var(--primary)", textDecoration: "none" }}>{r.title || r.id}</a></td><td className="nowrap">{r.type || "-"}</td><td className="num">{r.qualityScore != null ? Number(r.qualityScore).toFixed(2) : "-"}</td><td className="nowrap mono" style={{ fontSize: "var(--fs-sm)" }}>{r.updatedAt ? String(r.updatedAt).slice(0, 10) : "-"}</td></tr>);
-                  })}
-                </tbody></table>
-              ) : (<div style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>无同主题记录</div>)}
+                <DataTable<any> columns={relatedColumns} rows={relatedItems} rowKey={(r) => r.id} />
+              ) : (<div className={styles.emptyNote}>无同主题记录</div>)}
             </DetailSection>
           ) : null}
           {/* 2026-09-10: 通用讨论模块 */}

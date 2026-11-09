@@ -1,9 +1,12 @@
 "use client";
 // 任务详情页 · 「需要人类决策」提示条 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 2026-11-05 P2 批12 呈现层：唯一内联 style（警示条下外边距）下沉到 ./TaskHumanAlert.module.css。
+//   文案、「转成人的待办」跳转与取数未动。
 import { Alert } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t as tr } from "@/i18n";
 import ConvertToTodoButton from "@/components/ConvertToTodoButton";
 import { stripTypePrefix } from "@/config/taskScopes";
+import styles from "./TaskHumanAlert.module.css";
 
 export default function TaskHumanAlert({
   id,
@@ -19,7 +22,7 @@ export default function TaskHumanAlert({
     <Alert
       type="warning"
       showIcon
-      style={{ marginBottom: "var(--sp-4)" }}
+      className={styles.alertGap}
       title="这条任务包含「需要人类决策」的内容"
       description={
         <span>

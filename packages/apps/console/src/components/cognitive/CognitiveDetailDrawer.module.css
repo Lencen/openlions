@@ -1,0 +1,21 @@
+/* components/cognitive/CognitiveDetailDrawer · 2026-11-05 P2 批8 呈现层：内联 style 清零
+   声明值逐项照搬（字号 / 行高 / 分隔线 / 留白）；抽屉外壳、标题与正文容器的排版仍由
+   .ui-drawer-* 与 primitives 原语负责，本文件只补下面这几处。未新增全局类、未改 globals.css。 */
+
+/* 抽屉正文内边距：原来是 Drawer 的 styles.body 内联对象（antd 兼容形态）。
+   改成 className + :global 压到原语正文容器上；值与原内联、与 globals 里 .ui-drawer-body 的
+   默认档位三者同值（var(--sp-4)），因此视觉无变化。 */
+.body :global(.ui-drawer-body) { padding: var(--sp-4); }
+
+/* 抽屉内标题块（原来是内联 marginBottom + paddingBottom + borderBottom） */
+.head { margin-bottom: var(--sp-3); padding-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.headTitle { font-size: var(--fs-lg); font-weight: 600; line-height: 1.5; }
+.headId { word-break: break-all; }
+
+/* 抽屉头部标题右侧的小字提示（原来是内联 marginLeft + fontWeight） */
+.titleHint { margin-left: var(--sp-2); font-weight: 400; }
+
+/* 深链接 + 关闭说明那一行（原来是内联 flex / gap / align / marginBottom） */
+.actionRow { display: flex; gap: var(--sp-2-5); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-2-5); }
+.detailLink { font-size: var(--fs-base); color: var(--primary); }
+.hint { color: var(--text-dim); }

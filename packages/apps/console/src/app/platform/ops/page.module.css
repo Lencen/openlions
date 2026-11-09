@@ -1,0 +1,6 @@
+/* 2026-11-05 P2 批7：platform/ops 的内联样式下沉（页头改造同批）。
+   只做 token 化，不改字号/间距口径。 */
+.crumbDim { color: var(--text-dim); }
+.big { font-size: var(--fs-lg); line-height: 2; }
+.footNote { margin-top: var(--sp-4); }
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

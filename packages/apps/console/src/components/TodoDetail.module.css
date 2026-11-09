@@ -1,0 +1,118 @@
+/* TodoDetail 待办详情（components/TodoDetail.tsx）—— 2026-11-05 P2 批11
+   78 处内联 style 全部下沉到这里；本组件没有裸 table 标签，故不涉及白名单 DataTable。
+   动态值走 data-* + 属性选择器：优先级 data-prio（P0/P1/P2）、选项卡 data-rec（推荐）、
+   data-clickable（可点）；可点态悬停高亮由 :hover 承担（原先靠 onMouseEnter 写内联 boxShadow）。
+   字号要覆盖 globals 的 .mono.mono（18px 档）时用同名类叠加 .xxx.xxx，单类压不住。
+   宽高与配色全部复用 globals.css 变量，不新增全局类、不改 globals.css。
+   注意：本文件注释里不得出现星号加斜杠的连续字符，否则样式表会被提前截断。 */
+
+.root { font-size: var(--fs-base); line-height: 1.85; }
+
+/* 顶部一行（结构化标记 / 生成方 / 补齐 meta / 证据 / 备注 / 提示） */
+.topRow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; margin-bottom: var(--sp-2-5); }
+.btnFlat.btnFlat { padding: 0; font-size: var(--fs-sm); }
+.okText { color: var(--status-ok); }
+.critText { color: var(--status-crit); }
+
+/* 负责人 / 创建者 / 状态 / 变更 / 优先级 / 来源 / 阻塞 信息格 */
+.metaGrid {
+  display: grid;
+  gap: var(--sp-2);
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.fsBase { font-size: var(--fs-base); }
+.ml15 { margin-left: var(--sp-1-5); }
+.ml2 { margin-left: var(--sp-2); }
+.mlAuto { margin-left: auto; }
+
+/* 优先级（原内联 PRIORITY_COLOR[todo.priority]） */
+.prio { font-weight: 600; }
+.prio[data-prio="P0"] { color: var(--status-crit); }
+.prio[data-prio="P1"] { color: var(--status-warn); }
+.prio[data-prio="P2"] { color: var(--text-muted); }
+
+/* meta 机器字段小卡片 */
+.statsRow { display: flex; gap: var(--sp-2-5); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.statCard { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface2); padding: var(--sp-1) var(--sp-2-5); }
+.statVal { font-size: var(--fs-md); font-weight: 600; }
+.scalarRow { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); }
+.metaPill.metaPill { font-size: var(--fs-xs); }
+
+/* 分节 */
+.section { margin-bottom: var(--sp-3); }
+.sectionTitle { font-weight: 700; color: var(--primary); margin-bottom: var(--sp-0-5); }
+.decisionTitle { font-weight: 700; color: var(--primary); margin-bottom: var(--sp-1-5); }
+.noteTiny { font-weight: 400; }
+.items { margin: var(--sp-0-5) 0 0 var(--sp-5); padding: 0; }
+.item { margin-bottom: var(--sp-0-5); }
+.bodyText { word-break: break-word; color: var(--text-dim); }
+.rawText { white-space: pre-wrap; word-break: break-word; color: var(--text-dim); }
+
+/* 决策选项卡片 */
+.optionsGrid { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.optionsGridSpaced { margin-top: var(--sp-1-5); }
+.option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5) var(--sp-3);
+  background: var(--bg-surface2);
+  cursor: default;
+}
+.optionHover { transition: box-shadow var(--c-transition, 0.2s); }
+.optionHover[data-clickable="1"]:hover { box-shadow: 0 0 0 2px var(--primary-dim); }
+.option[data-clickable="1"] { cursor: pointer; }
+.option[data-rec="1"] { border-color: var(--status-ok); background: color-mix(in srgb, var(--status-ok) 7%, transparent); }
+.optionHead { display: flex; align-items: center; gap: var(--sp-1-5); margin-bottom: var(--sp-1); }
+.optionKey { font-weight: 700; color: var(--text-dim); }
+.optionKey[data-rec="1"] { color: var(--status-ok); }
+.pickHint { margin-left: auto; color: var(--primary); }
+.optionImpact { margin-top: var(--sp-1); }
+
+/* 区块标题（关联任务 / 处理时间线 / 来源回溯 / 相关链接） */
+.block { margin-top: var(--sp-3-5); }
+.blockSm { margin-top: var(--sp-3); }
+.blockTitle { font-weight: 700; color: var(--primary); margin-bottom: var(--sp-1-5); display: flex; align-items: center; gap: var(--sp-2); }
+.blockTitleTight { font-weight: 700; color: var(--primary); margin-bottom: var(--sp-1); }
+
+/* 关联任务卡片 */
+.taskGrid { display: grid; gap: var(--sp-2); grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.taskCard {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--sp-2) var(--sp-3);
+}
+.taskCardTitle { font-size: var(--fs-base); line-height: 1.5; margin-bottom: var(--sp-1); }
+.taskMeta { display: flex; gap: var(--sp-1-5); align-items: center; flex-wrap: wrap; }
+.tagTight.tagTight { margin-inline-end: 0; }
+.taskPrio { color: var(--text-muted); }
+.taskPrio { font-size: var(--fs-sm); font-weight: 600; }
+.taskPrio[data-prio="P0"] { color: var(--status-crit); }
+.taskPrio[data-prio="P1"] { color: var(--status-warn); }
+.taskPrio[data-prio="P2"] { color: var(--text-muted); }
+.taskIdLine { margin-top: var(--sp-0-5); }
+.idPills { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.taskIdPill { text-decoration: none; font-family: var(--font-mono); }
+
+/* 处理时间线 */
+.timelineText { margin-right: var(--sp-1-5); }
+
+/* 来源回溯 */
+.sourceRow { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; font-size: var(--fs-base); }
+
+/* 相关链接 */
+.linksRow { display: flex; gap: var(--sp-2-5); flex-wrap: wrap; }
+
+/* 正文内联文本（RichText / SectionBody） */
+.richLink { word-break: break-all; }
+.taskIdLink { font-family: var(--font-mono); font-size: 0.94em; }
+.subHead { font-weight: 600; color: var(--text-dim); margin: var(--sp-1-5) 0 var(--sp-0-5); }
+.preLine { white-space: pre-wrap; }

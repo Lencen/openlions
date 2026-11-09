@@ -1,0 +1,24 @@
+/* 2026-11-05 P2 批6（B/飞轮业务）：FlowQualityPanel（24h 产出质量）内联样式下沉。
+   · 六列表格 -> 白名单 @/components/DataTable（右对齐列由 columns.align 承载）；
+   · 单元格的动态色（未打分>0 / 均分档位 / 低质>0）改为 [data-tone] 属性选择器；
+   · 其余为静态布局类。取数与文案未动。 */
+
+.wrap { margin-bottom: var(--sp-4); }
+
+/* 数值着色：tone 取值 ok / crit / dim / text（text = var(--text)，与改前一致） */
+.tone[data-tone="ok"] { color: var(--status-ok); }
+.tone[data-tone="crit"] { color: var(--status-crit); }
+.tone[data-tone="dim"] { color: var(--text-dim); }
+.tone[data-tone="text"] { color: var(--text); }
+
+/* 均分列：改前是 fontWeight 700 + 同上的色档 */
+.avg { font-weight: 700; }
+
+.foot {
+  display: flex;
+  gap: var(--sp-6);
+  margin-top: var(--sp-2-5);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  flex-wrap: wrap;
+}

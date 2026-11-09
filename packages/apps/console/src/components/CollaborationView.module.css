@@ -1,0 +1,166 @@
+/* 2026-11-06 token-ratchet 批13：CollaborationView（平台协作时间线 · 任务式对话）内联样式下沉。
+   改前 47 处内联 style -> 改后 0。只改呈现层：取数（/api/collaboration、/api/interventions、
+   /api/knowledge-candidates）、字段名、导出 props 形状、交互与文案一字未改。
+   令牌口径：间距 var(--sp-*) / 字号 var(--fs-*) / 圆角 var(--radius-*)。宽度、限高、flex 这类几何值
+   也一并集中在这里，便于一处改（棘轮口径里几何值本就不计裸值）。
+   动态值一律走 data-* + 属性选择器：
+     · data-dot   时间线圆点色（原 background = KIND_STYLE 的 dot，取值是 var(--x) 令牌名，解出令牌名后上色）
+     · data-src   面板右上角数据源徽标（mind 接口 / 本地只读兜底）
+     · data-tone  质量分色（qualityTone().cls = ok/warn/crit/mute）与「偏红标题」（crit）
+     · data-w     参与度条形宽度（2% 一档，误差 <=1%，同 WorkPlanView.module.css 的做法）
+   任务范围 Tag 的色不走 data-*：primitives 的 Tag 只接受固定几个 props、不透传 data-*，故按 scope.key
+   选类名（见 .tsx 里的 SCOPE_TAG_CLASS）。
+   叠在 globals 既有类上只补差量（.te-dot / .te-title / .tiny / .mono / .truncate / .mini-bar /
+   .mini-bar-fill / .thread-publish），不新增全局类、不改 globals.css。
+   双写类名（如 .linkBtn.linkBtn）用于压过 primitives 与 globals 的单类规则。 */
+
+/* ── 时间线圆点（ThreadEvent 与「平台发布任务」） ── */
+/* 改前内联 background: style.dot —— KIND_STYLE 的 dot 是 var(--x) 令牌，这里按令牌名上色 */
+.teDot[data-dot="primary"] { background: var(--primary); }
+.teDot[data-dot="table-memory"] { background: var(--table-memory); }
+.teDot[data-dot="table-knowledge"] { background: var(--table-knowledge); }
+.teDot[data-dot="status-ok"] { background: var(--status-ok); }
+.teDot[data-dot="status-warn"] { background: var(--status-warn); }
+.teDot[data-dot="status-crit"] { background: var(--status-crit); }
+.teDot[data-dot="text-muted"] { background: var(--text-muted); }
+
+/* 标题偏红：改前内联 color: ev.tone === 「crit」 ? var(--status-crit) : undefined */
+.teTitle[data-tone="crit"] { color: var(--status-crit); }
+
+/* 质量分：改前内联 color: qualityTone(x).color —— 取值就是这 4 个令牌（cls 与令牌一一对应） */
+.qualityNum[data-tone="ok"] { color: var(--status-ok); }
+.qualityNum[data-tone="warn"] { color: var(--status-warn); }
+.qualityNum[data-tone="crit"] { color: var(--status-crit); }
+.qualityNum[data-tone="mute"] { color: var(--text-muted); }
+
+/* 「展开全文 / 查看结论全文」链接按钮：改前内联 paddingLeft 0（双类名压过 .ui-btn 的内边距） */
+.linkBtn.linkBtn { padding-left: 0; }
+
+/* ── 线程标题区（ThreadCard 的 title / extra） ── */
+/* 任务范围 Tag：改前内联 color / borderColor(40%) / background(9%)，色源是 config/taskScopes 的 color。
+   OTHER 的旧硬编码 #64748b 用中性令牌 --text-muted 表达（与 WorkPlanView.module.css 对该 scope 的取法一致）。
+   特异性 0,3,0：:global(.ui-tag-filled) 0,1,0 + 双写类名 0,2,0 —— 才压得住
+   primitives 里 .ui-tag-filled:not([style*="color"]) 的 0,2,0（去掉内联样式后它会重新命中）。 */
+:global(.ui-tag-filled).scopeTagAll.scopeTagAll { color: var(--primary); border-color: color-mix(in srgb, var(--primary) 40%, transparent); background: color-mix(in srgb, var(--primary) 9%, transparent); }
+:global(.ui-tag-filled).scopeTagMech.scopeTagMech { color: var(--status-warn); border-color: color-mix(in srgb, var(--status-warn) 40%, transparent); background: color-mix(in srgb, var(--status-warn) 9%, transparent); }
+:global(.ui-tag-filled).scopeTagVerify.scopeTagVerify { color: var(--table-knowledge); border-color: color-mix(in srgb, var(--table-knowledge) 40%, transparent); background: color-mix(in srgb, var(--table-knowledge) 9%, transparent); }
+:global(.ui-tag-filled).scopeTagDiscuss.scopeTagDiscuss { color: var(--table-memory); border-color: color-mix(in srgb, var(--table-memory) 40%, transparent); background: color-mix(in srgb, var(--table-memory) 9%, transparent); }
+:global(.ui-tag-filled).scopeTagOther.scopeTagOther { color: var(--text-muted); border-color: color-mix(in srgb, var(--text-muted) 40%, transparent); background: color-mix(in srgb, var(--text-muted) 9%, transparent); }
+
+/* 标签右间距：改前内联 marginRight sp-2（范围 Tag 与类型 Tag 共用） */
+.mr2 { margin-right: var(--sp-2); }
+
+/* ── ThreadCard 结构 ── */
+/* 横排一行：改前内联 display: flex + alignItems: center + gap sp-2（extra 行 / 裁定分布行等多处共用） */
+.rowCenter { display: flex; align-items: center; gap: var(--sp-2); }
+/* 上间距：改前内联 marginTop sp-1 / sp-2 */
+.mt1 { margin-top: var(--sp-1); }
+.mt2 { margin-top: var(--sp-2); }
+/* 下间距：改前内联 marginBottom sp-1 */
+.mb1 { margin-bottom: var(--sp-1); }
+/* 左内边距：改前内联 paddingLeft sp-1（空线程提示） */
+.pl1 { padding-left: var(--sp-1); }
+/* 完整背景正文：改前内联 marginTop sp-1 + maxHeight 260 + overflow auto */
+.descScroll { margin-top: var(--sp-1); max-height: 260px; overflow: auto; }
+/* 「展开完整线程」这一段：改前内联 marginTop sp-2 + textAlign center */
+.moreWrap { margin-top: var(--sp-2); text-align: center; }
+
+/* ── 右侧面板（人类干预 / 结论候选 / 裁定分布 / 参与度） ── */
+/* 数据源徽标：改前内联 color 走三元（兜底=warn，接口=ok），现按 data-src 上色（叠在 .tiny 上） */
+.srcBadge[data-src="ok"] { color: var(--status-ok); }
+.srcBadge[data-src="fallback"] { color: var(--status-warn); }
+/* 纵向堆叠：改前内联 display: flex + flexDirection: column + gap sp-2（4 处共用） */
+.stack2 { display: flex; flex-direction: column; gap: var(--sp-2); }
+/* 基线对齐一行：改前内联 display: flex + alignItems: baseline + gap sp-2 */
+.rowBaseline { display: flex; align-items: baseline; gap: var(--sp-2); }
+/* 大数字（人类干预次数）：改前内联 fontSize fs-2xl + fontWeight 600 + color warn（叠在 .mono 上） */
+.bigNum { font-size: var(--fs-2xl); font-weight: 600; color: var(--status-warn); }
+/* 靠右：改前内联 marginLeft auto（计数列） */
+.mlAuto { margin-left: auto; }
+/* 换行横排：改前内联 gap sp-2 + alignItems center + flexWrap wrap（候选操作行） */
+.rowWrap2 { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+/* 换行横排（宽间距）：改前内联 gap sp-3 + flexWrap wrap（候选三态计数行） */
+.rowWrap3 { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+/* 正文字号：改前内联 fontSize fs-base / fs-sm（与 .rowCenter / .stack2 组合） */
+.fsBase { font-size: var(--fs-base); }
+.fsSm { font-size: var(--fs-sm); }
+/* 三态计数着色：改前内联 color（待复核 warn / 已验证 ok / 已驳回 crit，叠在 .mono 上） */
+.numWarn { color: var(--status-warn); }
+.numOk { color: var(--status-ok); }
+.numCrit { color: var(--status-crit); }
+/* 「已过期」：改前内联 color crit */
+.critText { color: var(--status-crit); }
+/* 顶部说明 Alert：改前内联 marginBottom sp-3（2 处共用） */
+.alertMb { margin-bottom: var(--sp-3); }
+
+/* ── 工具栏控件宽（几何值） ── */
+/* 任务类型下拉：改前内联 minWidth 168 */
+.typeSelect.typeSelect { min-width: 168px; }
+/* 搜索框：改前内联 width 220（className 落到 .ui-input-wrap 上） */
+.searchInput.searchInput { width: 220px; }
+/* 条数下拉：改前内联 width 88 */
+.limitSelect.limitSelect { width: 88px; }
+
+/* ── 平台裁定分布 / 参与度 ── */
+/* 裁定说明脚注：改前内联 marginTop sp-1 + lineHeight 1.7 */
+.noteMt1 { margin-top: var(--sp-1); line-height: 1.7; }
+/* 参与度智能体名：改前内联 width 120（配 globals 的 .truncate） */
+.agentNameW { width: 120px; }
+/* 参与度条形槽：改前内联 flex 1（叠在 globals 的 .mini-bar 上；它只给了 width/height，没给 flex） */
+.miniTrack { flex: 1; }
+/* 参与度条形填充：宽度按 data-w 档位。底色原本内联写 var(--primary)，与 globals 的 .mini-bar-fill
+   完全同值，故不再重复声明（改后观感不变）。 */
+.miniFill[data-w="0"] { width: 0%; }
+.miniFill[data-w="2"] { width: 2%; }
+.miniFill[data-w="4"] { width: 4%; }
+.miniFill[data-w="6"] { width: 6%; }
+.miniFill[data-w="8"] { width: 8%; }
+.miniFill[data-w="10"] { width: 10%; }
+.miniFill[data-w="12"] { width: 12%; }
+.miniFill[data-w="14"] { width: 14%; }
+.miniFill[data-w="16"] { width: 16%; }
+.miniFill[data-w="18"] { width: 18%; }
+.miniFill[data-w="20"] { width: 20%; }
+.miniFill[data-w="22"] { width: 22%; }
+.miniFill[data-w="24"] { width: 24%; }
+.miniFill[data-w="26"] { width: 26%; }
+.miniFill[data-w="28"] { width: 28%; }
+.miniFill[data-w="30"] { width: 30%; }
+.miniFill[data-w="32"] { width: 32%; }
+.miniFill[data-w="34"] { width: 34%; }
+.miniFill[data-w="36"] { width: 36%; }
+.miniFill[data-w="38"] { width: 38%; }
+.miniFill[data-w="40"] { width: 40%; }
+.miniFill[data-w="42"] { width: 42%; }
+.miniFill[data-w="44"] { width: 44%; }
+.miniFill[data-w="46"] { width: 46%; }
+.miniFill[data-w="48"] { width: 48%; }
+.miniFill[data-w="50"] { width: 50%; }
+.miniFill[data-w="52"] { width: 52%; }
+.miniFill[data-w="54"] { width: 54%; }
+.miniFill[data-w="56"] { width: 56%; }
+.miniFill[data-w="58"] { width: 58%; }
+.miniFill[data-w="60"] { width: 60%; }
+.miniFill[data-w="62"] { width: 62%; }
+.miniFill[data-w="64"] { width: 64%; }
+.miniFill[data-w="66"] { width: 66%; }
+.miniFill[data-w="68"] { width: 68%; }
+.miniFill[data-w="70"] { width: 70%; }
+.miniFill[data-w="72"] { width: 72%; }
+.miniFill[data-w="74"] { width: 74%; }
+.miniFill[data-w="76"] { width: 76%; }
+.miniFill[data-w="78"] { width: 78%; }
+.miniFill[data-w="80"] { width: 80%; }
+.miniFill[data-w="82"] { width: 82%; }
+.miniFill[data-w="84"] { width: 84%; }
+.miniFill[data-w="86"] { width: 86%; }
+.miniFill[data-w="88"] { width: 88%; }
+.miniFill[data-w="90"] { width: 90%; }
+.miniFill[data-w="92"] { width: 92%; }
+.miniFill[data-w="94"] { width: 94%; }
+.miniFill[data-w="96"] { width: 96%; }
+.miniFill[data-w="98"] { width: 98%; }
+.miniFill[data-w="100"] { width: 100%; }
+
+/* 页脚来源行：改前内联 textAlign right */
+.taRight { text-align: right; }

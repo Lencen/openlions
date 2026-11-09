@@ -2,10 +2,12 @@
 import Link from "next/link";
 import styles from "../page.module.css";
 
-export default function AgentMissing({ id }: { id: string }) {
+export default function AgentMissing({ id, header }: { id: string; header?: React.ReactNode }) {
   return (
     <div className="layout-with-sidebar">
       <main className="main">
+        {/* 2026-11-06 D-03：降级态也要先出页头（否则 SSR 无 page-header） */}
+        {header}
         <div className="breadcrumb">
           <Link href="/">概览</Link>
           <span className="sep">/</span>

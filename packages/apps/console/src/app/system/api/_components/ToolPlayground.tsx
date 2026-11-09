@@ -1,7 +1,11 @@
 "use client";
 // system/api 页 · 工具实时调测面板 (从 page.tsx 抽出, 页面瘦身)
+// 2026-11-05 P2 批6：12 处内联 style 清零，样式下沉同目录 ./ToolPlayground.module.css；
+//   调用中按钮的 cursor:wait 由 :disabled 承担（按钮本来就用 disabled={calling}）。
+//   取数与回调 props（selectedTool / inputJson / setInputJson / callResult / calling / onInvoke）与文案未动。
 import { t } from "@/i18n";
 import type { McpTool } from "./types";
+import styles from "./ToolPlayground.module.css";
 
 export default function ToolPlayground({
   selectedTool,
@@ -24,84 +28,45 @@ export default function ToolPlayground({
         <span className="panel-title">{t('api.panel.mcpTest')}</span>
       </div>
       {selectedTool ? (
-        <div style={{ padding: "var(--sp-4)" }}>
-          <div style={{ marginBottom: "var(--sp-3)" }}>
-            <div style={{ fontWeight: 600, color: "var(--primary)" }}>
+        <div className={styles.tpBody}>
+          <div className={styles.tpHead}>
+            <div className={styles.tpName}>
               {selectedTool.name}
             </div>
             {selectedTool.description && (
-              <div
-                style={{
-                  fontSize: "var(--fs-base)",
-                  color: "var(--text-dim)",
-                  marginTop: "var(--sp-1)",
-                }}
-              >
+              <div className={styles.tpDesc}>
                 {selectedTool.description}
               </div>
             )}
           </div>
-          <div style={{ marginBottom: "var(--sp-2)", fontSize: "var(--fs-base)" }}>
+          <div className={styles.tpLabel}>
             输入参数（结构化数据）：
           </div>
           <textarea
             value={inputJson}
             onChange={(e) => setInputJson(e.target.value)}
-            style={{
-              width: "100%",
-              minHeight: 120,
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--fs-base)",
-              padding: "var(--sp-2)",
-              background: "var(--bg-surface2)",
-              color: "var(--text)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--radius-xs)",
-            }}
+            className={styles.tpInput}
           />
-          <div style={{ marginTop: "var(--sp-3)" }}>
+          <div className={styles.tpInvokeRow}>
             <button
               onClick={onInvoke}
               disabled={calling}
-              className="badge badge-blue"
-              style={{
-                cursor: calling ? "wait" : "pointer",
-                padding: "var(--sp-1-5) var(--sp-4)",
-              }}
+              className={"badge badge-blue " + styles.tpInvoke}
             >
               {calling ? "调用中..." : "▶ 调用"}
             </button>
           </div>
           {callResult && (
-            <div style={{ marginTop: "var(--sp-4)" }}>
-              <div style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-1-5)" }}>结果:</div>
-              <pre
-                style={{
-                  background: "var(--bg-surface2)",
-                  padding: "var(--sp-3)",
-                  borderRadius: "var(--radius-xs)",
-                  border: "1px solid var(--border)",
-                  fontSize: "var(--fs-sm)",
-                  maxHeight: 400,
-                  overflow: "auto",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}
-              >
+            <div className={styles.tpResult}>
+              <div className={styles.tpResultLabel}>结果:</div>
+              <pre className={styles.tpPre}>
                 {callResult}
               </pre>
             </div>
           )}
         </div>
       ) : (
-        <div
-          style={{
-            padding: "var(--sp-7)",
-            textAlign: "center",
-            color: "var(--text-dim)",
-            fontSize: "var(--fs-md)",
-          }}
-        >
+        <div className={styles.tpEmpty}>
           ← 点击上方服务行展开工具，再点击工具名称开始调测
         </div>
       )}

@@ -6,12 +6,15 @@
 //     ② 四张卡: 记忆/知识/反思/实践 的 24h 新增(带单位「条」与**数据时刻**);
 //     ③ 两块明细: 沉淀质量(结构化发现覆盖率) 与 最近学到的东西。
 //   四态按规范区分: 加载中… / 真的 0 / —(不适用) / 未知(取不到)。
-import { MetricCard, PageHero, Pill } from "@/components/ui";
+// 2026-11-05 P2 批6：内联 style 清零（样式下沉 page.module.css）；取数/文案/结构未动。
+import { KpiCard, Pill } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import Link from "next/link";
 import ErrorAlert from "@/components/ErrorAlert";
 import { useApi } from "@/lib/api";
 import DataMoment from "@/components/DataMoment";
 import { fmtCompact, fmtNum, fmtPctOf, fmtState, fmtTime } from "@/lib/format";
+import styles from "./page.module.css";
 
 type TableStat = { table: string; active: number; h24: number; h1: number };
 type Dash = {
@@ -46,7 +49,11 @@ export default function LearningPage() {
   if (error) {
     return (
       <main className="page">
-        <PageHero title="它在学" subtitle="飞轮最近学到了什么" />
+        <div className="breadcrumb"><span className={styles.dim}>飞轮</span><span className="sep">/</span><span className="current">学习闭环</span></div>
+        <PageHeader>
+          <PageTitle>学习闭环</PageTitle>
+          <div className="page-subtitle">反馈如何回流成规则与改进任务</div>
+        </PageHeader>
         <ErrorAlert title="学习数据加载失败" message={String((error as Error)?.message || error)} onRetry={() => { mutate(); mutateStats(); }} />
       </main>
     );
@@ -54,10 +61,11 @@ export default function LearningPage() {
 
   return (
     <main className="page">
-      <PageHero
-        title="它在学"
-        subtitle="不看流程，只看它最近学到了什么 —— 记忆、知识、反思、实践各自长出来多少。"
-        tags={<>
+      <div className="breadcrumb"><span className={styles.dim}>飞轮</span><span className="sep">/</span><span className="current">学习闭环</span></div>
+      <PageHeader>
+        <PageTitle>学习闭环</PageTitle>
+        <div className="page-subtitle">反馈如何回流成规则与改进任务</div>
+        <div className="hero-tags">
           <Pill tone="info">近 24 小时</Pill>
           {/* 2026-10-16（round 77-Q, 决策③逐源 + 77-M 机检清单）: 本页有 **2 个数据源** ——
               /api/flywheel-dashboard（四张卡的 24h 新增）与 /api/flywheel-stats（沉淀质量那块）。
@@ -65,15 +73,15 @@ export default function LearningPage() {
               实测两源各自都有时刻（看板 timestamp / 指标 asOf，后者是 77-P 补上的），故纯页面改动 ✓。
               注意: 四张卡的 asOf={asOf} 仍用**看板**的时刻 —— 那是它们真正的来源, 是正确的 ✓。 */}
           <DataMoment items={[{ label: "看板", at: data?.timestamp }, { label: "指标", at: raw?.asOf }]} />
-        </>}
-      />
+        </div>
+      </PageHeader>
 
       {/* ① 结论（铁律 1：先给一句话结论） */}
-      <div className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <div className={"panel " + styles.mb4}>
         <div className="panel-header"><span className="panel-title">一句话结论</span></div>
-        <div style={{ padding: "var(--sp-3-5) var(--sp-4)", fontSize: "var(--fs-lg)", lineHeight: 1.7 }}>
+        <div className={styles.proseBox}>
           {!anyData ? (
-            <span style={{ color: "var(--text-dim)" }}>{fmtState(undefined, flags)}</span>
+            <span className={styles.dim}>{fmtState(undefined, flags)}</span>
           ) : totalH24 > 0 ? (
             <>过去 24 小时，它一共记住 / 想清楚 / 练到了 <b>{fmtNum(totalH24)}</b> 条新东西。</>
           ) : (
@@ -85,7 +93,7 @@ export default function LearningPage() {
       {/* ② 四张卡（带单位与数据时刻） */}
       <div className="metric-row">
         {items.map((x) => (
-          <MetricCard
+          <KpiCard
             key={x.key}
             label={x.label}
             value={fmtState(x.stat?.h24, flags)}
@@ -98,24 +106,24 @@ export default function LearningPage() {
       </div>
 
       {/* ③ 明细：沉淀质量 + 最近学到的东西 */}
-      <div className="card-grid cols-2" style={{ marginTop: "var(--sp-4)" }}>
+      <div className={"card-grid cols-2 " + styles.mt4}>
         <div className="panel">
           <div className="panel-header"><span className="panel-title">沉淀质量</span><span className="tiny">结构化发现覆盖率</span></div>
-          <div style={{ padding: "var(--sp-3-5) var(--sp-4)", fontSize: "var(--fs-lg)", lineHeight: 1.9 }}>
+          <div className={styles.proseBoxWide}>
             <div>反思总数 <b>{fmtState(stats?.reflections?.total, { loading, error: !!statsErr })}</b> 条（其中成功 {fmtState(stats?.reflections?.ok, { loading, error: !!statsErr })} 条）</div>
             <div>结构化发现覆盖 <b>{stats?.structuredFindings ? fmtPctOf(stats.structuredFindings.covered, stats.structuredFindings.total) : fmtState(undefined, { loading, error: !!statsErr })}</b></div>
           </div>
         </div>
         <div className="panel">
           <div className="panel-header"><span className="panel-title">最近在关注的主题</span><span className="tiny">按飞轮统计</span></div>
-          <div style={{ padding: "var(--sp-3-5) var(--sp-4)", fontSize: "var(--fs-lg)", lineHeight: 1.9 }}>
+          <div className={styles.proseBoxWide}>
             {(data?.themes ?? []).length === 0 ? (
-              <span style={{ color: "var(--text-dim)" }}>{fmtState(undefined, flags)}</span>
+              <span className={styles.dim}>{fmtState(undefined, flags)}</span>
             ) : (
               (data?.themes ?? []).slice(0, 6).map((t, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: "var(--sp-3)" }}>
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.theme}</span>
-                  <span className="mono" style={{ color: "var(--text-dim)" }}>{t.count != null ? `覆盖 ${fmtNum(t.count)}` : ""}</span>
+                <div key={i} className={styles.themeRow}>
+                  <span className={styles.themeName}>{t.theme}</span>
+                  <span className={"mono " + styles.themeCount}>{t.count != null ? `覆盖 ${fmtNum(t.count)}` : ""}</span>
                 </div>
               ))
             )}
@@ -123,7 +131,7 @@ export default function LearningPage() {
         </div>
       </div>
       {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.footLinks}>
         <span>相关视图：</span>
         <Link href="/cognitive/knowledge">沉淀的知识 →</Link>
         <Link href="/flywheel/reflections">飞轮反思 →</Link>

@@ -1,0 +1,28 @@
+/* /platform/model 页内样式（2026-11-05 页头口径批次）
+   只放本页真正需要、globals.css 里没有的东西：面包屑上级段的弱化色（.crumbDim），
+   以及 2026-11-05 P2 批8 追加的表单区/出链行（见文件末尾）。
+   面包屑/页头/表单宽度档位一律复用 globals 既有类，不新增全局样式。 */
+
+.crumbDim { color: var(--text-dim); }
+/* ── 2026-11-05 P2 批8：表单区与底部出链的内联样式下沉 ── */
+
+/* 表单整体：大字号 + 行距（原内联 fontSize: var(--fs-lg) / lineHeight: 2） */
+.formList { font-size: var(--fs-lg); line-height: 2; }
+
+/* 单个字段行：label + input 一行（原内联 display/gap/alignItems/marginBottom） */
+.fieldRow { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-2-5); }
+
+/* 字段名：固定 200px + 弱化色（原内联 width: 200 / color: var(--text-dim)） */
+.fieldLabel { width: 200px; color: var(--text-dim); }
+
+/* 输入框占满剩余宽度（原内联 flex: 1）；与 globals 的 .ui-input 叠加使用 */
+.fieldInput { flex: 1; }
+
+/* 保存按钮：与上方字段行留一点间距（原内联 marginTop: var(--sp-1-5)） */
+.saveBtn { margin-top: var(--sp-1-5); }
+
+/* 保存结果提示（原内联 marginTop: var(--sp-2-5)） */
+.saveMsg { margin-top: var(--sp-2-5); }
+
+/* 底部「相关视图」行（原内联 flex/gap/flexWrap/marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

@@ -30,3 +30,13 @@
 
 /* 表下口径说明（原来内联 fontSize/color/marginTop） */
 .asmLegend { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1-5); }
+/* ── page.tsx（批8，2026-11-05 P2）──────────────────────────────────────
+   详情页正文三处容器间距 + 数据时刻行 + 终端入口链接，原为内联 style，现下沉到这里。 */
+/* 数据时刻行：靠右、压暗（原内联 textAlign/color） */
+.momentRow { text-align: right; color: var(--text-dim); }
+/* 区块下间距（原内联 marginBottom: var(--sp-3)） */
+.mb3 { margin-bottom: var(--sp-3); }
+/* 「查看终端详情」入口（原内联 color/fontSize） */
+.termLink { color: var(--primary); font-size: var(--fs-sm); }
+/* 「相关视图」一行：flex + 换行 + 与上方内容拉开（原内联 display/gap/flexWrap/marginTop） */
+.relatedRow { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

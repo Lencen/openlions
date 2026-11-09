@@ -7,7 +7,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api";
-import { PageHero } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import DataTable from "@/components/DataTable";
 import type { DataColumn } from "@/components/DataTable";
 import styles from "./page.module.css";
@@ -109,10 +109,11 @@ export default function FailedMessagesPage() {
 
   return (
     <main className="page">
-      <PageHero
-        title="未送达消息"
-        subtitle="投递失败与过期的消息、以及未送达队列。这里只回答“为什么没送到”，不回答“为什么没回”。"
-      />
+      <div className="breadcrumb"><span className={styles.crumbDim}>服务</span><span className="sep">/</span><span className={styles.crumbDim}>消息</span><span className="sep">/</span><span className="current">失败</span></div>
+      <PageHeader>
+        <PageTitle>失败消息</PageTitle>
+        <div className="page-subtitle">发送失败与重试记录，按时间倒序</div>
+      </PageHeader>
       <div className="metric-row">
         <div className="metric-card"><div className="m-label">投递失败</div><div className="m-value">{s.failed}</div></div>
         <div className="metric-card"><div className="m-label">投递过期</div><div className="m-value">{s.expired}</div></div>

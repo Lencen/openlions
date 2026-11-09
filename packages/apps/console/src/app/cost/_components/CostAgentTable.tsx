@@ -1,10 +1,15 @@
 "use client";
 // cost 页 · 按智能体聚合表 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 2026-11-05 P2 呈现层（批8）：内联 style 清零。
+//   展开区字号/行高、告警色、任务链接左间距、智能体 ID 字号下沉到 CostAgentTable.module.css；
+//   估算 token 列「有值/无值」两态改用 data-est 属性选择器。
+//   可展开表沿用 @/components/common/DataTable（本文件原本就用它，未新增 E1 例外），列定义与取数未动。
 import { Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import DataTable from "@/components/common/DataTable";
 import { PanelCard, StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { fmtNum, fmtTokens, relTime } from "@/lib/format";
+import styles from "./CostAgentTable.module.css";
 
 export default function CostAgentTable({ data, byAgent, loadingAll }: { data: any; byAgent: any[]; loadingAll: boolean }) {
   const s = data?.summary ?? {};
@@ -26,28 +31,28 @@ export default function CostAgentTable({ data, byAgent, loadingAll }: { data: an
           dataSource={byAgent}
           expandable={{
             expandedRowRender: (row: any) => (
-              <div style={{ fontSize: "var(--fs-sm)", lineHeight: 1.9 }}>
+              <div className={styles.expandBody}>
                 <div>
                   模型分布(实测)：{row.models.length ? row.models.map((m: any) => `${m.model} ${fmtTokens(m.tokens)}`).join(" · ") : "-"}
                 </div>
                 {(row.estimatedModels || []).length ? (
-                  <div style={{ color: "var(--status-warn)" }}>
+                  <div className={styles.warnText}>
                     模型分布(估算, 未并入)：{row.estimatedModels.map((m: any) => `${m.model} ${fmtTokens(m.tokens)}`).join(" · ")}
                   </div>
                 ) : null}
                 <div>
                   涉及任务 {fmtNum(row.taskCount)} 个：
                   {row.tasks.slice(0, 6).map((t: any) => (
-                    <a key={t.taskId} href={`/flywheel/tasks/${t.taskId}`} style={{ marginLeft: "var(--sp-2)" }}>
+                    <a key={t.taskId} href={`/flywheel/tasks/${t.taskId}`} className={styles.taskLink}>
                       {String(t.taskId).slice(0, 10)}… {fmtTokens(t.tokens)}
                     </a>
                   ))}
                 </div>
                 {(row.estimatedTasks || []).length ? (
-                  <div className="tiny" style={{ color: "var(--status-warn)" }}>
+                  <div className={"tiny " + styles.warnText}>
                     估算任务 {row.estimatedTasks.length} 个（未并入）：
                     {row.estimatedTasks.slice(0, 4).map((t: any) => (
-                      <a key={t.taskId} href={`/flywheel/tasks/${t.taskId}`} style={{ marginLeft: "var(--sp-2)" }}>
+                      <a key={t.taskId} href={`/flywheel/tasks/${t.taskId}`} className={styles.taskLink}>
                         {String(t.taskId).slice(0, 10)}… {fmtTokens(t.tokens)}
                       </a>
                     ))}
@@ -58,7 +63,7 @@ export default function CostAgentTable({ data, byAgent, loadingAll }: { data: an
             ),
           }}
           columns={[
-            { title: t("cost.col.agent"), dataIndex: "agentId", render: (v: string) => <a href={`/agents/detail?agentId=${v}`} style={{ fontSize: "var(--fs-base)" }}>{v}</a> },
+            { title: t("cost.col.agent"), dataIndex: "agentId", render: (v: string) => <a href={`/agents/detail?agentId=${v}`} className={styles.agentLink}>{v}</a> },
             { title: "上报次数", dataIndex: "calls", width: 84, render: (v: number) => <span className="mono">{fmtNum(v)}</span> },
             { title: t("cost.col.measured"), dataIndex: "totalTokens", width: 104, render: (v: number) => <b className="mono">{fmtTokens(v)}</b> },
             {
@@ -67,7 +72,7 @@ export default function CostAgentTable({ data, byAgent, loadingAll }: { data: an
               width: 104,
               render: (v: number, row: any) => (
                 <Tooltip title={row.combinedTokens ? `参考合计(实测+估算): ${fmtTokens(row.combinedTokens)}` : undefined}>
-                  <span className="mono" style={{ color: v > 0 ? "var(--status-warn)" : "var(--text-muted)" }}>{v > 0 ? fmtTokens(v) : "—"}</span>
+                  <span className={"mono " + styles.estCell} data-est={v > 0}>{v > 0 ? fmtTokens(v) : "—"}</span>
                 </Tooltip>
               ),
             },

@@ -169,3 +169,7 @@ run/reply-idempotency-baseline.json
 run/flywheel-business-snapshot-*.json
 # 2026-11-07 会话完整性审计（latest 为运行时产物；日报在 verification/）
 run/session-source-audit-*.json
+
+# 2026-11-06：LIONS_DIST_DIR 用绝对路径时 next 会写到 packages/apps/console/media（仓库内）
+# 已改为软链到外置盘；此目录不入库
+packages/apps/console/media

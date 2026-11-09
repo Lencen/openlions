@@ -9,10 +9,12 @@
 //   · 卡片 7 §8「任务级耗时」：Task 表没有 startedAt（information_schema 已核），接口只给
 //     createdAt/completedAt —— 因此任务级耗时显示「不可得」+ 原因，保留原「全流程耗时（创建→完成）」原值；
 //   · 取数端点/参数、路由语义、字段口径一行未改。
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Alert, Button, Empty, Skeleton } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { useApi } from "@/lib/api";
 import { KpiCard, PanelCard } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { fmtNum, fmtTime } from "@/lib/format";
 import DiscussionPanel from "@/components/DiscussionPanel";
 import TaskHero from "./_components/TaskHero";
@@ -54,6 +56,20 @@ export default function TaskDetailPage() {
 
   return (
     <main className="page">
+      {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #12）：面包屑 / 标题 / 一句说明。
+          标题与说明逐字取自口径表；面包屑末段取本页已有的任务标题（task.title，不新增查询，
+          取不到时退回任务编号）。任务编号·类型·状态标签·时间与刷新仍由 TaskHero 渲染。 */}
+      <div className="breadcrumb">
+        <span className={styles.crumbDim}>飞轮</span>
+        <span className="sep">/</span>
+        <Link href="/flywheel/tasks">改进任务</Link>
+        <span className="sep">/</span>
+        <span className="current">{t?.title || id}</span>
+      </div>
+      <PageHeader>
+        <PageTitle>改进任务 · 详情</PageTitle>
+        <div className="page-subtitle">任务目标、执行与产出</div>
+      </PageHeader>
       <TaskHero id={id} task={t} onRefresh={mutate} />
 
       {error ? <Alert type="error" showIcon className={styles.alertGap} title="任务加载失败" description={String(error?.message || "")} /> : null}

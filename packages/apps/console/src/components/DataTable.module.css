@@ -4,6 +4,17 @@
    - 骨架宽度：按 5% 一档 -> .p0 … .p100
    表格本体样式（.dt / .dt-num / .dt-skel 等）在 app/globals.css，这里只补对齐与档位。 */
 
+/* 整行可点（onRow.onClick）：只补鼠标提示，键盘路径仍走行内原生按钮 */
+.rowClickable { cursor: pointer; }
+
+/* 展开列与展开行（2026-11-05 裁决 D）：把"必须原地展开"的表留在白名单里 */
+.expandCol { width: 36px; text-align: center; }
+.expandBtn { background: none; border: none; cursor: pointer; padding: 0 4px; color: var(--text-dim); font-size: var(--fs-sm); }
+.expandBtn:hover { color: var(--text); }
+.expandedRow > td { background: var(--bg-hover); padding: 0; }
+/* 行表头：保留 th 语义但视觉与普通单元格一致（热力图 / 键值表的首列） */
+.rowHead { font-weight: 400; text-align: left; }
+
 /* 列对齐（th/td 共用；右对齐同时保留 .dt-num 的等宽数字） */
 .cellLeft { text-align: left; }
 .cellRight { text-align: right; }

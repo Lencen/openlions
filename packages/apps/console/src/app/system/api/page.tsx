@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api";
 import { Alert } from "@/components/primitives";
-import { ApiHeader, ApiKpiGrid } from "./_components/ApiHeader";
+import { ApiKpiGrid } from "./_components/ApiHeader";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import EndpointTables, { REST_ENDPOINTS, TRPC_ROUTERS } from "./_components/EndpointTables";
 import McpServiceTable from "./_components/McpServiceTable";
 import ToolPlayground from "./_components/ToolPlayground";
@@ -14,7 +15,7 @@ import ErrorAlert from "@/components/ErrorAlert";
 import styles from "./page.module.css";
 
 export default function ApiListPage() {
-  const { data: svcData, loading, error, mutate } = useApi<Svc[] | { services: Svc[] }>(
+  const { data: svcData, error, mutate } = useApi<Svc[] | { services: Svc[] }>(
     "/api/agent-services"
   );
   const services = Array.isArray(svcData)
@@ -22,7 +23,7 @@ export default function ApiListPage() {
     : svcData?.services ?? [];
 
   // MCP 服务工具列表（按服务名分桶）
-  const { toolsByService, toolsLoading } = useMcpTools(services);
+  const { toolsByService } = useMcpTools(services);
 
   // 实时调测状态
   const [selectedTool, setSelectedTool] = useState<McpTool | null>(null);
@@ -92,13 +93,17 @@ export default function ApiListPage() {
     <div className="layout-with-sidebar">
       
       <main className="main">
-        <ApiHeader
-          loading={loading || toolsLoading}
-          restCount={REST_ENDPOINTS.length}
-          trpcCount={TRPC_ROUTERS.length}
-          mcpCount={services.length}
-          toolCount={totalTools}
-        />
+        {/* 2026-11-05 页头口径统一（PAGE-HEADER-31 §3）：页头从 _components/ApiHeader 上移到本页，
+            标题 / 一句说明 / 面包屑逐字取表（平台 / 接口）。四个计数仍在下方 KPI 卡里，指标口径未动。 */}
+        <div className="breadcrumb">
+          <span className={styles.crumbDim}>平台</span>
+          <span className="sep">/</span>
+          <span className="current">接口</span>
+        </div>
+        <PageHeader>
+          <PageTitle>接口</PageTitle>
+          <div className="page-subtitle">平台对外接口与调用量</div>
+        </PageHeader>
         {error ? <ErrorAlert title="服务列表加载失败" message={String((error as Error)?.message || error)} onRetry={() => { mutate(); }} /> : null}
         <ApiKpiGrid
           restCount={REST_ENDPOINTS.length}

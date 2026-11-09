@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import type { FlowData } from "./_components/types";
 import FlowHeader from "./_components/FlowHeader";
 import FlowStatus from "./_components/FlowStatus";
@@ -40,7 +41,16 @@ export default function FlywheelFlowPage() {
 
   return (
     <div className="layout"><main className="main">
-      <FlowHeader d={d} err={err} />
+      {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #10）：面包屑 / 标题 / 一句说明上移到本文件，
+          子组件 FlowHeader 只剩取数失败提示条。标题与说明逐字取自口径表；尾部保留改前就有的
+          「最近更新」时刻（数据新鲜度），不新增别的口径。 */}
+      <div className="breadcrumb"><span className={styles.flowCrumbDim}>飞轮</span><span className="sep">/</span><span className="current">流程编排</span></div>
+      <PageHeader>
+        <PageTitle>流程编排</PageTitle>
+        <div className="page-subtitle">飞轮各阶段的编排与队列 · 只汇总、不调用模型 · 每 10 秒自动刷新{d ? "（最近更新 "
+          + new Date(d.timestamp).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }) + "）" : "（加载中…）"}</div>
+      </PageHeader>
+      <FlowHeader err={err} />
       <FlowStatus d={d} age={age} alive={alive} pausedWarn={pausedWarn} q={q} />
       <FlowPipeline steps={d?.steps || []} />
       <FlowSourcesSessions d={d} />

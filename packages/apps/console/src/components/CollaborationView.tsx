@@ -9,10 +9,11 @@ import { ReloadOutlined } from "@/components/primitives"; // 2026-09-18 antd 绞
 import { useApi } from "@/lib/api";
 import { t } from "@/i18n";
 import { useGlobalFilter } from "@/components/GlobalFilter";
-import { MetricCard, PanelCard, Pill, StateBlock } from "@/components/ui";
+import { KpiCard, PanelCard, Pill, StateBlock } from "@/components/ui";
 import { fmtNum, fmtTime, qualityTone, relTime, truncate } from "@/lib/format";
 import { scopeDef, scopeOfType } from "@/config/taskScopes";
 import ConvertToTodoButton from "@/components/ConvertToTodoButton";
+import styles from "./CollaborationView.module.css"; // 2026-11-06 token-ratchet：内联 style 下沉到同目录 CSS Module
 
 const KIND_STYLE: Record<string, { dot: string; label: string }> = {
   publish: { dot: "var(--primary)", label: "平台发布" },
@@ -64,6 +65,27 @@ function displayTitle(title: string, label: string): string {
   return out;
 }
 
+/** 2026-11-06 token-ratchet：时间线圆点的颜色原来走内联 style 的 background: style.dot。
+ *  KIND_STYLE 的 dot 取值都是 var(--x) 令牌 —— 这里解成令牌名交给 data-dot，
+ *  由 CollaborationView.module.css 的 .teDot[data-dot=...] 规则上色
+ *  （与 components/ui/primitives.tsx 的 panelTone 同一手法）；非 var() 写法返回 "invalid"，
+ *  没有对应规则 = 不上色，与改前"内联给了非法色值"同观感。 */
+function dotToken(dot?: string): string {
+  const m = /^var\(--([a-z0-9-]+)\)$/i.exec(String(dot || "").trim());
+  return m ? m[1] : "invalid";
+}
+
+/** 2026-11-06 token-ratchet：范围 Tag 的色原来走内联（color + borderColor 40% + background 9%）。
+ *  primitives 的 Tag 只接受固定几个 props、不透传 data-*，故按 scope.key 选类名；
+ *  色值与 config/taskScopes 的 color 同源（OTHER 的旧硬编码 #64748b 用中性令牌 --text-muted 表达）。 */
+const SCOPE_TAG_CLASS: Record<string, string> = {
+  ALL: styles.scopeTagAll,
+  MECHANISM: styles.scopeTagMech,
+  VERIFY: styles.scopeTagVerify,
+  DISCUSSION: styles.scopeTagDiscuss,
+  OTHER: styles.scopeTagOther,
+};
+
 function ActorChip({ actor, kind }: { actor: string; kind: string }) {
   const k = ["agent", "human", "platform"].includes(kind) ? kind : "unknown";
   const icon = k === "agent" ? "🤖" : k === "human" ? "🧑" : "🏛";
@@ -80,16 +102,16 @@ function ThreadEvent({ ev }: { ev: any }) {
   const hasLongOutput = (ev.outputLength || 0) > 220;
   return (
     <div className="thread-event">
-      <span className="te-dot" style={{ background: style.dot }} />
+      <span className={"te-dot " + styles.teDot} data-dot={dotToken(style.dot)} />
       <div className="te-head">
-        <span className="te-title" style={{ color: ev.tone === "crit" ? "var(--status-crit)" : undefined }}>{ev.title}</span>
+        <span className={"te-title " + styles.teTitle} data-tone={ev.tone === "crit" ? "crit" : undefined}>{ev.title}</span>
         <ActorChip actor={ev.actor} kind={ev.actorKind} />
         {ev.status ? <Tag color={STATUS_TAG[ev.status]?.color || "default"}>{STATUS_TAG[ev.status]?.label || ev.status}</Tag> : null}
         {ev.qualityPassed !== null && ev.qualityPassed !== undefined ? (
           <Tag color={ev.qualityPassed ? "success" : "error"}>{ev.qualityPassed ? "质量通过" : "质量未过"}</Tag>
         ) : null}
         {typeof ev.quality === "number" ? (
-          <span className="tiny" style={{ color: qualityTone(ev.quality).color }}>质量分 {ev.quality.toFixed(2)}</span>
+          <span className={"tiny " + styles.qualityNum} data-tone={qualityTone(ev.quality).cls}>质量分 {ev.quality.toFixed(2)}</span>
         ) : null}
         {ev.outputLength ? <span className="tiny">正文 {fmtNum(ev.outputLength)} 字</span> : null}
         <span className="te-time">{fmtTime(ev.at)}</span>
@@ -102,7 +124,7 @@ function ThreadEvent({ ev }: { ev: any }) {
             {!open && hasLongOutput ? <span className="te-output-mask" /> : null}
           </div>
           {hasLongOutput ? (
-            <Button type="link" size="small" style={{ paddingLeft: 0 }} onClick={() => setOpen(!open)}>
+            <Button type="link" size="small" className={styles.linkBtn} onClick={() => setOpen(!open)}>
               {open ? "收起" : `展开全文（${fmtNum(ev.outputLength)} 字）`}
             </Button>
           ) : null}
@@ -133,11 +155,11 @@ function ThreadCard({ thread }: { thread: any }) {
               const sd = scopeDef(thread.scope || scopeOfType(thread.improvementType));
               return (
                 <Tooltip title={sd.desc}>
-                  <Tag style={{ marginRight: "var(--sp-2)", color: sd.color, borderColor: "color-mix(in srgb, " + sd.color + " 40%, transparent)", background: "color-mix(in srgb, " + sd.color + " 9%, transparent)" }}>{sd.short}</Tag>
+                  <Tag className={(SCOPE_TAG_CLASS[sd.key] || styles.scopeTagAll) + " " + styles.mr2}>{sd.short}</Tag>
                 </Tooltip>
               );
             })()}
-            {thread.improvementTypeLabel ? <Tag color="blue" style={{ marginRight: "var(--sp-2)" }}>{thread.improvementTypeLabel}</Tag> : null}
+            {thread.improvementTypeLabel ? <Tag color="blue" className={styles.mr2}>{thread.improvementTypeLabel}</Tag> : null}
             {truncate(displayTitle(thread.title, thread.improvementTypeLabel), 78)}
           </div>
           <div className="thread-sub">
@@ -153,7 +175,7 @@ function ThreadCard({ thread }: { thread: any }) {
         </div>
       }
       extra={
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+        <div className={styles.rowCenter}>
           {thread.counts?.human ? <Pill tone="warn">人类干预 {thread.counts.human}</Pill> : null}
           {thread.counts?.verdicts ? <Pill tone="ok">裁定 {thread.counts.verdicts}</Pill> : null}
           <Tag color={STATUS_TAG[thread.status]?.color || "default"}>{STATUS_TAG[thread.status]?.label || thread.status}</Tag>
@@ -163,19 +185,19 @@ function ThreadCard({ thread }: { thread: any }) {
       <div className="thread-rail">
         {/* 平台发布 */}
         <div className="thread-event">
-          <span className="te-dot" style={{ background: "var(--primary)" }} />
+          <span className={"te-dot " + styles.teDot} data-dot="primary" />
           <div className="te-head">
             <span className="te-title">平台发布任务</span>
             <ActorChip actor={thread.auto ? "平台自动派单" : "平台/目标系统"} kind="platform" />
             <span className="te-time">{fmtTime(thread.createdAt)}</span>
           </div>
-          <div className="thread-publish" style={{ marginTop: "var(--sp-2)" }}>
+          <div className={"thread-publish " + styles.mt2}>
             <div><span className="tp-label">要求</span> {thread.publish?.requirements || "-"}</div>
-            <div style={{ marginTop: "var(--sp-1)" }}><span className="tp-label">验收标准</span> {thread.publish?.acceptanceCriteria || "-"}</div>
+            <div className={styles.mt1}><span className="tp-label">验收标准</span> {thread.publish?.acceptanceCriteria || "-"}</div>
             {open && thread.publish?.description ? (
-              <div style={{ marginTop: "var(--sp-2)" }}>
+              <div className={styles.mt2}>
                 <span className="tp-label">完整背景</span>
-                <div style={{ marginTop: "var(--sp-1)", maxHeight: 260, overflow: "auto" }}>{thread.publish.description}</div>
+                <div className={styles.descScroll}>{thread.publish.description}</div>
               </div>
             ) : null}
           </div>
@@ -184,12 +206,12 @@ function ThreadCard({ thread }: { thread: any }) {
         {shown.map((ev: any) => <ThreadEvent key={ev.id} ev={ev} />)}
 
         {events.length === 0 ? (
-          <div className="tiny" style={{ paddingLeft: "var(--sp-1)" }}>{t('collab.noClaim')}</div>
+          <div className={"tiny " + styles.pl1}>{t('collab.noClaim')}</div>
         ) : null}
       </div>
 
       {events.length > 4 || (open && thread.publish?.description) ? (
-        <div style={{ marginTop: "var(--sp-2)", textAlign: "center" }}>
+        <div className={styles.moreWrap}>
           <Button type="link" size="small" onClick={() => setOpen(!open)}>
             {open ? "收起线程" : `展开完整线程（还有 ${Math.max(hidden, 0)} 条事件与完整背景）`}
           </Button>
@@ -229,31 +251,31 @@ function InterventionsPanel() {
               : "来自 mind GET /api/v1/flywheel/interventions"
           }
         >
-          <span className="tiny" style={{ color: data?.source === "local-readonly-fallback" ? "var(--status-warn)" : "var(--status-ok)" }}>
+          <span className={"tiny " + styles.srcBadge} data-src={data?.source === "local-readonly-fallback" ? "fallback" : "ok"}>
             {loading && !data ? "加载中…" : data?.source === "local-readonly-fallback" ? "⚠ 上游不可达·本地兜底" : "🟢 mind 接口"}
           </span>
         </Tooltip>
       }
     >
       {loading && !data ? <StateBlock loading rows={3} /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-2)" }}>
-            <span className="mono" style={{ fontSize: "var(--fs-2xl)", fontWeight: 600, color: "var(--status-warn)" }}>{fmtNum(data?.total)}</span>
+        <div className={styles.stack2}>
+          <div className={styles.rowBaseline}>
+            <span className={"mono " + styles.bigNum}>{fmtNum(data?.total)}</span>
             <span className="tiny">次人类干预 · 用于计算"真实自主率"</span>
           </div>
           {(data?.byKind ?? []).length === 0 ? (
             <div className="tiny">近 {data?.windowHours || 24} 小时没有人类干预记录（平台全自动运行）。</div>
           ) : (
             (data?.byKind ?? []).map((k: any) => (
-              <div key={k.kind} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: "var(--fs-base)" }}>
+              <div key={k.kind} className={styles.rowCenter + " " + styles.fsBase}>
                 <Pill tone="warn">{kindLabel[k.kind] || k.kind}</Pill>
-                <span className="mono" style={{ marginLeft: "auto" }}>{fmtNum(k.count)}</span>
+                <span className={"mono " + styles.mlAuto}>{fmtNum(k.count)}</span>
               </div>
             ))
           )}
           {(data?.recent ?? []).length ? (
-            <div style={{ marginTop: "var(--sp-1)" }}>
-              <div className="tiny" style={{ marginBottom: "var(--sp-1)" }}>干预明细</div>
+            <div className={styles.mt1}>
+              <div className={"tiny " + styles.mb1}>干预明细</div>
               {(data.recent ?? []).slice(0, 6).map((r: any) => (
                 <div key={r.id} className="cand-row">
                   <div className="cr-title">{truncate(r.title, 70)}</div>
@@ -292,18 +314,18 @@ function CandidatesPanel() {
               : "来自 mind GET /api/v1/flywheel/knowledge-candidates?limit=20"
           }
         >
-          <span className="tiny" style={{ color: data?.source === "local-readonly-fallback" ? "var(--status-warn)" : "var(--status-ok)" }}>
+          <span className={"tiny " + styles.srcBadge} data-src={data?.source === "local-readonly-fallback" ? "fallback" : "ok"}>
             {loading && !data ? "加载中…" : data?.source === "local-readonly-fallback" ? "⚠ 上游不可达·本地兜底" : "🟢 mind 接口"}
           </span>
         </Tooltip>
       }
     >
       {loading && !data ? <StateBlock loading rows={3} /> : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
-          <div style={{ display: "flex", gap: "var(--sp-3)", flexWrap: "wrap" }}>
-            <span className="tiny">待复核 <b className="mono" style={{ color: "var(--status-warn)" }}>{fmtNum(data?.pending)}</b></span>
-            <span className="tiny">已验证 <b className="mono" style={{ color: "var(--status-ok)" }}>{fmtNum(data?.verified)}</b></span>
-            <span className="tiny">已驳回 <b className="mono" style={{ color: "var(--status-crit)" }}>{fmtNum(data?.rejected)}</b></span>
+        <div className={styles.stack2}>
+          <div className={styles.rowWrap3}>
+            <span className="tiny">待复核 <b className={"mono " + styles.numWarn}>{fmtNum(data?.pending)}</b></span>
+            <span className="tiny">已验证 <b className={"mono " + styles.numOk}>{fmtNum(data?.verified)}</b></span>
+            <span className="tiny">已驳回 <b className={"mono " + styles.numCrit}>{fmtNum(data?.rejected)}</b></span>
           </div>
           <Segmented
             size="small"
@@ -325,12 +347,12 @@ function CandidatesPanel() {
                 <div className="cr-meta">
                   <Tag color={VERIFY_TAG[r.verification]?.color || "default"}>{VERIFY_TAG[r.verification]?.label || r.verification || "未验证"}</Tag>
                   <span>{String(r.agentSource || "").replace(/^agent:/, "") || t('common.unknownAgent')}</span>
-                  <span style={{ color: qualityTone(r.qualityScore).color }}>质量分 {r.qualityScore ? Number(r.qualityScore).toFixed(2) : "-"}</span>
-                  {r.stale ? <span style={{ color: "var(--status-crit)" }}>已过期</span> : null}
+                  <span className={styles.qualityNum} data-tone={qualityTone(r.qualityScore).cls}>质量分 {r.qualityScore ? Number(r.qualityScore).toFixed(2) : "-"}</span>
+                  {r.stale ? <span className={styles.critText}>已过期</span> : null}
                   <span>{relTime(r.createdAt)}</span>
                 </div>
-                <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap" }}>
-                  <Button type="link" size="small" style={{ paddingLeft: 0 }} onClick={() => setOpenId(openId === r.id ? null : r.id)}>
+                <div className={styles.rowWrap2}>
+                  <Button type="link" size="small" className={styles.linkBtn} onClick={() => setOpenId(openId === r.id ? null : r.id)}>
                     {openId === r.id ? "收起结论" : "查看结论全文"}
                   </Button>
                   {/* 2026-09-10: 被驳回的 agent 结论 → 一键转成人的待办 (复核/整改) */}
@@ -386,13 +408,13 @@ export default function CollaborationView() {
       <Alert
         type="info"
         showIcon
-        style={{ marginBottom: "var(--sp-3)" }}
+        className={styles.alertMb}
         title="这是什么"
         description={t('collab.desc')}
       />
 
       <div className="metric-row">
-        <MetricCard
+        <KpiCard
           label="协作线程"
           tone="info"
           value={loadingAll ? "…" : fmtNum(s.threads)}
@@ -406,11 +428,11 @@ export default function CollaborationView() {
             ) : null
           }
         />
-        <MetricCard label={t('collab.replied')} tone="ok" value={loadingAll ? "…" : fmtNum(s.replied)} unit="条" hint={`共 ${fmtNum(s.replies)} 次提交`} />
-        <MetricCard label="平台裁定" tone="ok" value={loadingAll ? "…" : fmtNum(s.verdicts)} unit="次" hint="验证/接受/驳回/缺依据" />
-        <MetricCard label="人类干预" tone={s.humanInterventions ? "warn" : "mute"} value={loadingAll ? "…" : fmtNum(s.humanInterventions)} unit="次" hint="人否决/复核/发言" />
-        <MetricCard label={t('collab.participants')} tone="info" value={loadingAll ? "…" : fmtNum((s.participants ?? []).length)} unit="个" hint={(s.participants ?? []).slice(0, 2).map((p: any) => p.agentId).join("、")} />
-        <MetricCard label="平均回复长度" tone="mute" value={loadingAll ? "…" : fmtNum(s.avgReplyLength)} unit="字" hint={`质量通过 ${fmtNum(s.replyQualityPassed)} / ${fmtNum(s.replies)}`} />
+        <KpiCard label={t('collab.replied')} tone="ok" value={loadingAll ? "…" : fmtNum(s.replied)} unit="条" hint={`共 ${fmtNum(s.replies)} 次提交`} />
+        <KpiCard label="平台裁定" tone="ok" value={loadingAll ? "…" : fmtNum(s.verdicts)} unit="次" hint="验证/接受/驳回/缺依据" />
+        <KpiCard label="人类干预" tone={s.humanInterventions ? "warn" : "mute"} value={loadingAll ? "…" : fmtNum(s.humanInterventions)} unit="次" hint="人否决/复核/发言" />
+        <KpiCard label={t('collab.participants')} tone="info" value={loadingAll ? "…" : fmtNum((s.participants ?? []).length)} unit="个" hint={(s.participants ?? []).slice(0, 2).map((p: any) => p.agentId).join("、")} />
+        <KpiCard label="平均回复长度" tone="mute" value={loadingAll ? "…" : fmtNum(s.avgReplyLength)} unit="字" hint={`质量通过 ${fmtNum(s.replyQualityPassed)} / ${fmtNum(s.replies)}`} />
       </div>
 
       <div className="card-grid main-side">
@@ -419,7 +441,7 @@ export default function CollaborationView() {
             <span className="ct-label">任务类型</span>
             <Select
               size="small"
-              style={{ minWidth: 168 }}
+              className={styles.typeSelect}
               value={type}
               onChange={setType}
               options={(data?.types ?? [{ value: "ALL", label: "全部类型", count: 0 }]).map((t: any) => ({
@@ -433,7 +455,7 @@ export default function CollaborationView() {
               size="small"
               allowClear
               placeholder="搜索任务标题 / 主题"
-              style={{ width: 220 }}
+              className={styles.searchInput}
               value={kw}
               onChange={(e) => setKw(e.target.value)}
               onSearch={(v) => setKwApplied(v)}
@@ -441,7 +463,7 @@ export default function CollaborationView() {
             <span className="ct-label">条数</span>
             <Select
               size="small"
-              style={{ width: 88 }}
+              className={styles.limitSelect}
               value={limit}
               onChange={setLimit}
               options={[10, 20, 40, 60].map((n) => ({ value: n, label: n + " 条" }))}
@@ -452,7 +474,7 @@ export default function CollaborationView() {
           </div>
 
           {data?.warnings?.length ? (
-            <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-3)" }} title="数据源提示" description={data.warnings.join("；")} />
+            <Alert type="warning" showIcon className={styles.alertMb} title="数据源提示" description={data.warnings.join("；")} />
           ) : null}
 
           {loadingAll ? (
@@ -476,16 +498,16 @@ export default function CollaborationView() {
             {(s.verdictBreakdown ?? []).length === 0 ? (
               <StateBlock title="窗口内没有裁定事件" rows={2} />
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)", fontSize: "var(--fs-base)" }}>
+              <div className={styles.stack2 + " " + styles.fsBase}>
                 {(s.verdictBreakdown ?? []).map((v: any) => (
-                  <div key={v.stage} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+                  <div key={v.stage} className={styles.rowCenter}>
                     <Pill tone={v.stage === "KNOWLEDGE_REJECTED" ? "crit" : v.stage === "HUMAN_INTERVENTION" ? "warn" : "ok"}>
                       {v.label}
                     </Pill>
-                    <span className="mono" style={{ marginLeft: "auto" }}>{fmtNum(v.count)}</span>
+                    <span className={"mono " + styles.mlAuto}>{fmtNum(v.count)}</span>
                   </div>
                 ))}
-                <div className="tiny" style={{ marginTop: "var(--sp-1)", lineHeight: 1.7 }}>
+                <div className={"tiny " + styles.noteMt1}>
                   {t('collab.verdictNote')}
                 </div>
               </div>
@@ -495,14 +517,17 @@ export default function CollaborationView() {
             {(s.participants ?? []).length === 0 ? (
               <StateBlock title={t('collab.noParticipation')} rows={2} />
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-2)" }}>
+              <div className={styles.stack2}>
                 {(s.participants ?? []).map((p: any) => {
                   const max = (s.participants ?? [])[0]?.threads || 1;
+                  // 2026-11-06 token-ratchet：条形宽度由内联百分号改 data-w 档位（2% 一档，误差 <=1%；
+                  //   超过 100% 夹到 100 —— 改前由 .mini-bar 的 overflow: hidden 兜住，观感一致）
+                  const w = Math.min(100, Math.max(0, Math.round((p.threads / max) * 50) * 2));
                   return (
-                    <div key={p.agentId} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", fontSize: "var(--fs-sm)" }}>
-                      <span className="truncate" style={{ width: 120 }}>{p.agentId}</span>
-                      <div className="mini-bar" style={{ flex: 1 }}>
-                        <div className="mini-bar-fill" style={{ width: `${(p.threads / max) * 100}%`, background: "var(--primary)" }} />
+                    <div key={p.agentId} className={styles.rowCenter + " " + styles.fsSm}>
+                      <span className={"truncate " + styles.agentNameW}>{p.agentId}</span>
+                      <div className={"mini-bar " + styles.miniTrack}>
+                        <div className={"mini-bar-fill " + styles.miniFill} data-w={w} />
                       </div>
                       <span className="mono nowrap">{fmtNum(p.threads)}</span>
                     </div>
@@ -514,7 +539,7 @@ export default function CollaborationView() {
         </div>
       </div>
 
-      <div className="tiny" style={{ textAlign: "right" }}>
+      <div className={"tiny " + styles.taRight}>
         {t('collab.source')}{" "}
         {data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "-"}
       </div>

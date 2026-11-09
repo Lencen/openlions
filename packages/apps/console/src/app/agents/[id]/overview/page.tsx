@@ -5,9 +5,14 @@
 //   三张「标签 → 值」表改前无表头，换 DataTable 后用 .kvTable 藏掉空表头行并把首列还原成 th 观感
 //   （与 /agents/[id]/config 同一做法）；「待开始任务」表头（任务 / 优先级 90 / 改进类型 130）不变。
 //   取数（loadAgent / loadLive）与只读语义一字未改。
+// 2026-11-05 P2 批6 热修（线上 500）：本页是**服务端组件**，不能把函数传给 "use client" 的 DataTable。
+//   故 columns 只留 { key, title, width?, align? }（删掉全部 render 箭头函数），单元格值（含 styles.xxx 的
+//   元素）在服务端预算好放进 rows；行 key 函数不再传（DataTable 已改为可选，未给时按行下标取 key）。
+//   列/表头/宽度档位/空态文案/module.css 类名与页面结构一律不变。
 import type { ReactNode } from "react";
 import KPICard from "@/components/KPICard";
-import AgentShell from "../_components/AgentShell";
+import AgentShell, { AgentTabHeader } from "../_components/AgentShell";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import AgentMissing from "../_components/AgentMissing";
 import AgentSourceError from "../_components/AgentSourceError";
 import { TIER_LABELS, fmtAgo, fmtTime, loadAgent, loadLive, parseJson } from "../_data";
@@ -26,30 +31,44 @@ const CAP_ROWS: Array<[string, string]> = [
   ["network", "网络"],
 ];
 
-/** 「标签 → 值」两列（改前是 table.tbl > tbody 里逐行 kv(...)） */
+/** 「标签 → 值」两列（改前是 table.tbl > tbody 里逐行 kv(...)）；无 render，直接取行字段（label 字符串 / value ReactNode） */
 type KvRow = { label: string; value: ReactNode };
 const KV_COLUMNS: DataColumn<KvRow>[] = [
-  { key: "label", title: "", render: (r) => r.label },
-  { key: "value", title: "", render: (r) => r.value },
+  { key: "label", title: "" },
+  { key: "value", title: "" },
 ];
 
-/** 待开始任务的一行 */
+/** 待开始任务的一行（接口原样字段） */
 type PendingRow = { id: string; title?: string; priority?: string; improvementType?: string };
-const PENDING_COLUMNS: DataColumn<PendingRow>[] = [
-  { key: "title", title: "任务", render: (r) => r.title || r.id },
-  { key: "priority", title: "优先级", width: 90, render: (r) => r.priority || "-" },
-  { key: "improvementType", title: "改进类型", width: 130, render: (r) => r.improvementType || "-" },
+/** 待开始任务的一行（服务端预算好的展示值；列 key 与改前一致，改前由 render 做的默认值下沉到这里） */
+type PendingView = { title: ReactNode; priority: ReactNode; improvementType: ReactNode };
+const PENDING_COLUMNS: DataColumn<PendingView>[] = [
+  { key: "title", title: "任务" },
+  { key: "priority", title: "优先级", width: 90 },
+  { key: "improvementType", title: "改进类型", width: 130 },
 ];
 
 export default async function AgentOverviewPage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params.id || "");
   const [agentLoad, liveS] = await Promise.all([loadAgent(id), loadLive(id)]);
-  if (!agentLoad.ok) return <AgentSourceError id={id} />;
+  // 2026-11-06 D-03：先备好页签页头 —— 名册失败/智能体不存在/正常三条分支都要渲染它，
+  //   否则 SSR 首屏没有 page-header（0.4.31 dev 实测 5 页 70/75 的根因就是只有"正常"分支带页头）。
+  const tabHeader = (
+    <AgentTabHeader
+      id={id}
+      tab="概览"
+      title="智能体详情 · 概览"
+      subtitle="档案、能力分级、配额与在办任务"
+      agent={agentLoad.ok ? agentLoad.agent : null}
+      live={liveS.data}
+    />
+  );
+  if (!agentLoad.ok) return <AgentSourceError id={id} header={tabHeader} />;
   const agent = agentLoad.agent;
   const live = liveS.data;
   const degraded: string[] = [];
   if (!liveS.ok) degraded.push("实时状态 /api/agents-live");
-  if (!agent && !live) return <AgentMissing id={id} />;
+  if (!agent && !live) return <AgentMissing id={id} header={tabHeader} />;
 
   const profile = parseJson(agent?.profile);
   const perms = agent?.permissions ?? [];
@@ -59,6 +78,13 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
   const ts = live?.taskStats ?? {};
   const current = live?.currentTask ?? agent?.currentTask ?? null;
   const pending: PendingRow[] = live?.assignedPending ?? [];
+  // 改前是列上的 render（r.title || r.id / r.priority || "-" / r.improvementType || "-"）：
+  // 服务端组件不能把函数传过边界，故在此把三列的展示值先算好；取前 10 条与改前一致。
+  const pendingRows: PendingView[] = pending.slice(0, 10).map((r) => ({
+    title: r.title || r.id,
+    priority: r.priority || "-",
+    improvementType: r.improvementType || "-",
+  }));
 
   const baseRows: KvRow[] = [
     { label: "智能体编号", value: <span className="mono">{agent?.agent_id || id}</span> },
@@ -104,7 +130,13 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
   ] : [];
 
   return (
-    <AgentShell id={id} active="overview" agent={agent} live={live}>
+    <AgentShell
+      id={id}
+      active="overview"
+      agent={agent}
+      live={live}
+      header={tabHeader}
+    >
       {degraded.length ? <Alert type="warning" showIcon className={styles.alertRow} title="部分数据源降级" description={degraded.join("；")} /> : null}
       <div className="kpi-grid">
         <KPICard label="已办任务" value={(ts.done ?? 0).toLocaleString()} />
@@ -120,7 +152,7 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
           <div className="panel-header"><span className="panel-title">基础信息</span></div>
           <TableCopyButton />
           <div className={styles.kvTable}>
-            <DataTable columns={KV_COLUMNS} rows={baseRows} rowKey={(r) => r.label} />
+            <DataTable columns={KV_COLUMNS} rows={baseRows} />
           </div>
         </div>
 
@@ -128,7 +160,7 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
           <div className="panel-header"><span className="panel-title">能力与配额</span></div>
           <TableCopyButton />
           <div className={styles.kvTable}>
-            <DataTable columns={KV_COLUMNS} rows={capRows} rowKey={(r) => r.label} />
+            <DataTable columns={KV_COLUMNS} rows={capRows} />
           </div>
         </div>
       </div>
@@ -137,7 +169,7 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
         <div className="panel-header"><span className="panel-title">当前任务</span></div>
         {current ? (
           <div className={styles.kvTable}>
-            <DataTable columns={KV_COLUMNS} rows={taskRows} rowKey={(r) => r.label} />
+            <DataTable columns={KV_COLUMNS} rows={taskRows} />
           </div>
         ) : (
           <div className={styles.emptyNote}>当前没有在办任务。</div>
@@ -149,7 +181,7 @@ export default async function AgentOverviewPage({ params }: { params: { id: stri
           <span className="panel-title">待开始任务（{(live?.assignedPendingCount ?? pending.length).toLocaleString()}）</span>
         </div>
         <TableCopyButton />
-        <DataTable columns={PENDING_COLUMNS} rows={pending.slice(0, 10)} rowKey={(r) => r.id} empty={{ title: "没有待开始任务" }} />
+        <DataTable columns={PENDING_COLUMNS} rows={pendingRows} empty={{ title: "没有待开始任务" }} />
       </div>
     </AgentShell>
   );

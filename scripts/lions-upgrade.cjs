@@ -25,6 +25,7 @@
  *   node scripts/lions-upgrade.cjs --home=DIR [--rollback]
  *   node scripts/lions-upgrade.cjs --selftest
  *   [--skip-deps] [--skip-generate] [--skip-migrate] [--skip-build] [--skip-start] [--no-systemctl] [--allow-edition-change]
+ *   [--repair]   # 同版本换包：目标版本 == 当前版本，且树与产物有关键差异时才允许；不动库（强制 skip-migrate）
  *   [--unit-prefix=lions-qa-] [--simulate-fail=<step>]   # 测试接缝
  */
 "use strict";
@@ -592,6 +593,30 @@ async function healthAll(args, rec, ports) {
   return out;
 }
 
+// 2026-11-05（0.4.29 车单 #8 / 方案 R1）同版本换包：
+//   为什么需要：0.4.28 重打包后要覆盖 test，旧逻辑 toVersion==fromVersion 直接失败，
+//   只能“先降级再升级”（当天实测多花 14 分钟，且中途服务是停的）。
+//   为什么只比关键文件：这几样变了就说明不是同一个包；全一样时必须**拒绝**——
+//   “修了个没坏的”不是修复，是把漂移掩盖掉。
+const REPAIR_KEY_FILES = [
+  "VERSION",
+  "scripts/lions-service-wrapper.sh",
+  "packages/apps/mind/.next/BUILD_ID",
+  "packages/apps/console/.next/BUILD_ID",
+  "packages/apps/session/.next/BUILD_ID",
+  "packages/apps/selfimproving/.next/BUILD_ID",
+];
+function fileSha(p) { try { return crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex"); } catch (_e) { return null; } }
+function diffKeyFiles(a, b) {
+  const out = [];
+  for (const rel of REPAIR_KEY_FILES) {
+    const x = fileSha(path.join(a, rel));
+    const y = fileSha(path.join(b, rel));
+    if (x !== y) out.push(rel + (x === null ? "(新包缺)" : "") + (y === null ? "(产物缺)" : ""));
+  }
+  return out;
+}
+
 async function doUpgrade(args) {
   const home = H.resolveHome({ home: typeof args.home === "string" ? args.home : undefined });
   const startedAt = new Date().toISOString();
@@ -615,7 +640,22 @@ async function doUpgrade(args) {
   const isTar = fromAbs && (fromAbs.endsWith(".tar.gz") || fromAbs.endsWith(".tgz"));
   if (isTar) { staging = fs.mkdtempSync(path.join(os.tmpdir(), "lions-upgrade-stage-")); I.run("tar", ["-xzf", fromAbs, "-C", staging]); srcDir = staging; }
   const toVersion = srcDir ? I.readVersion(srcDir) : null;
-  if (toVersion && toVersion === fromVersion) fail("preflight", "目标版本与当前相同: " + toVersion);
+  // 2026-11-05（车单 #8）：同版本 -> 默认拒绝；--repair 只放行“树与产物确有差异”的那种，且不动库。
+  const isRepair = !!args.repair;
+  const sameVersion = !!(toVersion && toVersion === fromVersion);
+  if (sameVersion && !isRepair) fail("preflight", "目标版本与当前相同: " + toVersion + "（同版本换包请加 --repair）");
+  if (isRepair) {
+    if (!sameVersion) fail("preflight", "--repair 只用于同版本换包（目标 " + toVersion + " != 当前 " + fromVersion + "）");
+    const diff = diffKeyFiles(srcDir, fromRelease);
+    if (!diff.length) fail("preflight", "--repair 被拒绝：树与产物一致（关键文件 0 处不同），没有可修的东西");
+    // 裁决（2026-11-05）：树差异 -> 显式 tar sha + backup/ledger；失败回滚。
+    //   repair 是“换包”，不是“省步骤”：备份不能被跳过，否则出问题没有回退点。
+    if (args["skip-backup"]) fail("preflight", "--repair 不允许 --skip-backup（换包必须有备份/回滚点）");
+    args["skip-migrate"] = true;   // 同版本换包不碰库：强制跳过（不靠调用方记得传 flag）
+    const tarSha = isTar ? crypto.createHash("sha256").update(fs.readFileSync(fromAbs)).digest("hex") : "(dir)";
+    mark("repair", "同版本换包；差异 " + diff.length + " 处: " + diff.slice(0, 3).join(" | ") + (diff.length > 3 ? " …" : "") + "；tar sha256=" + String(tarSha).slice(0, 16));
+    args._repairTarSha = tarSha;
+  }
   const fromEdition = rec.edition || (fromRelease && fs.existsSync(fromRelease) ? detectEdition(fromRelease) : null);
   const toEdition = srcDir ? detectEdition(srcDir) : null;
   const eg = editionGuard(fromEdition, toEdition, !!args["allow-edition-change"]);
@@ -891,6 +931,22 @@ function runSelftest() {
     writeDropIn(ud, "lions-mind.service", false);
     assert("drop-in 移除", !fs.existsSync(path.join(ud, "lions-mind.service.d", "10-upgrade-maintenance.conf")));
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+  // 2026-11-05（车单 #8 / R1）：同版本换包的“树 vs 产物”判定必须两向都对——
+  //   一致 -> 差异 0（调用方据此拒绝）；不一致 -> 差异 >0（才允许 repair）。
+  const ra = fs.mkdtempSync(path.join(os.tmpdir(), "lions-ug-repair-a-"));
+  const rb = fs.mkdtempSync(path.join(os.tmpdir(), "lions-ug-repair-b-"));
+  try {
+    fs.mkdirSync(path.join(ra, "scripts"), { recursive: true });
+    fs.mkdirSync(path.join(rb, "scripts"), { recursive: true });
+    fs.writeFileSync(path.join(ra, "VERSION"), "0.4.28\n");
+    fs.writeFileSync(path.join(rb, "VERSION"), "0.4.28\n");
+    assert("repair: 树与产物一致 -> 差异 0（必须拒绝）", diffKeyFiles(ra, rb).length === 0);
+    fs.writeFileSync(path.join(rb, "VERSION"), "0.4.29\n");
+    assert("repair: 版本文件不同 -> 差异 1", diffKeyFiles(ra, rb).length === 1);
+    fs.writeFileSync(path.join(rb, "VERSION"), "0.4.28\n");
+    fs.writeFileSync(path.join(ra, "scripts/lions-service-wrapper.sh"), "a");
+    assert("repair: wrapper 不同 -> 差异 1", diffKeyFiles(ra, rb).length === 1);
+  } finally { fs.rmSync(ra, { recursive: true, force: true }); fs.rmSync(rb, { recursive: true, force: true }); }
   for (const r of results) console.log((r.ok ? "PASS" : "FAIL") + "  " + r.name + (r.detail ? " :: " + r.detail : ""));
   const bad = results.filter((r) => !r.ok).length;
   console.log(bad === 0 ? "SELFTEST OK (" + results.length + " 断言)" : "SELFTEST FAILED (" + bad + ")");

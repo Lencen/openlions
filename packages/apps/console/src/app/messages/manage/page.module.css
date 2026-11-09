@@ -1,0 +1,46 @@
+/* /messages/manage 页内样式（2026-11-05 页头口径批次）
+   只放本页真正需要、globals.css 里没有的一条：面包屑上级段的弱化色。
+   面包屑/页头/正文一律复用 globals 既有类，不新增全局样式。 */
+
+.crumbDim { color: var(--text-dim); }
+
+/* ── 2026-11-05 P2 批8：内联 style 清零 + 手写 .tbl 裸表 → 白名单 DataTable ──
+   本页 9 处内联 style 全是静态值（限宽/间距/边框/弹性布局），没有随数据变的动态值，
+   所以没有引入 data-* 属性选择器；动态的只是状态文案与状态药丸类，配色仍由 globals 提供，不在此复制。
+   （2026-11-05 教训：注释里不要出现"星号 + 斜杠"的连续字符，CSS 会把它当成注释结束符 —— 本行的前身
+     就因为写了两个类名前缀加斜杠，把注释提前闭合，build 直接 Failed to compile。） */
+
+/* 搜索框限宽（原内联 maxWidth: 280） */
+.searchInput { max-width: 280px; }
+
+/* 工具条最右侧的返回入口（原内联 marginLeft: auto） */
+.barEnd { margin-left: auto; }
+
+/* 表格横向滚动容器（原内联 overflowX: auto；DataTable 自身也有 .dt-wrap，这里保留原结构不动） */
+.tableScroll { overflow-x: auto; }
+
+/* 摘要 / 最后错误：限宽 + 省略号（原 td-clip 的意图；globals 里并没有 .td-clip 这条类） */
+.clip {
+  display: inline-block;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* 改派卡片：标题与说明行下间距（原内联 marginBottom: var(--sp-2)） */
+.cardHead { margin-bottom: var(--sp-2); }
+.cardLine { margin-bottom: var(--sp-2); }
+
+/* 第二个输入框上间距（原内联 marginTop: var(--sp-2)） */
+.fieldGap { margin-top: var(--sp-2); }
+
+/* 改派结果（原内联 marginTop: var(--sp-2) + color: var(--status-warn)） */
+.assignMsg { margin-top: var(--sp-2); color: var(--status-warn); }
+
+/* 卡片底部按钮行（原内联 display:flex / gap / marginTop / justifyContent） */
+.cardActions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); justify-content: flex-end; }
+
+/* 只读脚注去边框内边距（原内联 border: none; padding: 0） */
+.footPlain { border: none; padding: 0; }

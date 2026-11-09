@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
-import MetricCard from "./MetricCard";
+import { KpiCard } from "@/components/ui";
+import { businessKpiProps } from "./businessKpi";
 import { Pill } from "./ui";
 import type { MetricSpec } from "./types";
 
 export function OverviewCards({ metrics, s }: { metrics: MetricSpec[]; s: any }) {
   return (
     <div className="card-grid cols-4" data-testid="overview-cards">
-      {metrics.map((m) => <MetricCard key={m.key} m={m} s={s} />)}
+      {metrics.map((m) => <KpiCard key={m.key} {...businessKpiProps(m, s)} />)}
     </div>
   );
 }

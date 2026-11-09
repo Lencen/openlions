@@ -4,6 +4,9 @@
    assistant 那档沿用 lib/ink 的配方（color-mix(… 55%, var(--text))）逐字写进 CSS，观感与改前一致。
    取数（/api/session-detail/<uid>）与路由语义一字未改。 */
 
+/* 面包屑首段（分组层）压暗；末段由 globals.css 的 .breadcrumb .current 承担 */
+.crumbDim { color: var(--text-dim); }
+
 /* 空/错误态面板（原内联 padding: var(--sp-6)） */
 .panelPad6 { padding: var(--sp-6); }
 .emptyTitle { font-weight: 600; margin-bottom: var(--sp-2); }

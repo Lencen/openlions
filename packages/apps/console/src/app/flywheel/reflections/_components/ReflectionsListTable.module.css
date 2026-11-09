@@ -1,0 +1,38 @@
+/* /flywheel/reflections · 反思列表（ReflectionsListTable）—— 2026-11-05 P2 批6
+   原先 9 处内联 style + 1 处 chipStyle 内联对象全部下沉到这里；
+   动态态改由 data-* 属性选择器承载（展开行的主题色 data-open、粒度 chip 的 data-on），不留行内样式。
+   表格本体沿用 .ui-table（primitives.Table 自带）。 */
+
+/* 展开行的主题名：展开时用主色（原来是内联 color: openNow ? primary : inherit + fs-md） */
+.rltTheme { font-size: var(--fs-md); }
+.rltTheme[data-open="true"] { color: var(--primary); }
+
+/* 粒度 chip：原来由 reflectionsShared.chipStyle() 返回内联 CSSProperties，
+   现在用类 + data-on 区分选中态；选中底色沿用原来的 15% 混色，但改用品牌令牌（随主题自适应）。 */
+.rltChip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 11px;
+  cursor: default;
+}
+.rltChip[data-on="true"] { background: color-mix(in srgb, var(--primary) 15%, transparent); }
+
+/* 覆盖率/遗漏/改进三列的正文档位（原来是内联 fontSize: var(--fs-base)） */
+.rltBase { font-size: var(--fs-base); }
+/* 更新时间列（原来是内联 fontSize: var(--fs-sm)） */
+.rltSm { font-size: var(--fs-sm); }
+
+/* 可点的行（原来是内联 cursor:pointer） */
+.rltRow { cursor: pointer; }
+
+/* 展开行：表格默认给 td 加了内边距，这里清零让详情的底色铺满（改前就是 td padding:0） */
+.rltTable :global(.ui-table-expanded) > td { padding: 0; }
+
+/* 详情区（原来是内联 background: var(--bg-hover) + 内层 padding: sp-3-5 18px） */
+.rltDetail {
+  padding: var(--sp-3-5) 18px;
+  background: var(--bg-hover);
+}

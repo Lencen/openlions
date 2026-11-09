@@ -139,6 +139,7 @@ export const PAGE_INDEX: SearchPage[] = [
       groupLabel: g.label,
       color: g.color,
       keywords: KEYWORDS[it.id] || '',
+      utility: it.utility,   // 2026-11-06: nav 页也可标"工具页"（如 /system/version-board）
     })),
   ),
   ...UTILITY_PAGES.map((p) => {

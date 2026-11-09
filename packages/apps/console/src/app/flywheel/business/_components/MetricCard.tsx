@@ -1,25 +1,12 @@
 "use client";
-import Link from "next/link";
+// 2026-11-05 KPI 收敛 phase2（ord-027 裁决 A）：本件不再自带卡片解剖，改为 KpiCard variant="business" 的薄封装。
+//   入参仍是业务口径规格 { m, s }（m.status(s)/m.value(s) 这种函数式），口径逻辑一行没动；
+//   卡片 DOM/样式由 components/KPICard.tsx 的 business 档 + KPICard.module.css 承载。
+//   当前调用点已直接渲染 KpiCard；保留本文件只是给存量调用点留一个发布周期的回退面（不参与判据使用面）。
+import KpiCard from "@/components/KPICard";
 import type { MetricSpec } from "./types";
-import { Pill, STATUS_META } from "./ui";
+import { businessKpiProps } from "./businessKpi";
 
 export default function MetricCard({ m, s }: { m: MetricSpec; s: any }) {
-  const st = m.status(s);
-  const meta = STATUS_META[st] || STATUS_META.info;
-  return (
-    <article className="panel" data-metric={m.key} data-status={st} style={{ padding: "var(--sp-3)", borderLeft: "3px solid " + meta.color, minWidth: 0 }}>
-      <div className="tiny" style={{ color: "var(--text-muted)", minHeight: 18 }}>{m.label}</div>
-      <div style={{ fontSize: "var(--fs-2xl)", fontWeight: 600, lineHeight: 1.25, margin: "4px 0", overflowWrap: "anywhere" }}>{m.value(s)}</div>
-      {m.sub ? <div className="tiny" style={{ color: "var(--text-dim)" }}>{m.sub(s)}</div> : null}
-      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
-        <Pill status={st} />
-        {m.threshold ? <span className="tiny" style={{ color: "var(--text-muted)" }}>阈值 {m.threshold}</span> : null}
-      </div>
-      <div className="tiny" style={{ color: "var(--text-muted)", marginTop: 8, lineHeight: 1.55 }}>口径：{m.caliber}</div>
-      <div className="tiny" style={{ color: "var(--text-muted)", lineHeight: 1.55 }}>来源：{m.source} · 责任人：{m.owner}</div>
-      {m.note ? <div className="tiny" style={{ color: meta.color, marginTop: 4, lineHeight: 1.55 }}>{m.note}</div> : null}
-      <div className="tiny" style={{ color: "var(--text-muted)", marginTop: 6, overflowWrap: "anywhere" }}>复算：<code>{m.verify}</code></div>
-      {m.href ? <Link href={m.href} className="tiny" style={{ display: "inline-block", marginTop: 6 }}>下钻 →</Link> : null}
-    </article>
-  );
+  return <KpiCard {...businessKpiProps(m, s)} />;
 }

@@ -8,7 +8,8 @@ import { useApi } from "@/lib/api";
 import DataMoment from "@/components/DataMoment";
 import { t } from "@/i18n";
 import { useGlobalFilter } from "@/components/GlobalFilter";
-import { ErrorBlock, PageHero } from "@/components/ui";
+import { ErrorBlock } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { OPEN_STATUSES } from "@/lib/todos";
 import ViewSwitch from "./_components/ViewSwitch";
 import AgentsLiveWorkplan from "./_components/AgentsLiveWorkplan";
@@ -56,7 +57,11 @@ export default function AgentsLivePage() {
   if (error) {
     return (
       <main className="page">
-        <PageHero title={t('agentsLive.title')} subtitle={t('agentsLive.subtitle')} />
+        <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className={styles.crumbDim}>智能体</span><span className="sep">/</span><span className="current">实时</span></div>
+        <PageHeader>
+          <PageTitle>实时会话</PageTitle>
+          <div className="page-subtitle">正在进行的会话与智能体实时状态</div>
+        </PageHeader>
         <ErrorBlock message={String(error?.message || "")} onRetry={mutate} />
       </main>
     );
@@ -68,6 +73,12 @@ export default function AgentsLivePage() {
 
   return (
     <main className="page">
+      <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className={styles.crumbDim}>智能体</span><span className="sep">/</span><span className="current">实时</span></div>
+      <PageHeader>
+        <PageTitle>实时会话</PageTitle>
+        <div className="page-subtitle">正在进行的会话与智能体实时状态</div>
+      </PageHeader>
+
       <AgentsLiveHero data={data} s={s} agent={f.agent} />
 
       <ViewSwitch view={view} onChange={setView} hint={t('agentsLive.switchHint')} />

@@ -1,0 +1,57 @@
+/* /lineage · 落库构成 / 知识验证状态 / 智能体产出入库（2026-11-05 P2 批6 呈现层改造）
+   内联 style 清零：卡片堆叠、构成条、验证行、备注都下沉到本文件。
+   动态色（产物类型）走 data-table 属性选择器；构成条宽度按 5% 一档取 .p0…​.p100。
+   智能体产出入库仍是登记的 E1 例外 components/common/DataTable（本批未新增使用点，列/字段未动）。 */
+
+/* 产物落库构成：四条纵向排列 */
+.stack { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* 构成条标题行：名称 + 计数（改前内联 flex/justify/fontSize/marginBottom） */
+.compHead { display: flex; justify-content: space-between; font-size: var(--fs-base); margin-bottom: var(--sp-0-5); }
+.compLabel { font-weight: 600; }
+.compLabel[data-table="Memory"] { color: var(--table-memory); }
+.compLabel[data-table="Knowledge"] { color: var(--table-knowledge); }
+.compLabel[data-table="Practice"] { color: var(--table-practice); }
+.compLabel[data-table="Skill"] { color: var(--table-skill); }
+
+/* 构成条轨道：覆盖 .mini-bar 的 80px/6px，按改前内联 100%/8px */
+.barTrack.barTrack { width: 100%; height: 8px; }
+.barFill[data-table="Memory"] { background: var(--table-memory); }
+.barFill[data-table="Knowledge"] { background: var(--table-knowledge); }
+.barFill[data-table="Practice"] { background: var(--table-practice); }
+.barFill[data-table="Skill"] { background: var(--table-skill); }
+
+/* 验证状态：五行纵排，色片 + 右对齐计数 */
+.verifyStack { display: flex; flex-direction: column; gap: var(--sp-2-5); font-size: var(--fs-base); }
+.verifyRow { display: flex; align-items: center; gap: var(--sp-2); }
+.mlAuto { margin-left: auto; }
+
+/* 说明文字（改前内联 lineHeight 1.7 + marginTop sp-1） */
+.note { line-height: 1.7; margin-top: var(--sp-1); }
+.mt0_5 { margin-top: var(--sp-0-5); }
+
+/* 表格单元格字号（改前内联 fontSize fs-base） */
+.baseText { font-size: var(--fs-base); }
+
+/* 构成条宽度：5% 一档（改前是内联百分比，四舍五入到档位，肉眼无差） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

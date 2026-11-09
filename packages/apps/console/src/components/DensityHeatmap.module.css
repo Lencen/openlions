@@ -1,0 +1,11 @@
+/* components/DensityHeatmap 样式（2026-11-05 P2 批8：内联 style 清零）
+   SVG 的 display/max-width 与数字等宽、以及视觉隐藏的等效数据表定位，全部下沉为类。 */
+
+/* width 由 SVG 的 width 属性给（像素），max-width:100% 保证窄容器内等比缩放 */
+.svg { display: block; max-width: 100%; height: auto; }
+
+/* 单元格右下角数字等宽，避免列间抖动 */
+.num { font-variant-numeric: tabular-nums; }
+
+/* 视觉隐藏的等效数据表：移出屏幕但保留给读屏（与原内联声明的定位/尺寸逐项一致） */
+.srTable { position: absolute; left: -9999px; top: 0; width: 1px; height: 1px; overflow: hidden; }

@@ -1,0 +1,16 @@
+/* 2026-11-05 P2 批9：/agents/capabilities 能力中心（服务端页）内联样式下沉。
+   三张手写表格改为白名单 @/components/DataTable：服务端预算好单元格，列定义只含数据，
+   不传 rowKey / render / onRow / onRetry 任何函数 prop（服务端组件硬约束）。
+   未新增全局类、未改 globals.css；取数、路由、文案、字段名未动。 */
+
+/* 面包屑末段（改前内联 color text-dim） */
+.crumbDim { color: var(--text-dim); }
+
+/* 主题覆盖度分布面板（改前内联 marginTop sp-4） */
+.panelTop { margin-top: var(--sp-4); }
+
+/* 服务端点单元格（改前内联 fontFamily mono + fs-xs） */
+.endpoint { font-family: var(--font-mono); font-size: var(--fs-xs); }
+
+/* 页脚「相关视图」出链行（改前内联 flex / gap sp-4 / wrap / marginTop sp-4；与 .tiny 组合） */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

@@ -129,14 +129,24 @@ echo "$SERVER_PID" > "$PIDFILE"
 echo "[wrapper] server PID=$SERVER_PID cmd='$WORKER_CMD' pidfile written" >> "$LOG_FILE"
 
 # Cleanup: kill the worker on exit
+# 2026-11-05（0.4.29 车单 #6）：TERM/INT 由 systemd 发出时，清理完必须以 0 退出。
+#   原实现 trap cleanup EXIT TERM INT：handler 返回后脚本继续走看护循环，
+#   下一轮 kill -0 失败 -> 打 FATAL -> exit 1 -> systemd 记 Result=exit-code / failed。
+#   结果：正常 env-down 被监控当成故障（sales 15:48、test 17:12 各一次）。
+#   现改为：EXIT 仍走 cleanup；TERM/INT 清理后显式 exit 0（= systemd 语义上的正常停止）。
+#   CLEANED 去重：exit 0 之后 EXIT trap 还会再触发一次 cleanup，避免重复 kill/重复日志。
+CLEANED=0
 cleanup() {
+  [ "$CLEANED" = "1" ] && return 0
+  CLEANED=1
   echo "[wrapper] cleanup at $(date -Iseconds): killing $SERVER_PID (and children of $NEXT_CLI_PID)" >> "$LOG_FILE"
   kill -TERM "$SERVER_PID" 2>/dev/null || true
   pkill -P "$NEXT_CLI_PID" 2>/dev/null || true
   kill -9 "$NEXT_CLI_PID" "$SERVER_PID" 2>/dev/null || true
   rm -f "$PIDFILE"
 }
-trap cleanup EXIT TERM INT
+trap cleanup EXIT
+trap 'cleanup; exit 0' TERM INT
 
 # Wait for the HTTP endpoint to actually respond
 # 2026-09-18 修(实测假失败): 原实现 `curl -fsS .../` —— mind 没有根路由, `/` 恒为 404,

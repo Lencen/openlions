@@ -21,7 +21,7 @@ LIONS 安装向导
   提示：开机自启需要执行  sudo loginctl enable-linger <你的用户名>（现在不做也不影响本次使用）
 
 [2/8] 取安装包（渠道 stable，版本 0.1.0）
-  下载 lions-0.4.28.tar.gz（28.4 MB）… 校验和 OK
+  下载 lions-0.4.33.tar.gz（28.4 MB）… 校验和 OK
 
 [3/8] 解包到 ~/lions/releases/0.1.0
 

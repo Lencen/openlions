@@ -1,9 +1,9 @@
 "use client";
+// 2026-11-05 商业线裁决：301 -> /market，目录保留 60 天
 import Link from "next/link";
 import ErrorAlert from "@/components/ErrorAlert";
 import { useBusinessSnapshot } from "./_components/useBusiness";
 import BusinessShell from "./_components/BusinessShell";
-import MetricCard from "./_components/MetricCard";
 import { OverviewCards, RedLines } from "./_components/OverviewParts";
 import { ProductionFunnel, ConsumptionFunnel } from "./_components/Funnels";
 import { OutputTrend, FlowTrend } from "./_components/TrendChart";

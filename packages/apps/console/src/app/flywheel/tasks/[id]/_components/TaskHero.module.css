@@ -1,0 +1,49 @@
+/* /flywheel/tasks/[id] · 页头下的任务标识条（TaskHero）—— 2026-11-05 P2 批12 呈现层
+   内联 style 清零（改前 4 处：范围标签配色、同类任务入口配色与字重、两处间距），
+   页头结构/文案/取数/对外 props 均未动；本件不含表格。
+   任务范围色是动态值，改由 data-scope + CSS 变量 --scope 承载，属性值取自 config/taskScopes.ts，
+   与列表页 page.module.css 的 .scopeName 用同一份映射（OTHER 在配置里就是字面值 #64748b）。
+   注：注释里不写“星号加斜杠”的连续字符，否则 CSS 会提前闭合注释（批8 教训）。 */
+
+/* 页头下的任务标识条布局（2026-11-05 从 ../page.module.css 迁入；只有本组件用）
+   内容未变：左 = 编号 · 类型 · 主题 · 优先级 + 状态标签；右 = 同类任务 / 时间 / 刷新。 */
+.taskBar { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--sp-4); flex-wrap: wrap; }
+.taskIdLine { font-size: var(--fs-base); color: var(--text-muted); }
+/* 取值照抄 globals.css 的 .page-hero .hero-meta（失去 .page-hero 祖先后在这里补齐；
+   .hero-meta 类仍保留，刷新按钮的 .hero-meta .ui-btn 样式才继续生效） */
+.taskBarMeta { font-size: var(--fs-sm); color: var(--text-muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 范围标签（改前内联：color-mix 13% 底、33% 描边、自身色字面 + 600 字重）。
+   双类名是为了稳定压过 globals 的 .pill（同是单类选择器，靠加载顺序不可靠）。 */
+.scopePill.scopePill {
+  font-weight: 600;
+  background: color-mix(in srgb, var(--scope) 13%, transparent);
+  color: var(--scope);
+  border-color: color-mix(in srgb, var(--scope) 33%, transparent);
+}
+
+/* 同类任务一行（改前内联 marginBottom sp-1-5） */
+.scopeRow { margin-bottom: var(--sp-1-5); }
+
+/* 同类任务入口（改前内联：marginLeft sp-1-5、fs-sm、非当前范围 dim + 400） */
+.scopeLink {
+  margin-left: var(--sp-1-5);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  font-weight: 400;
+}
+/* 当前范围：自身色 + 600（改前三元里另一支） */
+.scopeLink[data-active="true"] {
+  color: var(--scope);
+  font-weight: 600;
+}
+
+/* 刷新按钮（改前内联 marginTop sp-1-5） */
+.refresh { margin-top: var(--sp-1-5); }
+
+/* 范围到颜色的映射：一份给上面标签与入口共用（改前两处各写一遍同一个 sd.color） */
+.scopePill[data-scope="ALL"], .scopeLink[data-scope="ALL"] { --scope: var(--primary); }
+.scopePill[data-scope="MECHANISM"], .scopeLink[data-scope="MECHANISM"] { --scope: var(--status-warn); }
+.scopePill[data-scope="VERIFY"], .scopeLink[data-scope="VERIFY"] { --scope: var(--table-knowledge); }
+.scopePill[data-scope="DISCUSSION"], .scopeLink[data-scope="DISCUSSION"] { --scope: var(--table-memory); }
+.scopePill[data-scope="OTHER"], .scopeLink[data-scope="OTHER"] { --scope: #64748b; }

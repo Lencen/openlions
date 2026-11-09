@@ -1,0 +1,13 @@
+/* /cognitive/reflection/detail 页内样式（2026-11-05 P2 批8：内联 style 清零）
+   面包屑弱化色、讨论挂载行、以及「主题反思 / 旧反思记录」的动态文字色，
+   全部下沉为类与 data-kind 属性选择器；动态色沿用 inkOf 同一配方（令牌 55% + 当前文字色）。 */
+
+.crumbDim { color: var(--text-dim); }
+
+.mountRow { margin-top: var(--sp-1-5); font-size: var(--fs-base); color: var(--text-dim); }
+
+/* 挂载类型文字色：主题反思 = 知识令牌，旧反思记录 = 记忆令牌 */
+.mountKind { color: color-mix(in srgb, var(--table-memory) 55%, var(--text)); }
+.mountKind[data-kind="fw"] { color: color-mix(in srgb, var(--table-knowledge) 55%, var(--text)); }
+
+.mountId { margin-left: var(--sp-1-5); }

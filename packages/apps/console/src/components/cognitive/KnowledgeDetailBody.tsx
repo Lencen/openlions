@@ -9,7 +9,11 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { StateBlock } from "@/components/ui";
 import { t as tr } from "@/i18n";
 import { DetailFields, DetailProse, DetailTech } from "@/components/detail";
+import styles from "./KnowledgeDetailBody.module.css";
 
+// 2026-11-05 P2 批8 呈现层：本文件 7 处内联 style 全部下沉到同名 CSS Module。
+//   知识模板正文（renderKt）的 p / h4 / h5 / 引用块，以及两处 panel 的留白与标签间距都改由类承担；
+//   解析规则、取数、字段、文案未动。
 
 // 2026-09-03: 知识模板正文渲染 (陈述式: #结论 / ##原理 / ##事实 / ##边界 / ##案例)
 export function renderKt(content?: string): any {
@@ -17,13 +21,14 @@ export function renderKt(content?: string): any {
   const lines = String(content).split("\n");
   const out: any[] = [];
   let para: string[] = [];
-  const flush = () => { if (para.length) { out.push(<p key={out.length} style={{ margin: "var(--sp-0-5) 0 var(--sp-2)" }}>{para.join("\n")}</p>); para = []; } };
+  // 2026-11-05 P2 批8：四个标签的排版一并下沉（原来是内联 margin / color / fontWeight）
+  const flush = () => { if (para.length) { out.push(<p key={out.length} className={styles.para}>{para.join("\n")}</p>); para = []; } };
   for (const raw of lines) {
     const t = raw.trim();
     if (!t) { flush(); continue; }
-    if (t.startsWith("# ")) { flush(); out.push(<h4 key={out.length} style={{ margin: "var(--sp-2-5) 0 var(--sp-1)", color: "var(--primary)" }}>{t.slice(2)}</h4>); }
-    else if (t.startsWith("## ")) { flush(); out.push(<h5 key={out.length} style={{ margin: "var(--sp-2) 0 var(--sp-0-5)", fontWeight: 700 }}>{t.slice(3)}</h5>); }
-    else if (t.startsWith("> ")) { flush(); out.push(<p key={out.length} style={{ color: "var(--primary)", fontWeight: 600, margin: "var(--sp-0-5) 0 var(--sp-2)" }}>{t.slice(2)}</p>); }
+    if (t.startsWith("# ")) { flush(); out.push(<h4 key={out.length} className={styles.h4}>{t.slice(2)}</h4>); }
+    else if (t.startsWith("## ")) { flush(); out.push(<h5 key={out.length} className={styles.h5}>{t.slice(3)}</h5>); }
+    else if (t.startsWith("> ")) { flush(); out.push(<p key={out.length} className={styles.quote}>{t.slice(2)}</p>); }
     else para.push(raw);
   }
   flush();
@@ -43,12 +48,12 @@ export default function KnowledgeDetailBody({
     return (<div>{renderHeader ? renderHeader(k, true) : null}<StateBlock loading rows={4} /></div>);
   }
   if (error) {
-    return (<div>{renderHeader ? renderHeader(k, false) : null}<div className="panel" style={{ padding: "var(--sp-5)" }}><Alert type="error" message="知识详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
+    return (<div>{renderHeader ? renderHeader(k, false) : null}<div className={"panel " + styles.padLg}><Alert type="error" message="知识详情加载失败" description={humanError(error, "这条详情")} /></div></div>);
   }
   return (
     <div>
       {renderHeader ? renderHeader(k, loading) : null}
-      {!k.id && <div className="panel"><div style={{ padding: "var(--sp-5)", color: "var(--text-muted)" }}>未找到这条知识（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
+      {!k.id && <div className="panel"><div className={styles.padLgDim}>未找到这条知识（id: <span className="mono">{id || "-"}</span>）。点列表项查看真实数据。</div></div>}
       {k.id && <><div className="dt-stack">
         <div className="dt-grid-2">
           {/* 2026-10-26：改用统一详情解剖（与记忆详情同一套组件） */}
@@ -65,7 +70,7 @@ export default function KnowledgeDetailBody({
             { label: "更新时间", value: fmtTs(k.updatedAt) },
           ]} />
           <DetailFields title="标签与溯源" cols={1} items={[
-            { label: tr('field.tags'), value: (k.tags || "").split(",").filter(Boolean).map((t: string) => <span key={t} className="badge badge-blue" style={{ marginRight: "var(--sp-1)" }}>{t}</span>) },
+            { label: tr('field.tags'), value: (k.tags || "").split(",").filter(Boolean).map((t: string) => <span key={t} className={"badge badge-blue " + styles.tagGap}>{t}</span>) },
             { label: "来源", value: k.agentSource || k.sourceType },
             { label: "来源明细", value: k.sourceDetail },
           ]} />

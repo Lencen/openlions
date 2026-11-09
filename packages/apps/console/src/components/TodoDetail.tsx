@@ -2,6 +2,9 @@
 // 2026-09-11 用户反馈: 待办中心只有标题和一段裸文本, 人类看不到上下文。
 // 规范: docs/platform-logic/todo.md —— detail 七段结构 + meta 机器可读字段 + 渲染要求。
 // 本组件负责按规范渲染 (段标题加粗 / 动作清单有序列表 / URL 可点 / meta.taskIds 跳任务 / options 选项卡片 / 旧格式标记)。
+// 2026-11-05 P2 批11（呈现层）：78 处内联 style 清零（下沉同目录 TodoDetail.module.css）；
+//   动态值（优先级色、推荐态、可点态悬停）走 data-* + 属性选择器；本组件无裸 table 标签，不涉及 DataTable；
+//   取数（/api/todo-detail、patchTodo）、回调 props 形状、文案、字段名与导出（SECTION_KEYS/SECTION_ORDER 等）一字未改。
 import { useCallback, useEffect, useState } from "react";
 import { Button, Skeleton, Tag, Timeline, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { ReloadOutlined } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
@@ -11,6 +14,7 @@ import DiscussionPanel from "@/components/DiscussionPanel";
 import { fmtNum, relTime } from "@/lib/format";
 import { t } from "@/i18n";
 import { patchTodo } from "@/lib/todos";
+import styles from "./TodoDetail.module.css";
 
 /** 七段标题 → 机器 key (与 docs/platform-logic/todo.md 的 sections 一致) */
 export const SECTION_KEYS: Record<string, string> = {
@@ -212,7 +216,7 @@ function RichText({ text }: { text: string }): ReactNode {
   for (const tk of tokens) {
     if (tk.type === "url") {
       parts.push(
-        <a key={key++} href={tk.v} target="_blank" rel="noreferrer" style={{ wordBreak: "break-all" }}>{tk.v}</a>
+        <a key={key++} href={tk.v} target="_blank" rel="noreferrer" className={styles.richLink}>{tk.v}</a>
       );
       continue;
     }
@@ -223,7 +227,7 @@ function RichText({ text }: { text: string }): ReactNode {
       if (im.index > li) parts.push(<span key={key++}>{tk.v.slice(li, im.index)}</span>);
       const id = im[1];
       parts.push(
-        <a key={key++} href={`/flywheel/tasks/${id}`} title={`打开任务 ${id}`} style={{ fontFamily: "var(--font-mono)", fontSize: "0.94em" }}>
+        <a key={key++} href={`/flywheel/tasks/${id}`} title={`打开任务 ${id}`} className={styles.taskIdLink}>
           {id}
         </a>
       );
@@ -242,7 +246,6 @@ const TASK_STATUS_TAG: Record<string, { color: string; label: string }> = {
   PENDING: { color: "default", label: "待认领" },
   DEPRECATED: { color: "default", label: "已废弃" },
 };
-const PRIORITY_COLOR: Record<string, string> = { P0: "var(--status-crit)", P1: "var(--status-warn)", P2: "var(--text-muted)" };
 
 /** 段正文: ### 小标题加粗, 其余行用 RichText (URL/任务 id 可点) */
 function SectionBody({ body }: { body: string }) {
@@ -253,13 +256,13 @@ function SectionBody({ body }: { body: string }) {
         const sub = /^\s*#{3,6}\s+(.+?)\s*$/.exec(line);
         if (sub) {
           return (
-            <div key={i} style={{ fontWeight: 600, color: "var(--text-dim)", margin: "var(--sp-1-5) 0 var(--sp-0-5)" }}>
+            <div key={i} className={styles.subHead}>
               {sub[1]}
             </div>
           );
         }
         return (
-          <div key={i} style={{ whiteSpace: "pre-wrap" }}>
+          <div key={i} className={styles.preLine}>
             <RichText text={line} />
           </div>
         );
@@ -384,9 +387,9 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
   };
 
   return (
-    <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.85 }}>
+    <div className={styles.root}>
       {/* 顶部: 结构化状态 / 生成方 / 溯源 */}
-      <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--sp-2-5)" }}>
+      <div className={styles.topRow}>
         {parsed.structured ? (
           <Pill tone="ok">结构化 {parsed.sections.length} 段</Pill>
         ) : (
@@ -397,80 +400,74 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
         {meta?.generatedBy ? <span className="tiny">生成方 {meta.generatedBy}</span> : null}
         {parsed.structured && !(Array.isArray(meta?.sections) && meta.sections.length) ? (
           <Tooltip title="把七段结构与正文里的任务 id 写成机器可读的 meta (mind 已支持 PATCH meta), 便于自动流程判断是否已结构化">
-            <Button size="small" type="link" loading={metaBusy} onClick={saveMeta} style={{ padding: 0, fontSize: "var(--fs-sm)" }}>
+            <Button size="small" type="link" loading={metaBusy} onClick={saveMeta} className={styles.btnFlat}>
               补齐 meta
             </Button>
           </Tooltip>
         ) : null}
         {todo?.evidence ? <span className="tiny">证据 {String(todo.evidence).slice(0, 60)}</span> : null}
         {todo?.note ? <span className="tiny">备注 {String(todo.note).slice(0, 60)}</span> : null}
-        {metaMsg ? <span className="tiny" style={{ color: "var(--status-ok)" }}>{metaMsg}</span> : null}
+        {metaMsg ? <span className={"tiny " + styles.okText}>{metaMsg}</span> : null}
       </div>
 
       {/* 2026-09-11 评审采纳: 负责人 / 当前状态 / 最近一次状态变更 / 优先级 / 截止 / 来源 —— 必须在详情里直接看到 */}
-      <div
-        style={{
-          display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-          background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
-          padding: "var(--sp-2-5) var(--sp-3)", marginBottom: "var(--sp-3)",
-        }}
-      >
+      <div className={styles.metaGrid}>
         <div>
           <div className="tiny">负责人</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             <Pill tone={todo?.ownerType === "human" ? "warn" : todo?.ownerType === "agent" ? "info" : "mute"}>{ownerLabel}</Pill>
           </div>
         </div>
         <div>
           <div className="tiny">创建者</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             <span className="mono">{todo?.createdBy || "-"}</span>
-            <span className="tiny" style={{ marginLeft: "var(--sp-1-5)" }}>{todo?.createdAt ? relTime(todo.createdAt) : ""}</span>
+            <span className={"tiny " + styles.ml15}>{todo?.createdAt ? relTime(todo.createdAt) : ""}</span>
           </div>
         </div>
         <div>
           <div className="tiny">当前状态</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             <Pill tone={statusMeta[String(todo?.status)]?.tone || "mute"}>{statusMeta[String(todo?.status)]?.label || todo?.status || "-"}</Pill>
-            {todo?.doneAt ? <span className="tiny" style={{ marginLeft: "var(--sp-1-5)" }}>完成于 {relTime(todo.doneAt)}{todo.doneBy ? " · " + todo.doneBy : ""}</span> : null}
+            {todo?.doneAt ? <span className={"tiny " + styles.ml15}>完成于 {relTime(todo.doneAt)}{todo.doneBy ? " · " + todo.doneBy : ""}</span> : null}
           </div>
         </div>
         <div>
           <div className="tiny">最近一次状态变更</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             {lastChangeAt ? relTime(lastChangeAt) : "-"}
-            <span className="tiny" style={{ marginLeft: "var(--sp-1-5)" }}>
+            <span className={"tiny " + styles.ml15}>
               {lastStatusEvent ? `（${lastStatusEvent.text} · ${lastStatusEvent.actor}）` : "（创建后未变更过状态）"}
             </span>
           </div>
         </div>
         <div>
           <div className="tiny">优先级 / 截止</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
-            <span className="mono" style={{ color: PRIORITY_COLOR[todo?.priority] || "inherit", fontWeight: 600 }}>{todo?.priority || "-"}</span>
-            <span className="tiny" style={{ marginLeft: "var(--sp-1-5)" }}>
+          <div className={styles.fsBase}>
+            <span className={"mono " + styles.prio} data-prio={todo?.priority || undefined}>{todo?.priority || "-"}</span>
+            <span className={"tiny " + styles.ml15}>
               {todo?.dueAt ? new Date(todo.dueAt).toLocaleString("zh-CN", { hour12: false }) : "无截止"}
             </span>
           </div>
         </div>
         <div>
           <div className="tiny">来源</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             <Pill tone="mute">{todo?.source || "-"}</Pill>
-            <span className="tiny mono" style={{ marginLeft: "var(--sp-1-5)" }}>{todo?.sourceRefId || "-"}</span>
-            {extra?.source?.href ? <a href={extra.source.href} style={{ marginLeft: "var(--sp-1-5)" }}>打开 →</a> : null}
+            <span className={"tiny mono " + styles.ml15}>{todo?.sourceRefId || "-"}</span>
+            {extra?.source?.href ? <a href={extra.source.href} className={styles.ml15}>打开 →</a> : null}
           </div>
         </div>
         <div>
           <div className="tiny">依赖与阻塞</div>
-          <div style={{ fontSize: "var(--fs-base)" }}>
+          <div className={styles.fsBase}>
             {hasBlocking ? (
-              <span style={{ color: "var(--status-crit)" }}>
+              <span className={styles.critText}>
                 {blockedBy.length ? <span>被阻塞于 {blockedBy.join(", ")} </span> : null}
                 {openBlockers.length ? <span>· 关联任务未完成 {openBlockers.length} 条</span> : null}
               </span>
             ) : (
-              <span className="tiny" style={{ color: "var(--status-ok)" }}>无阻塞（没有未完成的阻塞依赖）</span>
+              <span className={"tiny " + styles.okText}>无阻塞（没有未完成的阻塞依赖）</span>
             )}
           </div>
         </div>
@@ -478,20 +475,20 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
 
       {/* meta 机器字段 (核验统计等) */}
       {metaStats.length || metaScalars.length ? (
-        <div style={{ display: "flex", gap: "var(--sp-2-5)", flexWrap: "wrap", marginBottom: "var(--sp-3)" }}>
+        <div className={styles.statsRow}>
           {metaStats.map((s) => (
-            <div key={s.k} style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface2)", padding: "var(--sp-1) var(--sp-2-5)" }}>
+            <div key={s.k} className={styles.statCard}>
               <div className="tiny">{s.k}</div>
-              <div className="mono" style={{ fontSize: "var(--fs-md)", fontWeight: 600 }}>{String(s.v)}</div>
+              <div className={"mono " + styles.statVal}>{String(s.v)}</div>
             </div>
           ))}
           {/* 2026-10-26：机器字段（kind=… / stormAlertFile=/home/…）不再平铺在正文里——
               那是日志腔，读者要的是「这条待办要你做什么」。收进「技术信息」折叠，需要时再看。 */}
           <details className="tech-detail">
             <summary>技术信息（{metaScalars.length} 项机器字段）</summary>
-            <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap", marginTop: "var(--sp-2)" }}>
+            <div className={styles.scalarRow}>
               {metaScalars.map(([k, v]) => (
-                <span key={k} className="pill mute" style={{ fontSize: "var(--fs-xs)" }}>{k}={String(v)}</span>
+                <span key={k} className={"pill mute " + styles.metaPill}>{k}={String(v)}</span>
               ))}
             </div>
           </details>
@@ -504,50 +501,43 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
           // 决策项已渲染成选项卡片时, 不再重复显示原始文字 (规范: 渲染为卡片而不是一段文字)
           const asCards = s.key === "decision" && textOptions.options.length > 0 && !(Array.isArray(meta?.options) && meta.options.length);
           return (
-          <div key={s.key + s.title} style={{ marginBottom: "var(--sp-3)" }}>
-            <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-0-5)" }}>
-              【{s.title}】{asCards ? <span className="tiny" style={{ fontWeight: 400 }}>（已转成下方选项卡片）</span> : null}
+          <div key={s.key + s.title} className={styles.section}>
+            <div className={styles.sectionTitle}>
+              【{s.title}】{asCards ? <span className={"tiny " + styles.noteTiny}>（已转成下方选项卡片）</span> : null}
             </div>
             {asCards ? null : s.items.length ? (
-              <ol style={{ margin: "var(--sp-0-5) 0 0 var(--sp-5)", padding: 0 }}>
+              <ol className={styles.items}>
                 {s.items.map((it, i) => (
-                  <li key={i} style={{ marginBottom: "var(--sp-0-5)" }}><RichText text={it} /></li>
+                  <li key={i} className={styles.item}><RichText text={it} /></li>
                 ))}
               </ol>
             ) : (
-              <div style={{ wordBreak: "break-word", color: "var(--text-dim)" }}>
+              <div className={styles.bodyText}>
                 <SectionBody body={s.body} />
               </div>
             )}
             {/* 决策项段: 选项卡片内联在此 (可复算/需人决策的部分优先呈现) */}
             {s.key === "decision" && options.length ? (
-              <div style={{ display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", marginTop: "var(--sp-1-5)" }}>
+              <div className={styles.optionsGrid + " " + styles.optionsGridSpaced}>
                 {options.map((o, i) => {
                   const isRec = (recommendedKey && o.key === recommendedKey) || (!recommendedKey && i === 0);
                   return (
                     <div
                       key={o.key}
-                      className={"todo-option" + (onDecide ? " clickable" : "")}
+                      className={"todo-option" + (onDecide ? " clickable" : "") + " " + styles.option + " " + styles.optionHover}
+                      data-rec={isRec ? "1" : "0"}
+                      data-clickable={onDecide ? "1" : undefined}
                       onClick={onDecide ? () => pickOption(o) : undefined}
                       title={onDecide ? ("选择选项 " + o.key + "（预填到提交决定）") : undefined}
                       role={onDecide ? "button" : undefined}
-                      style={{
-                        border: "1px solid " + (isRec ? "var(--status-ok)" : "var(--border)"),
-                        background: isRec ? "color-mix(in srgb, var(--status-ok) 7%, transparent)" : "var(--bg-surface2)",
-                        borderRadius: "var(--radius-md)", padding: "var(--sp-2-5) var(--sp-3)",
-                        cursor: onDecide ? "pointer" : "default",
-                        transition: "box-shadow var(--c-transition, 0.2s)",
-                      }}
-                      onMouseEnter={onDecide ? (e: any) => { e.currentTarget.style.boxShadow = "0 0 0 2px var(--primary-dim)"; } : undefined}
-                      onMouseLeave={onDecide ? (e: any) => { e.currentTarget.style.boxShadow = "none"; } : undefined}
                     >
-                      <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1-5)", marginBottom: "var(--sp-1)" }}>
-                        <span className="mono" style={{ fontWeight: 700, color: isRec ? "var(--status-ok)" : "var(--text-dim)" }}>{o.key}</span>
+                      <div className={styles.optionHead}>
+                        <span className={"mono " + styles.optionKey} data-rec={isRec ? "1" : "0"}>{o.key}</span>
                         {isRec ? <Pill tone="ok">推荐</Pill> : null}
-                        {onDecide ? <span className="tiny" style={{ marginLeft: "auto", color: "var(--primary)" }}>选择</span> : null}
+                        {onDecide ? <span className={"tiny " + styles.pickHint}>选择</span> : null}
                       </div>
                       <div><RichText text={o.label} /></div>
-                      {o.impact ? <div className="tiny" style={{ marginTop: "var(--sp-1)" }}>影响：<RichText text={String(o.impact)} /></div> : null}
+                      {o.impact ? <div className={"tiny " + styles.optionImpact}>影响：<RichText text={String(o.impact)} /></div> : null}
                     </div>
                   );
                 })}
@@ -557,7 +547,7 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
           );
         })
       ) : (
-        <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word", color: "var(--text-dim)" }}>
+        <div className={styles.rawText}>
           <RichText text={parsed.raw || "(无详情)"} />
         </div>
       )}
@@ -565,34 +555,30 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
       {/* 决策项选项卡片 (meta.options 优先, 否则从决策段文本兜底解析)
           —— 若已有决策段, 卡片已内联渲染在该段内, 这里不再重复 */}
       {options.length && !parsed.sections.some((s) => s.key === "decision") ? (
-        <div style={{ marginTop: "var(--sp-3)" }}>
-          <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-1-5)" }}>
+        <div className={styles.blockSm}>
+          <div className={styles.decisionTitle}>
             决策选项{recommendedKey ? `（推荐 ${recommendedKey}）` : ""}
           </div>
-          <div style={{ display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
+          <div className={styles.optionsGrid}>
             {options.map((o, i) => {
               const isRec = (recommendedKey && o.key === recommendedKey) || (!recommendedKey && i === 0);
               return (
                 <div
                   key={o.key}
-                  className={"todo-option" + (onDecide ? " clickable" : "")}
+                  className={"todo-option" + (onDecide ? " clickable" : "") + " " + styles.option}
+                  data-rec={isRec ? "1" : "0"}
+                  data-clickable={onDecide ? "1" : undefined}
                   onClick={onDecide ? () => pickOption(o) : undefined}
                   title={onDecide ? ("选择选项 " + o.key + "（预填到提交决定）") : undefined}
                   role={onDecide ? "button" : undefined}
-                  style={{
-                    border: "1px solid " + (isRec ? "var(--status-ok)" : "var(--border)"),
-                    background: isRec ? "color-mix(in srgb, var(--status-ok) 7%, transparent)" : "var(--bg-surface2)",
-                    borderRadius: "var(--radius-md)", padding: "var(--sp-2-5) var(--sp-3)",
-                    cursor: onDecide ? "pointer" : "default",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1-5)", marginBottom: "var(--sp-1)" }}>
-                    <span className="mono" style={{ fontWeight: 700, color: isRec ? "var(--status-ok)" : "var(--text-dim)" }}>{o.key}</span>
+                  <div className={styles.optionHead}>
+                    <span className={"mono " + styles.optionKey} data-rec={isRec ? "1" : "0"}>{o.key}</span>
                     {isRec ? <Pill tone="ok">推荐</Pill> : null}
-                    {onDecide ? <span className="tiny" style={{ marginLeft: "auto", color: "var(--primary)" }}>选择</span> : null}
+                    {onDecide ? <span className={"tiny " + styles.pickHint}>选择</span> : null}
                   </div>
                   <div><RichText text={o.label} /></div>
-                  {o.impact ? <div className="tiny" style={{ marginTop: "var(--sp-1)" }}>影响：<RichText text={String(o.impact)} /></div> : null}
+                  {o.impact ? <div className={"tiny " + styles.optionImpact}>影响：<RichText text={String(o.impact)} /></div> : null}
                 </div>
               );
             })}
@@ -602,48 +588,43 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
 
       {/* ===== 关联任务卡片 (对齐任务详情页的"关联产物"区块) ===== */}
       {taskIds.length || (extra?.relatedTasks || []).length ? (
-        <div style={{ marginTop: "var(--sp-3-5)" }}>
-          <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-1-5)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+        <div className={styles.block}>
+          <div className={styles.blockTitle}>
             关联任务
-            <span className="tiny" style={{ fontWeight: 400 }}>
+            <span className={"tiny " + styles.noteTiny}>
               {fmtNum((extra?.relatedTasks || []).length || taskIds.length)} 个 · 来自 meta.taskIds
             </span>
-            <Button size="small" type="link" icon={<ReloadOutlined />} loading={extraLoading} onClick={loadExtra} style={{ padding: 0 }}>刷新</Button>
+            <Button size="small" type="link" icon={<ReloadOutlined />} loading={extraLoading} onClick={loadExtra} className={styles.btnFlat}>刷新</Button>
           </div>
           {extraLoading && !extra ? (
             <Skeleton active paragraph={{ rows: 2 }} title={false} />
           ) : (extra?.relatedTasks || []).length ? (
-            <div style={{ display: "grid", gap: "var(--sp-2)", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}>
+            <div className={styles.taskGrid}>
               {(extra.relatedTasks || []).map((t: any) => (
                 <a
                   key={t.id}
                   href={`/flywheel/tasks/${t.id}`}
-                  className="todo-task-card"
-                  style={{
-                    display: "block", textDecoration: "none", color: "inherit",
-                    border: "1px solid var(--border)", borderRadius: "var(--radius-md)",
-                    background: "var(--bg-surface)", padding: "var(--sp-2) var(--sp-3)",
-                  }}
+                  className={"todo-task-card " + styles.taskCard}
                   title={`打开任务详情 ${t.id}`}
                 >
-                  <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.5, marginBottom: "var(--sp-1)" }}>{t.title}</div>
-                  <div style={{ display: "flex", gap: "var(--sp-1-5)", alignItems: "center", flexWrap: "wrap" }}>
-                    <Tag color={TASK_STATUS_TAG[t.status]?.color || "default"} style={{ marginInlineEnd: 0 }}>
+                  <div className={styles.taskCardTitle}>{t.title}</div>
+                  <div className={styles.taskMeta}>
+                    <Tag color={TASK_STATUS_TAG[t.status]?.color || "default"} className={styles.tagTight}>
                       {TASK_STATUS_TAG[t.status]?.label || t.status}
                     </Tag>
-                    <span className="mono" style={{ color: PRIORITY_COLOR[t.priority] || "var(--text-muted)", fontSize: "var(--fs-sm)", fontWeight: 600 }}>{t.priority}</span>
+                    <span className={"mono " + styles.taskPrio} data-prio={t.priority || undefined}>{t.priority}</span>
                     {t.improvementType ? <span className="tiny">{t.improvementType}</span> : null}
                     <span className="tiny">👤 {t.assignedAgent || "未指派"}</span>
-                    <span className="tiny" style={{ marginLeft: "auto" }}>{t.updatedAt ? relTime(t.updatedAt) : "-"}</span>
+                    <span className={"tiny " + styles.mlAuto}>{t.updatedAt ? relTime(t.updatedAt) : "-"}</span>
                   </div>
-                  <div className="tiny mono" style={{ marginTop: "var(--sp-0-5)" }}>{t.id} →</div>
+                  <div className={"tiny mono " + styles.taskIdLine}>{t.id} →</div>
                 </a>
               ))}
             </div>
           ) : (
-            <div style={{ display: "flex", gap: "var(--sp-2)", flexWrap: "wrap" }}>
+            <div className={styles.idPills}>
               {taskIds.map((id) => (
-                <a key={id} href={`/flywheel/tasks/${id}`} className="pill info" style={{ textDecoration: "none", fontFamily: "var(--font-mono)" }} title={`打开任务 ${id}`}>
+                <a key={id} href={`/flywheel/tasks/${id}`} className={"pill info " + styles.taskIdPill} title={`打开任务 ${id}`}>
                   {id.slice(0, 12)}… →
                 </a>
               ))}
@@ -653,10 +634,10 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
       ) : null}
 
       {/* ===== 处理时间线 (对齐任务详情页的"状态流转/执行链") ===== */}
-      <div style={{ marginTop: "var(--sp-3-5)" }}>
-        <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-1-5)", display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+      <div className={styles.block}>
+        <div className={styles.blockTitle}>
           处理时间线
-          <span className="tiny" style={{ fontWeight: 400 }}>{t('todo.timelineFrom')}</span>
+          <span className={"tiny " + styles.noteTiny}>{t('todo.timelineFrom')}</span>
         </div>
         {extraLoading && !extra ? (
           <Skeleton active paragraph={{ rows: 2 }} title={false} />
@@ -666,10 +647,10 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
               key: i,
               color: t.kind === "done" ? "green" : t.kind === "created" ? "blue" : "gray",
               content: (
-                <div style={{ fontSize: "var(--fs-base)" }}>
-                  <span style={{ marginRight: "var(--sp-1-5)" }}>{t.text}</span>
+                <div className={styles.fsBase}>
+                  <span className={styles.timelineText}>{t.text}</span>
                   <span className="actor-chip platform">{t.actor || "-"}</span>
-                  <span className="tiny" style={{ marginLeft: "var(--sp-2)" }}>{relTime(t.at)}</span>
+                  <span className={"tiny " + styles.ml2}>{relTime(t.at)}</span>
                 </div>
               ),
             }))}
@@ -681,9 +662,9 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
 
       {/* ===== 来源回溯 ===== */}
       {extra?.source ? (
-        <div style={{ marginTop: "var(--sp-3-5)" }}>
-          <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-1)" }}>来源回溯</div>
-          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", fontSize: "var(--fs-base)" }}>
+        <div className={styles.block}>
+          <div className={styles.blockTitleTight}>来源回溯</div>
+          <div className={styles.sourceRow}>
             <Pill tone="mute">source={extra.source.source || "-"}</Pill>
             <span className="tiny">{t('field.sourceRefId')} <span className="mono">{extra.source.sourceRefId || "-"}</span></span>
             {extra.source.resolved ? (
@@ -699,9 +680,9 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
 
       {/* meta.links → 外部/页面链接 */}
       {metaLinks.length ? (
-        <div style={{ marginTop: "var(--sp-3)" }}>
-          <div style={{ fontWeight: 700, color: "var(--primary)", marginBottom: "var(--sp-1)" }}>相关链接</div>
-          <div style={{ display: "flex", gap: "var(--sp-2-5)", flexWrap: "wrap" }}>
+        <div className={styles.blockSm}>
+          <div className={styles.blockTitleTight}>相关链接</div>
+          <div className={styles.linksRow}>
             {metaLinks.map((l, i) => (
               <a key={i} href={l.url} target={String(l.url).startsWith("http") ? "_blank" : undefined} rel="noreferrer" className="tiny">{l.label} →</a>
             ))}
@@ -710,7 +691,7 @@ export default function TodoDetail({ todo, onDecide }: { todo: any; onDecide?: (
       ) : null}
 
       {/* ===== 讨论 (与任务详情页一致: 任何实体都能针对它做 AI 沟通) ===== */}
-      <div style={{ marginTop: "var(--sp-3-5)" }}>
+      <div className={styles.block}>
         <DiscussionPanel entityType="todo" entityId={todo?.id} title="待办讨论与协作" />
       </div>
     </div>

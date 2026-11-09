@@ -1,0 +1,16 @@
+/* /terminals 落地页样式（2026-11-06）
+   只放本页布局类；间距/字号全部走令牌（var(--sp-*) / var(--fs-*)），不新增全局类、不改 globals.css。 */
+
+.crumbDim { color: var(--text-dim); }
+
+.listPanel { margin-top: var(--sp-3); }
+
+/* 执行体单元格：名称在上、编号·通道在下（两个 span 竖排） */
+.who { display: flex; flex-direction: column; gap: var(--sp-0-5); min-width: 0; }
+.whoName { font-weight: 600; color: var(--text); text-decoration: none; }
+.whoName:hover { text-decoration: underline; }
+
+.openLink { color: var(--primary); text-decoration: none; white-space: nowrap; }
+.openLink:hover { text-decoration: underline; }
+
+.footNote { margin-top: var(--sp-3); color: var(--text-muted); }

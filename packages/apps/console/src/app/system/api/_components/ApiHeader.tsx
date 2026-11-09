@@ -1,41 +1,9 @@
 "use client";
-// system/api 页 · 页头 + 指标卡行 (从 page.tsx 抽出, 页面瘦身)
+// system/api 页 · 指标卡行
+// 2026-11-05 页头口径统一（PAGE-HEADER-31 §3）：页头（面包屑 + 标题 + 一句说明）已上移到 page.tsx，
+//   本文件只保留 KPI 卡行；四个计数的取值口径与下方 key 一字未改。
 import KPICard from "@/components/KPICard";
 import { t } from "@/i18n";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import styles from "../page.module.css";
-
-export function ApiHeader({
-  loading,
-  restCount,
-  trpcCount,
-  mcpCount,
-  toolCount,
-}: {
-  loading: boolean;
-  restCount: number;
-  trpcCount: number;
-  mcpCount: number;
-  toolCount: number;
-}) {
-  return (
-    <>
-      <div className="breadcrumb">
-        <span className={styles.crumbDim}>业务与系统</span>
-        <span className="sep">/</span>
-        <span className="current">{t('api.crumb')}</span>
-      </div>
-      <PageHeader>
-        <PageTitle>{t('api.title')}</PageTitle>
-        <div className="page-subtitle">
-          {loading
-            ? "加载中..."
-            : t('api.meta', { rest: restCount, trpc: trpcCount, mcp: mcpCount, tools: toolCount })}
-        </div>
-      </PageHeader>
-    </>
-  );
-}
 
 export function ApiKpiGrid({
   restCount,

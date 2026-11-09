@@ -1,0 +1,18 @@
+/* /flywheel/flow 队列与堆积面板样式（2026-11-05 P2 批8：内联 style 清零）
+   每个格子的数值色按阈值分档，改由 data-tone 属性选择器承载；数据未到时整格弱化。 */
+
+.panelMb { margin-bottom: var(--sp-4); }
+
+/* 4 列等宽网格（原内联 repeat(4, 1fr)） */
+.queueGrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-2); }
+
+.tile { background: var(--bg-surface2, #16212b); border-radius: var(--radius-md); padding: var(--sp-2-5); }
+
+.tileLabel { font-size: var(--fs-sm); color: var(--text-dim); }
+
+.tileValue { font-size: var(--fs-2xl); font-weight: 700; color: var(--text); }
+.tileValue[data-tone="crit"] { color: var(--status-crit); }
+.tileValue[data-tone="ok"] { color: var(--status-ok); }
+.tileValue[data-tone="dim"] { color: var(--text-dim); }
+/* 数据未就绪（ready === false）：压过上面的分档色 */
+.tileValue[data-loading="true"] { color: var(--text-dim); }

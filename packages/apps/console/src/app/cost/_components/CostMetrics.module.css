@@ -1,0 +1,7 @@
+/* /cost 指标卡行样式（2026-11-06 P2 收尾：本文件最后一处内联 style 清零）
+   估算 token 脚注「有值/无值」两态色，改前是行内三元 color；现由 data-est 属性选择器承载。
+   字号/层级继续复用 globals 的 .tiny，不新增全局类、不改 globals.css。 */
+
+.estimateFoot { color: var(--text-muted); }
+.estimateFoot[data-est="true"] { color: var(--status-warn); }
+.estimateFoot[data-est="false"] { color: var(--text-muted); }

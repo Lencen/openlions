@@ -1,0 +1,24 @@
+/* /cognitive/practice · 实践列表（2026-11-05 P2 批9 呈现层）
+   内联 style 清零：面包屑上级段弱化色、取数失败块内边距、标题/详情两处链接按钮（原内联常量对象）、
+   描述列与时间列字号、外链箭头间距。
+   本页没有选中态/状态色/进度宽度这类动态值，故不含 data-* 选择器。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+/* 面包屑上级段（原内联 color: var(--text-dim)） */
+.crumbDim { color: var(--text-dim); }
+
+/* 取数失败块内边距（原内联 padding: var(--sp-3)） */
+.errBox { padding: var(--sp-3); }
+
+/* 标题与「详情」两处链接式按钮（原内联常量 linkBtn：去底色去掉边框、继承字号、主色） */
+.linkBtn { background: none; border: 0; padding: 0; cursor: pointer; color: var(--primary); font: inherit; text-align: left; }
+
+/* 描述列（原内联 color + fontSize: var(--fs-base)） */
+.descCell { color: var(--text-dim); font-size: var(--fs-base); }
+
+/* 更新时间 / 创建时间列（原内联 fontSize: var(--fs-sm)，配合 globals 的 .mono）。
+   选择器写两遍是同名类叠加：globals 里有 .mono.mono 的 18px 档，单类压不住它。 */
+.dateCell { font-size: var(--fs-sm); }
+
+/* 外链箭头（原内联 marginLeft: var(--sp-1-5) + color: var(--text-dim)，配合 globals 的 .tiny） */
+.extLink { margin-left: var(--sp-1-5); color: var(--text-dim); }

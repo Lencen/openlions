@@ -6,6 +6,9 @@ import DataTable from "@/components/common/DataTable";
 import { PanelCard } from "@/components/ui";
 import { fmtNum, relTime } from "@/lib/format";
 import { STATUS_TAG } from "./constants";
+// 2026-11-05 P2 批9（呈现层）：内联 style 清零 → 同名 CSS Module；列/文案/取数未动；
+//   本文件表格仍是既有的 @/components/common/DataTable（E1 例外，未新增引用）。
+import styles from "./AgentsLiveBottom.module.css";
 
 export default function AgentsLiveBottom({ data, loadingAll, s }: { data: any; loadingAll: boolean; s: any }) {
   return (
@@ -27,11 +30,11 @@ export default function AgentsLiveBottom({ data, loadingAll, s }: { data: any; l
             emptyTitle="窗口内没有执行记录"
             emptyRows={2}
             columns={[
-              { title: t('agentsLive.col.agent'), dataIndex: "agentId", width: 130, render: (v: string) => <span style={{ fontSize: "var(--fs-base)" }}>{v || "-"}</span> },
+              { title: t('agentsLive.col.agent'), dataIndex: "agentId", width: 130, render: (v: string) => <span className={styles.cellBase}>{v || "-"}</span> },
               {
                 title: "任务",
                 dataIndex: "taskTitle",
-                render: (v: string) => <Tooltip title={v}><span style={{ fontSize: "var(--fs-base)" }}>{(v || "-").slice(0, 40)}</span></Tooltip>,
+                render: (v: string) => <Tooltip title={v}><span className={styles.cellBase}>{(v || "-").slice(0, 40)}</span></Tooltip>,
               },
               {
                 title: "结果",
@@ -57,9 +60,9 @@ export default function AgentsLiveBottom({ data, loadingAll, s }: { data: any; l
                     <Tooltip
                       title={`${row.agentId} 窗口内自报累计 ${fmtNum(agentTokens)} 词元${taskTokens ? `（本任务 ${fmtNum(taskTokens)}）` : ""}`}
                     >
-                      <span className="mono" style={{ fontSize: "var(--fs-base)" }}>
+                      <span className={"mono " + styles.monoBase}>
                         {taskTokens ? fmtNum(taskTokens) : fmtNum(agentTokens)}
-                        <span className="tiny" style={{ marginLeft: "var(--sp-1)" }}>{taskTokens ? "本任务" : "窗口累计"}</span>
+                        <span className={"tiny " + styles.tagGap}>{taskTokens ? "本任务" : "窗口累计"}</span>
                       </span>
                     </Tooltip>
                   );
@@ -71,7 +74,7 @@ export default function AgentsLiveBottom({ data, loadingAll, s }: { data: any; l
         </PanelCard>
 
         <PanelCard title={t('agentsLive.rules.title')} extra={<span className="tiny">{t('agentsLive.rules.transparent')}</span>}>
-          <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.9, color: "var(--text-dim)" }}>
+          <div className={styles.rules}>
             <div>· {t('agentsLive.rules.online')}</div>
             <div>· {t('agentsLive.rules.running')}</div>
             <div>· {t('agentsLive.rules.stuck')}</div>
@@ -82,15 +85,15 @@ export default function AgentsLiveBottom({ data, loadingAll, s }: { data: any; l
             <div>· <b>离线</b>：{s.stateRules?.offline || "通信服务离线且名册非活跃"}。</div>
             <div>· <b>执行体</b>：{s.stateRules?.executor || "有工具、无常驻执行进程，不判在线 / 离线"}。</div>
             <div>· {t('agentsLive.rules.twoScopes', { types: s.taskScope?.types?.join(" + ") || "" })}</div>
-            <div className="tiny" style={{ marginTop: "var(--sp-1)" }}>{t('agentsLive.rules.goto')}</div>
-            <div className="tiny" style={{ marginTop: "var(--sp-1-5)" }}>
+            <div className={"tiny " + styles.tightTop}>{t('agentsLive.rules.goto')}</div>
+            <div className={"tiny " + styles.tightTopLoose}>
               {t('agentsLive.rules.note')}
             </div>
           </div>
         </PanelCard>
       </div>
 
-      <div className="tiny" style={{ textAlign: "right" }}>
+      <div className={"tiny " + styles.footRight}>
         {t('agentsLive.source')}{" "}
         {data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "-"}
       </div>

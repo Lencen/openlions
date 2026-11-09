@@ -1,0 +1,53 @@
+/* flywheel/tasks/new · P2 呈现层（批9，2026-11-05）
+   新建改进任务表单：面包屑弱化色、错误条、三列栅格、字段标签、下拉、底部操作行，
+   全部从内联 style 下沉到这里。颜色/间距/字号一律复用 globals.css 既有令牌，
+   panel / ui-input / ui-textarea 仍复用全局类，未新增全局类、未改 globals.css。 */
+
+/* 面包屑里"飞轮引擎"的弱化色（原内联 color: var(--text-dim)） */
+.crumbDim { color: var(--text-dim); }
+
+/* 面包屑链接沿用文字色（原内联 color: inherit） */
+.crumbLink { color: inherit; }
+
+/* 创建失败提示条（原内联 marginBottom: var(--sp-3)） */
+.errBar { margin-bottom: var(--sp-3); }
+
+/* 表单主体：panel 之外只补内边距与限宽（原内联 padding: var(--sp-4) + maxWidth: 900） */
+.form {
+  max-width: 900px;
+  padding: var(--sp-4);
+}
+
+/* 首行三列栅格：标题 2 份、优先级 1 份、工时 1 份（原内联 gridTemplateColumns: 2fr 1fr 1fr） */
+.grid3 {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3-5);
+}
+
+/* 字段标签（原内联 display/fontSize/color/marginBottom） */
+.fieldLabel {
+  display: block;
+  margin-bottom: var(--sp-1-5);
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+}
+
+/* 优先级下拉：撑满栅格 + 与 Input 同高（原内联 width: 100% + height: 30） */
+.prioritySelect {
+  width: 100%;
+  height: 30px;
+}
+
+/* 文本域字段块（原内联 marginBottom: var(--sp-3-5)，6 个字段共用） */
+.fieldBlock { margin-bottom: var(--sp-3-5); }
+
+/* 文本域撑满整行（原内联 width: 100%） */
+.fill { width: 100%; }
+
+/* 底部操作行（原内联 display: flex + gap: var(--sp-2)） */
+.actions {
+  display: flex;
+  gap: var(--sp-2);
+}

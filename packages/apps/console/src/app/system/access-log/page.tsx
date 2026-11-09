@@ -68,7 +68,7 @@ export default function AccessLogPage() {
             type="button"
             className={styles.rowToggle}
             aria-expanded={expandedId === l.id}
-            onClick={() => setExpandedId(expandedId === l.id ? null : l.id)}
+            onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === l.id ? null : l.id); }}
           >
             {expandedId === l.id ? "收起" : "展开"}
           </button>
@@ -103,6 +103,8 @@ export default function AccessLogPage() {
         columns={columns}
         rows={logs}
         rowKey={(l, i) => l.id || i}
+        // 2026-11-05 热修（uiux 批4/5 走查 P0-2）：整行点击展开/收起恢复；键盘路径仍是「详情」列的原生按钮。
+        onRow={(l) => ({ onClick: () => setExpandedId(expandedId === l.id ? null : l.id) })}
         loading={loading && !data}
         error={error ? String((error as Error)?.message || error) : null}
         onRetry={() => { mutate(); }}

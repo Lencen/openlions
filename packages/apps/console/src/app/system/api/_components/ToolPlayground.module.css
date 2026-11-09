@@ -1,0 +1,51 @@
+/* /system/api · 工具实时调测面板（ToolPlayground）—— 2026-11-05 P2 批6
+   原先 12 处内联 style 全部下沉到这里。能复用 .panel / .badge 的仍复用，这里只放「本组件特有」的排版。
+   动态态只有一处：调用中按钮的 cursor:wait —— 按钮本来就用 disabled={calling}，故由 :disabled 承担，不留行内 style。 */
+
+.tpBody { padding: var(--sp-4); }
+.tpHead { margin-bottom: var(--sp-3); }
+.tpName { font-weight: 600; color: var(--primary); }
+.tpDesc { font-size: var(--fs-base); color: var(--text-dim); margin-top: var(--sp-1); }
+.tpLabel { margin-bottom: var(--sp-2); font-size: var(--fs-base); }
+
+/* 参数输入框（原来是内联 width/minHeight/字体/底色/边框/圆角） */
+.tpInput {
+  width: 100%;
+  min-height: 120px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-base);
+  padding: var(--sp-2);
+  background: var(--bg-surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+}
+
+.tpInvokeRow { margin-top: var(--sp-3); }
+/* 双类名：压过同页 globals.css 的 .badge（改成组件类后内联 padding 不再能兜底） */
+.tpInvoke.tpInvoke { cursor: pointer; padding: var(--sp-1-5) var(--sp-4); }
+.tpInvoke:disabled { cursor: wait; }
+
+.tpResult { margin-top: var(--sp-4); }
+.tpResultLabel { font-size: var(--fs-base); margin-bottom: var(--sp-1-5); }
+
+/* 调用结果（原来是内联底色/内边距/圆角/边框/字号/maxHeight/滚动/换行） */
+.tpPre {
+  background: var(--bg-surface2);
+  padding: var(--sp-3);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border);
+  font-size: var(--fs-sm);
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 未选中工具时的引导语 */
+.tpEmpty {
+  padding: var(--sp-7);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: var(--fs-md);
+}

@@ -1,0 +1,38 @@
+/* /sessions/detail · 会话检查器（2026-11-05 P2 批6 呈现层改造）
+   内联 style 清零：右侧栏堆叠、两列 KPI、图表空态/内边距、平台处置键值表都下沉到本文件。
+   平台处置原为手写 table 标签：本组件是**服务端组件**，而客户端 DataTable 的列 render/rowKey 是函数，
+   从服务端组件传给客户端组件会触发 Next 14 的
+   「Functions cannot be passed directly to Client Components」运行时 500（0.4.28 的 /agents/[id]/runs 已实测复现）。
+   故改用平台表格原子件 primitives.Table（showHeader=false），保留改前「无表头 标签→值」观感与状态徽标。
+   取数、字段、文案未动。 */
+
+/* 右侧栏纵向堆叠（原内联 flex column gap sp-3） */
+.inspector { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* KPI 两列（原内联 gridTemplateColumns repeat(2, minmax(0, 1fr))；双类名压过 .kpi-grid） */
+.kpiTwo.kpiTwo { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* 图表空态 / 图表容器（原内联 padding sp-3 [+ color var(--text-dim)]） */
+.emptyNote { padding: var(--sp-3); color: var(--text-dim); }
+.pad3 { padding: var(--sp-3); }
+
+/* 键值表：去掉 .tbl 没有的外框；首列还原改前 th 的观感（宽度 110 与改前内联一致） */
+.kvWrap.kvWrap { border: 0; border-radius: 0; background: transparent; }
+.kvWrap.kvWrap :global(.ui-table) td { max-width: 320px; overflow: hidden; text-overflow: ellipsis; word-break: keep-all; }
+.kvWrap.kvWrap :global(.ui-table) tbody td:first-child {
+  width: 110px;
+  padding: 10px var(--sp-4);
+  color: var(--text-dim);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: .03em;
+  background: var(--bg-surface2);
+  border-bottom: 1px solid var(--border-hi);
+  white-space: nowrap;
+}
+
+/* 处理备注（原内联 color var(--text-dim) + fontSize fs-base） */
+.noteCell { color: var(--text-dim); font-size: var(--fs-base); }
+
+/* 数值右对齐（改前 td.num：等宽数字 + 右对齐；Table 的列对齐是整列级的，这里压在内容上） */
+.numCell { display: block; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }

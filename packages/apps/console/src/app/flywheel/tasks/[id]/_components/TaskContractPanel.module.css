@@ -1,0 +1,13 @@
+/* TaskContractPanel · P2 批12 呈现层（2026-11-05）
+   3 处内联 style 下沉：面板 extra 的一行布局、改进载荷 <pre>、字段表的上边距。
+   字段、文案、跳转与取数未动；不新增全局类、不改 globals.css。 */
+
+/* 面板右上角说明 + 「转成待办」（原内联 display/gap/alignItems） */
+.contractExtra { display: inline-flex; gap: var(--sp-2-5); align-items: center; }
+
+/* 改进载荷原始 JSON（原内联 whiteSpace / fontSize / margin / maxHeight / overflow）。
+   高度 320px 没有现成的高度档位类（DataTable 只有 w* 宽度档），故写在本模块。 */
+.payloadPre { white-space: pre-wrap; font-size: var(--fs-sm); margin: 0; max-height: 320px; overflow: auto; }
+
+/* 字段表接在正文块之后（原内联 marginTop） */
+.descTop { margin-top: var(--sp-2); }

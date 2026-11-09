@@ -2,7 +2,7 @@
 // agents-live 页 · 指标卡行 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
 import { Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t } from "@/i18n";
-import { MetricCard } from "@/components/ui";
+import { KpiCard } from "@/components/ui";
 import { fmtNum, fmtScore } from "@/lib/format";
 
 export default function AgentsLiveMetrics({
@@ -16,16 +16,16 @@ export default function AgentsLiveMetrics({
 }) {
   return (
     <div className="metric-row">
-      <MetricCard label={t('agentsLive.online')} tone="ok" value={loadingAll ? "…" : fmtNum(s.online)} unit="个" hint={`共 ${fmtNum(s.total)} 个登记`} />
-      <MetricCard label={t('agentsLive.busy')} tone="info" value={loadingAll ? "…" : fmtNum(s.busy)} unit="个" hint={t('agentsLive.busy.hint')} />
-      <MetricCard
+      <KpiCard label={t('agentsLive.online')} tone="ok" value={loadingAll ? "…" : fmtNum(s.online)} unit="个" hint={`共 ${fmtNum(s.total)} 个登记`} />
+      <KpiCard label={t('agentsLive.busy')} tone="info" value={loadingAll ? "…" : fmtNum(s.busy)} unit="个" hint={t('agentsLive.busy.hint')} />
+      <KpiCard
         label="疑似卡住"
         tone={s.stuck ? "crit" : "mute"}
         value={loadingAll ? "…" : fmtNum(s.stuck)}
         unit="个"
         hint={s.stuck ? "需人工排查" : "无异常"}
       />
-      <MetricCard
+      <KpiCard
         label="24h 任务完成（全部类型）"
         tone="ok"
         value={loadingAll ? "…" : fmtNum(s.taskDoneAll)}
@@ -37,7 +37,7 @@ export default function AgentsLiveMetrics({
           </span>
         }
       />
-      <MetricCard
+      <KpiCard
         label="改进任务完成（机制修复类）"
         tone="warn"
         value={loadingAll ? "…" : fmtNum(s.taskDone)}
@@ -50,7 +50,7 @@ export default function AgentsLiveMetrics({
         }
         footer={<span className="tiny">{s.taskFailed ? `失败 ${fmtNum(s.taskFailed)}` : "无失败"}</span>}
       />
-      <MetricCard
+      <KpiCard
         label={t('agentsLive.agentType.label')}
         tone="info"
         value={loadingAll ? "…" : fmtNum(s.taskDoneAgentType)}
@@ -58,14 +58,14 @@ export default function AgentsLiveMetrics({
         hint={<Tooltip title={t('agentsLive.verify.tip')}><span>独立复核类</span></Tooltip>}
         footer={<span className="tiny">对话/问答 {fmtNum(s.taskDoneDialogue)} 个另计 · 这三类都不算"改进任务"</span>}
       />
-      <MetricCard
+      <KpiCard
         label="执行记录"
         tone="info"
         value={loadingAll ? "…" : fmtNum(s.executions)}
         unit="次"
         hint={loadingAll ? "…" : `产出提交 ${fmtNum(s.submissions)} 次`}
       />
-      <MetricCard
+      <KpiCard
         label={t('agentsLive.token.label')}
         tone={(s.tokenUsage?.tokens || 0) > 0 ? "ok" : "mute"}
         // 2026-10-13 round 76-EC: 这张卡原来**整张都没守卫** —— 加载中显示「0 个智能体 · 0 次上报」(实测就绪后有数) ✗。
@@ -75,7 +75,7 @@ export default function AgentsLiveMetrics({
         hint={loadingAll ? "…" : t('agentsLive.token.footer', { n: fmtNum(s.tokenUsage?.agents || 0), m: fmtNum(s.tokenUsage?.calls || 0) })}
         footer={loadingAll ? <span className="tiny">…</span> : <span className="tiny">{s.tokenUsage?.note || t('agentsLive.token.noteDefault')}</span>}
       />
-      <MetricCard
+      <KpiCard
         label={t('agentsLive.todo.label')}
         // 2026-10-13 round 76-EC: 这张也是漏守卫的 —— 加载中显示「0条未完成」, 就绪后是 6(实测) ✗。
         tone={loadingAll ? "mute" : agentTodoOpen ? "warn" : "mute"}
@@ -83,7 +83,7 @@ export default function AgentsLiveMetrics({
         unit="条未完成"
         hint={t('agentsLive.todo.hint')}
       />
-      <MetricCard
+      <KpiCard
         label="产出平均质量"
         tone={(s.avgQuality ?? 0) >= 0.7 ? "ok" : "warn"}
         value={loadingAll ? "…" : s.avgQuality === null || s.avgQuality === undefined ? "-" : fmtScore(s.avgQuality)}

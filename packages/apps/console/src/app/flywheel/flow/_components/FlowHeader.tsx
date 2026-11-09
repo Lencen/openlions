@@ -1,18 +1,10 @@
 "use client";
-// flywheel/flow 页 · 面包屑 + 页头 + 错误提示 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
-import type { FlowData } from "./types";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+// flywheel/flow 页 · 取数失败提示条
+// 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #10）：面包屑/标题/一句说明已上移到 page.tsx，
+//   本文件只剩错误提示。文件名沿用 FlowHeader（仅 page.tsx 引用），不改名以免扩大改动面。
 import styles from "../page.module.css";
 
-export default function FlowHeader({ d, err }: { d: FlowData | null; err: string }) {
-  return (
-    <>
-      <div className="breadcrumb"><span className={styles.flowCrumbDim}>飞轮引擎</span><span className="sep">/</span><span className="current">飞轮运转动态图</span></div>
-      <PageHeader>
-        <PageTitle>飞轮运转动态图</PageTitle>
-        <div className="page-subtitle">每 10 秒被动刷新 · 只汇总不调 LLM · {d ? new Date(d.timestamp).toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }) : "加载中..."}</div>
-      </PageHeader>
-      {err && <div className={styles.flowErr}>⚠ {err}</div>}
-    </>
-  );
+export default function FlowHeader({ err }: { err: string }) {
+  if (!err) return null;
+  return <div className={styles.flowErr}>⚠ {err}</div>;
 }

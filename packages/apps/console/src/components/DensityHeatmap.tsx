@@ -2,10 +2,12 @@
 // Phase3 屏07/08/10 等的『密度热力』(D 型): 一种关系一种图型 (规范 §7)
 // 语义: 单一关系 = 密度 (行 × 列), 语义色 = --brand 单色深浅 (ramp 由组件内派生, 不用外部传色)。
 // 实现: 自研 SVG, 不依赖 echarts; 行标签放左, 单元格右下方注小角数字 (字体 9px, --text-3)。
-// 可访问性: 容器 role="img" + aria-label 概述关键结论; 视觉隐藏的 <table> 等效数据 (规范 §10)。
+// 可访问性: 容器 role="img" + aria-label 概述关键结论; 视觉隐藏的等效数据表 (规范 §10)。
 // 主题: 通过 CSS 变量 --brand / --brand-soft / --bg-surface / --text-3 取色, 三主题跟随。
 
 import { useEffect, useMemo, useState } from "react";
+import DataTable from "@/components/DataTable";
+import styles from "./DensityHeatmap.module.css";
 
 export interface DensityHeatmapCell {
   /** 列标题 (X 标签) */
@@ -98,10 +100,12 @@ export default function DensityHeatmap({
 
   return (
     <div role="img" aria-label={ariaLabel || `${rows.length} 行 × ${cols.length} 列 密度热力图`}>
+      {/* 2026-11-05 P2 批8：width 属性给自然像素宽 + CSS max-width:100%，
+          与原来 width="100%" + maxWidth: px 的渲染宽度等价（容器更窄时等比缩小，更宽时不超过自然宽）。 */}
       <svg
-        width="100%"
+        width={width}
         viewBox={`0 0 ${width} ${height}`}
-        style={{ display: "block", maxWidth: width }}
+        className={styles.svg}
       >
         {/* 行标签 */}
         {rows.map((r, ri) => (
@@ -157,7 +161,7 @@ export default function DensityHeatmap({
                     textAnchor="end"
                     fill={t > 0.5 ? "#fff" : palette.text}
                     fontFamily="-apple-system, 'PingFang SC', sans-serif"
-                    style={{ fontVariantNumeric: "tabular-nums" }}
+                    className={styles.num}
                   >
                     {v}
                   </text>
@@ -168,24 +172,23 @@ export default function DensityHeatmap({
         )}
       </svg>
 
-      {/* 视觉隐藏的等效数据表 (规范 §10: 状态不能只靠颜色) */}
-      <table style={{ position: "absolute", left: -9999, top: 0, width: 1, height: 1, overflow: "hidden" }} aria-hidden={false}>
-        <caption>{ariaLabel || "密度热力数据"}</caption>
-        <thead>
-          <tr>
-            <th></th>
-            {cols.map((c) => <th key={c}>{c}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r}>
-              <th scope="row">{r}</th>
-              {cols.map((c) => <td key={c}>{grid.get(`${r}\u0000${c}`) ?? 0}</td>)}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* 视觉隐藏的等效数据表 (规范 §10: 状态不能只靠颜色)
+          2026-11-05 P2 批8：裸表标签改用白名单 DataTable，外层用 .srTable 移出屏幕；
+          行/列标题与数值一条不少，读屏仍可逐格读取（原 caption 语义改为 group 的 aria-label）。 */}
+      <div className={styles.srTable} role="group" aria-label={ariaLabel || "密度热力数据"}>
+        <DataTable
+          columns={[
+            // 2026-11-05 裁决 D：首列是行名，必须保住 <th scope="row"> 的行表头语义（WCAG 1.3.1）
+            { key: "row", title: "", rowHeader: true },
+            ...cols.map((c, i) => ({ key: "c" + i, title: c })),
+          ]}
+          rows={rows.map((r) => {
+            const out: Record<string, string | number> = { row: r };
+            cols.forEach((c, i) => { out["c" + i] = grid.get(`${r}\u0000${c}`) ?? 0; });
+            return out;
+          })}
+        />
+      </div>
     </div>
   );
 }

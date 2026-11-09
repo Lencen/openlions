@@ -120,10 +120,32 @@ export interface StructuredFinding {
 const SESSION_API_BASE = "http://localhost:3002/api/v1";
 const SESSION_API_KEY = sessionApiKey(/* LIONS_SESSION_API_KEY */);
 const REFLECT_MODEL = process.env.REFLECT_MODEL || process.env.ANTHROPIC_MODEL || "MiniMax-M3";
-// 2026-11-05（Q7-min）：max_tokens 改为可配置，默认 16384。
+// 2026-11-05（Q7-min）：max_tokens 改为可配置。
 // 为什么：两条链已切到 thinking 模型（agent-x-flash / M3.1），长反思在 8192 会被截断，
 // 表现为 "all chunks failed"，把"模型没答完"误报成"API 不可用"。
-const REFLECT_MAX_TOKENS = Number(process.env.REFLECT_MAX_TOKENS || 16384);
+// 2026-11-05（Q7-auto）：再往前一步 —— 按模型取上限，不再写死一个数。
+//   写死的两种错法：小/未知模型吃 16384 直接 400（max_tokens 超上限）；
+//   大模型吃 8192 被截断。两者在日志里都长得像“API 不可用”。
+// 优先级：REFLECT_MAX_TOKENS（人工覆盖）> 模型族表 > 保守默认 8192；
+//   结果统一夹到 [1024, 32768]，防配置写错把请求打爆。
+const REFLECT_MAX_TOKENS_MIN = 1024;
+const REFLECT_MAX_TOKENS_MAX = 32768;
+const REFLECT_MAX_TOKENS_DEFAULT = 8192;
+const REFLECT_MAX_TOKENS_BY_MODEL: Array<[RegExp, number]> = [
+  [/agent-x/i, 16384],
+  [/minimax/i, 16384],
+  [/claude/i, 8192],
+];
+function reflectMaxTokens(model: string = REFLECT_MODEL): number {
+  const env = Number(process.env.REFLECT_MAX_TOKENS || 0);
+  let picked: number | null = null;
+  if (Number.isFinite(env) && env > 0) picked = env;
+  if (picked === null) {
+    const hit = REFLECT_MAX_TOKENS_BY_MODEL.find(([re]) => re.test(model));
+    picked = hit ? hit[1] : REFLECT_MAX_TOKENS_DEFAULT;
+  }
+  return Math.max(REFLECT_MAX_TOKENS_MIN, Math.min(REFLECT_MAX_TOKENS_MAX, picked));
+}
 const REFLECT_TIMEOUT_MS = 180000; // 单批 LLM 反思 3 分钟 (大 chunk 需要更长)
 // 2026-09-01 合并提交优化: 用户套餐按调用次数计费 (token 不限), 应把多次小调用合并为少次大调用
 //   原 CHUNK_MAX_TOKENS=12000 -> 单主题 25 chunk = 25 次调用 (碎片化, 调用次数消耗快)
@@ -706,7 +728,7 @@ ${products.reflection.slice(0, 20).map(p => `- [${p.id.slice(-6)}] ${(p.title ||
     },
     body: JSON.stringify({
       model: REFLECT_MODEL,
-      max_tokens: REFLECT_MAX_TOKENS,
+      max_tokens: reflectMaxTokens(REFLECT_MODEL),
       system: REFLECT_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
     }),

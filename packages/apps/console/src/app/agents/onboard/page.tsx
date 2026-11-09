@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useApi } from "@/lib/api";
-import { t } from "@/i18n";
 import { Alert } from "@/components/primitives";
-import { PageTitle } from "@/components/ui/PageHeader";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import StepIndicator from "./_components/StepIndicator";
 import StepInfoForm from "./_components/StepInfoForm";
 import StepSelectServices from "./_components/StepSelectServices";
@@ -71,8 +70,14 @@ export default function OnboardPage() {
     <div className="layout-with-sidebar">
       
       <main className="main">
-        <div className="breadcrumb">{t('onboard.crumb')}</div>
-        <PageTitle>AI 接入向导</PageTitle>
+        {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #9）：面包屑 + 标题 + 一句说明。
+            文案逐字取自口径表；说明按 §1 规则 5（业务语言，过 test-ui-copy-business-terms）
+            把表里的 "agent" 写成语义等价的「智能体」，层级/语义不变。 */}
+        <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className="current">接入向导</span></div>
+        <PageHeader>
+          <PageTitle>接入向导</PageTitle>
+          <div className="page-subtitle">分步接入新智能体并验收</div>
+        </PageHeader>
 
         {servicesError && <div className={styles.alertRow}><Alert type="error" message="业务服务列表加载失败" description="接入向导第 2 步的勾选项来自 /api/services-list, 当前取数失败, 请刷新重试。" /></div>}
 

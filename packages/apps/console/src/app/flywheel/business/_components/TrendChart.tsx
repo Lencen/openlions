@@ -6,13 +6,18 @@ const C = {
   structured: "#dc2626", newTasks: "#94a3b8", claims: "#64748b", done: "#16a34a", agentDone: "#2563eb",
 };
 
+/** 2026-11-06 token-ratchet：markArea 标注字号原为裸字面量 11（棘轮在本文件命中 1 处）。
+ *  console 的图表文字一律以 var(--fs-*) 令牌书写（见 components/EChart.tsx 的 chartBase / useChartBase，
+ *  已有 30 多处同写法），故这里同样换成令牌：11 在 --fs 阶梯上没有对应档位（最小档 --fs-xs 是 12px），
+ *  就近取 --fs-xs。zrender 的 parseFontSize 遇到 var() 会回退到默认 12px（canvas 不解析 CSS 变量），
+ *  即改后的实际渲染与改前只差 1px；series 数据、字段名、标注文案均未动。 */
 function markR3(series: any[]) {
   const start = series.find((x) => x.regime === "R3");
   if (!start) return undefined;
   return {
     silent: true,
     itemStyle: { color: "rgba(220,38,38,0.06)" },
-    label: { show: true, position: "insideTop", color: "#dc2626", fontSize: 11, formatter: "R3 交付崩塌期" },
+    label: { show: true, position: "insideTop", color: "#dc2626", fontSize: "var(--fs-xs)", formatter: "R3 交付崩塌期" },
     data: [[{ xAxis: start.date.slice(5) }, { xAxis: series[series.length - 1].date.slice(5) }]],
   };
 }

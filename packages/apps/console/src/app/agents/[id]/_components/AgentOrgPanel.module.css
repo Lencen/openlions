@@ -1,0 +1,36 @@
+/* 2026-11-05 P2 批9：AgentOrgPanel（组织页签：部门 / 小组 / RBAC 授权）内联样式下沉。
+   提示行成功与否只影响文字颜色，改为 data-tone 属性选择器；其余是静态布局与三处输入宽度。
+   取数、接口、文案、授权字段与 props 形状未动；本组件不含表格。 */
+
+/* 外层正文（改前内联 fs-base + lineHeight 1.8） */
+.wrap { font-size: var(--fs-base); line-height: 1.8; }
+
+/* 提示行（与 .tiny 组合）：改前按成功 / 失败分两色 */
+.msg[data-tone="ok"] { color: var(--status-ok); }
+.msg[data-tone="crit"] { color: var(--status-crit); }
+
+/* 三张 panel 的自适应网格（改前内联 repeat(auto-fit, minmax(280px, 1fr))） */
+.grid {
+  display: grid;
+  gap: var(--sp-2-5);
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+/* 小组一行（改前内联 marginBottom sp-1） */
+.groupRow { margin-bottom: var(--sp-1); }
+
+/* 小组名标签（改前内联 marginRight sp-1） */
+.tagRight { margin-right: var(--sp-1); }
+
+/* RBAC 表单行（改前内联 flex / gap sp-1-5 / wrap / marginBottom sp-1-5） */
+.rbacBar {
+  display: flex;
+  gap: var(--sp-1-5);
+  flex-wrap: wrap;
+  margin-bottom: var(--sp-1-5);
+}
+
+/* 三处输入宽度（改前内联 width 110 / 100 / 90） */
+.inputType { width: 110px; }
+.inputKey { width: 100px; }
+.selectPerm { width: 90px; }

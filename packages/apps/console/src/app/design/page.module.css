@@ -1,0 +1,93 @@
+/* /design 设计规范页（2026-11-06 token-ratchet）
+   改动：本页 34 处内联 style 全部下沉到这里 —— P2 内联计数 34 -> 0、棘轮裸值 5 -> 0。
+   口径与做法（与批4-批12 一致）：
+   · 动态字号/字重（字号尺度示例）改由 .typeSample[data-fs] 承载，data-fs 取 TYPE_SCALE 里的令牌名；
+   · 动态底色（颜色示例）改由 .swatchChip[data-swatch] 承载，data-swatch 就是色令牌名本身；
+   · 宽高/百分比是"示例几何值"（20px 色块、60%/80% 骨架条、minWidth 150），不属于间距/字号/圆角，
+     按棘轮口径不计，留在本文件里；其余间距 / 字号 / 圆角一律令牌，未新增全局类、未改 globals.css。
+   · 唯一没有档位可映射的是 1px 描边（border-width 在 globals 里没有令牌，全站都直接写 1px），
+     沿用 1px solid var(--border)，与改前逐字一致。
+   · 原 .main 上的 padding 与 5 个 section 上的 margin-bottom 是死样式：globals 的
+     .main { padding: var(--sp-5) } 与 .main > * { margin-bottom: 0 !important } 已经决定了这两件事，
+     改前内联值从未生效，故直接删除、不新增类（视觉零变化）。 */
+
+/* 页头：标题左、密度开关右（原内联 flex + space-between） */
+.headerRow { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-4); }
+.densityBox { display: flex; align-items: center; gap: var(--sp-2); }
+
+/* 每个 panel 的内文区（原内联 padding: var(--sp-4)） */
+.panelBody { padding: var(--sp-4); }
+
+/* 字号尺度：一行 = 令牌名 / 示例 / 用途 */
+.typeRow {
+  display: flex; align-items: baseline; gap: var(--sp-4);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px dashed var(--border);
+}
+.typeToken { min-width: 150px; color: var(--text-muted); font-size: var(--fs-xs); }
+/* 示例字号由 data-fs 决定（原内联是 fontSize: var(--fs-3xl) 之类拼字符串） */
+.typeSample { font-weight: 400; }
+.typeSample[data-fs="3xl"] { font-size: var(--fs-3xl); }
+.typeSample[data-fs="2xl"] { font-size: var(--fs-2xl); }
+.typeSample[data-fs="xl"] { font-size: var(--fs-xl); }
+.typeSample[data-fs="lg"] { font-size: var(--fs-lg); }
+.typeSample[data-fs="md"] { font-size: var(--fs-md); }
+.typeSample[data-fs="base"] { font-size: var(--fs-base); }
+.typeSample[data-fs="sm"] { font-size: var(--fs-sm); }
+.typeSample[data-fs="xs"] { font-size: var(--fs-xs); }
+/* 主数值/页标题档加粗（原内联三元：3xl 或 2xl 时 600，其余 400） */
+.typeSample[data-fs="3xl"], .typeSample[data-fs="2xl"] { font-weight: 600; }
+.typeHint { margin-left: auto; }
+
+/* 颜色：9 个色令牌，data-swatch 就是变量名 */
+.swatchGrid {
+  padding: var(--sp-4);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--sp-3);
+}
+.swatchCard {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--border); border-radius: var(--radius-md);
+}
+.swatchChip {
+  width: 20px; height: 20px; flex: none;
+  border-radius: var(--radius-xs); /* 原内联 4px，对应 --radius-xs */
+  border: 1px solid var(--border);
+}
+.swatchChip[data-swatch="--primary"] { background: var(--primary); }
+.swatchChip[data-swatch="--status-ok"] { background: var(--status-ok); }
+.swatchChip[data-swatch="--status-warn"] { background: var(--status-warn); }
+.swatchChip[data-swatch="--status-crit"] { background: var(--status-crit); }
+.swatchChip[data-swatch="--text-muted"] { background: var(--text-muted); }
+.swatchChip[data-swatch="--bg-surface"] { background: var(--bg-surface); }
+.swatchChip[data-swatch="--bg-surface2"] { background: var(--bg-surface2); }
+.swatchChip[data-swatch="--bg-surface3"] { background: var(--bg-surface3); }
+.swatchChip[data-swatch="--border"] { background: var(--border); }
+.swatchName { font-size: var(--fs-sm); display: block; }
+.swatchVar { color: var(--text-muted); font-size: var(--fs-xs); }
+
+/* 图标：名称网格 + 单元格（行内色为弱化色） */
+.iconGrid {
+  padding: var(--sp-4);
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--sp-3);
+}
+.iconCell { display: flex; align-items: center; gap: var(--sp-2); color: var(--text-dim); }
+.iconName { font-size: var(--fs-xs); color: var(--text-muted); }
+
+/* 指标卡两种（内部 .kpi-grid / .metric-row 仍由 globals 负责） */
+.kpiStack { padding: var(--sp-4); display: grid; gap: var(--sp-4); }
+
+/* 空 / 加载 / 错误 三态 */
+.stateGrid {
+  padding: var(--sp-4);
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sp-3);
+}
+.stateCard { border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); text-align: center; }
+.stateTitle { font-size: var(--fs-base); font-weight: 600; margin-top: var(--sp-2); }
+.stateNote { margin-top: var(--sp-1); }
+/* 骨架条：宽高是几何值，行距用 --sp-2（原内联 8px） */
+.skelWide { width: 60%; margin-bottom: var(--sp-2); }
+.skelRow { margin-bottom: var(--sp-2); }
+.skelNarrow { width: 80%; }
+/* 技术详情默认左对齐（原内联 textAlign: left） */
+.techDetails { text-align: left; }

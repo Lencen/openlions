@@ -1,9 +1,13 @@
 "use client";
 // 任务详情页 · 相关待办 (反向关联) (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 2026-11-05 P2 批12（呈现层）：本件 9 处内联 style 清零，样式下沉到同目录 TaskTodosPanel.module.css；
+//   待办状态左边条与优先级色是动态值，改由 data-status / data-priority 属性选择器承载（分支与改前三元逐支一致）；
+//   文案、取数（data.todos）与对外 props（data）一行没动；本件不含表格。
 import { Tag, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { PanelCard, Pill, StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { fmtNum, relTime, truncate } from "@/lib/format";
+import styles from "./TaskTodosPanel.module.css";
 
 export default function TaskTodosPanel({ data }: { data: any }) {
   return (
@@ -23,30 +27,23 @@ export default function TaskTodosPanel({ data }: { data: any }) {
           rows={2}
         />
       ) : (
-        <div style={{ display: "grid", gap: "var(--sp-2-5)" }}>
+        <div className={styles.todoList}>
           {(data.todos ?? []).map((td: any) => (
-            <div
-              key={td.id}
-              style={{
-                border: "1px solid var(--border)",
-                borderLeft: "3px solid " + (td.status === "DONE" ? "var(--status-ok)" : td.status === "BLOCKED" ? "var(--status-crit)" : "var(--status-warn)"),
-                borderRadius: "var(--radius-md)", background: "var(--bg-surface2)", padding: "var(--sp-2-5) var(--sp-3)",
-              }}
-            >
-              <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--sp-1)" }}>
+            <div key={td.id} className={styles.todoCard} data-status={td.status}>
+              <div className={styles.todoHead}>
                 <Tag color={td.status === "DONE" ? "success" : td.status === "BLOCKED" ? "error" : td.status === "DOING" ? "processing" : "blue"}>
                   {td.status === "OPEN" ? "待办" : td.status === "DOING" ? "进行中" : td.status === "BLOCKED" ? "受阻" : td.status === "DONE" ? "已完成" : td.status}
                 </Tag>
-                <span className="mono" style={{ color: td.priority === "P0" ? "var(--status-crit)" : td.priority === "P1" ? "var(--status-warn)" : "var(--text-muted)", fontWeight: 600, fontSize: "var(--fs-sm)" }}>{td.priority}</span>
+                <span className={"mono " + styles.todoPriority} data-priority={td.priority}>{td.priority}</span>
                 <Pill tone={td.ownerType === "human" ? "warn" : "info"}>{td.ownerType === "human" ? "🧑 人类" : "🤖 " + (td.ownerId || t('common.agent'))}</Pill>
                 {td.viaMeta ? <Pill tone="mute">经 meta.taskIds 关联</Pill> : <Pill tone="mute">sourceRefId 直连</Pill>}
                 {td.structured ? <Pill tone="ok">结构化详情</Pill> : <Pill tone="warn">旧格式</Pill>}
-                <span className="tiny" style={{ marginLeft: "auto" }}>{relTime(td.updatedAt)}</span>
+                <span className={"tiny " + styles.todoTime}>{relTime(td.updatedAt)}</span>
               </div>
-              <div style={{ fontSize: "var(--fs-base)", marginBottom: "var(--sp-1)" }}>{td.title}</div>
-              {td.detailPreview ? <div className="tiny" style={{ whiteSpace: "pre-wrap", marginBottom: "var(--sp-1)" }}>{truncate(td.detailPreview, 160)}</div> : null}
-              <div style={{ display: "flex", gap: "var(--sp-2-5)", alignItems: "center", flexWrap: "wrap" }}>
-                <a href={`/todo?open=${td.id}`} style={{ fontSize: "var(--fs-base)" }}>在待办中心展开详情 →</a>
+              <div className={styles.todoTitle}>{td.title}</div>
+              {td.detailPreview ? <div className={"tiny " + styles.todoDetail}>{truncate(td.detailPreview, 160)}</div> : null}
+              <div className={styles.todoFoot}>
+                <a href={`/todo?open=${td.id}`} className={styles.todoLink}>在待办中心展开详情 →</a>
                 <span className="tiny mono">{td.id}</span>
                 {td.doneAt ? <span className="tiny">完成于 {relTime(td.doneAt)}{td.doneBy ? " · " + td.doneBy : ""}</span> : null}
               </div>

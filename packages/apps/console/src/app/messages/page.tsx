@@ -8,9 +8,10 @@
 // 铁律：console 不直连 chat.db；写操作走 MACS admin BFF（下一阶段）。
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHero } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { useApi } from "@/lib/api";
 import MessagesLayout from "./_components/MessagesLayout";
+import styles from "./page.module.css";
 import LiveBar from "./_components/LiveBar";
 // 2026-10-22：本页不再使用示例会话（真实数据优先）；示例数据仅保留在显式 demo 场景。
 import { toConversation, type ApiConversation } from "./_data";
@@ -18,10 +19,26 @@ import { toConversation, type ApiConversation } from "./_data";
 export default function MessagesPage() {
   // 2026-10-22：useSearchParams() 在预渲染阶段要求 Suspense 边界，
   //   否则 next build 直接失败（实测 /messages 页 export error）。
+  // 2026-11-06 D-03：页头不依赖取数，移到 Suspense 外层。
+  //   useSearchParams() 让整个内容区在 SSR 阶段走 fallback(=null)；页头若留在里面，首屏 HTML 就没有 page-header。
+  //   面包屑 / 标题 / 说明 / 取数 / 路由参数均未改。
   return (
-    <Suspense fallback={null}>
-      <MessagesPageInner />
-    </Suspense>
+    <main className="page">
+      {/* 2026-11-05 页头口径统一（PAGE-HEADER-31 + 商业线裁决）：PageHero -> 白名单 PageHeader，
+          标题按裁决用「消息」；投递诊断的说明保留在下列入口条与各面板里，未删功能。 */}
+      <div className="breadcrumb">
+        <span className={styles.crumbDim}>服务</span>
+        <span className="sep">/</span>
+        <span className="current">消息</span>
+      </div>
+      <PageHeader>
+        <PageTitle>消息</PageTitle>
+        <div className="page-subtitle">会话消息的投递、失败与治理入口</div>
+      </PageHeader>
+      <Suspense fallback={null}>
+        <MessagesPageInner />
+      </Suspense>
+    </main>
   );
 }
 
@@ -43,11 +60,7 @@ function MessagesPageInner() {
     ? (convApi.conversations as ApiConversation[]).map(toConversation)
     : [];
   return (
-    <main className="page">
-      <PageHero
-        title="消息工作区"
-        subtitle="会话 · 消息流 · 上下文 · 投递诊断：3 次点击回答“消息发给了谁、送到了吗、为什么没回”。"
-      />
+    <>
       <LiveBar />
       <div className="msg-quick-links">
         <a href="/messages/failed" className="msg-ghost">未送达消息（失败 / 过期 / 队列）</a>
@@ -73,6 +86,6 @@ function MessagesPageInner() {
         initialConversationId={initialConversationId}
         initialMessageId={initialMessageId}
       />
-    </main>
+    </>
   );
 }

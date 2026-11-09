@@ -1,0 +1,46 @@
+/* /lineage · 未提炼会话积压面板（2026-11-05 P2 批6 呈现层改造）
+   内联 style 清零：计数卡字号/字重、失败态配色、占比条轨道与宽度都下沉到本文件。
+   动态色走 data-tone 属性选择器；占比条宽度按 5% 一档取 .p0…​.p100（与 DataTable 同口径）。
+   取数（backlog 由页面传入）、字段、文案未动。 */
+
+/* 「stat-inline」自带 gap 28px，这里按改前内联 sp-4 覆盖（双类名提高权重） */
+.statGap.statGap { gap: var(--sp-4); }
+
+/* 三个计数：改前内联 fontSize fs-2xl + fontWeight 600 */
+.bigNum { font-size: var(--fs-2xl); font-weight: 600; }
+.bigNum[data-tone="warn"] { color: var(--status-warn); }
+.bigNum[data-tone="crit"] { color: var(--status-crit); }
+.bigNum[data-tone="default"] { color: var(--text); }
+
+.mt3 { margin-top: var(--sp-3); }
+.mt1_5 { margin-top: var(--sp-1-5); }
+.mb1_5 { margin-bottom: var(--sp-1-5); }
+
+/* 智能体一行：名称 130px + 占比条自适应 + 右侧计数 */
+.agentRow { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); margin-bottom: var(--sp-1); }
+.agentName { width: 130px; }
+.barFlex { flex: 1; }
+.warnFill { background: var(--status-warn); }
+
+/* 占比条宽度：5% 一档（改前是内联百分比，四舍五入到档位，肉眼无差） */
+.p0 { width: 0%; }
+.p5 { width: 5%; }
+.p10 { width: 10%; }
+.p15 { width: 15%; }
+.p20 { width: 20%; }
+.p25 { width: 25%; }
+.p30 { width: 30%; }
+.p35 { width: 35%; }
+.p40 { width: 40%; }
+.p45 { width: 45%; }
+.p50 { width: 50%; }
+.p55 { width: 55%; }
+.p60 { width: 60%; }
+.p65 { width: 65%; }
+.p70 { width: 70%; }
+.p75 { width: 75%; }
+.p80 { width: 80%; }
+.p85 { width: 85%; }
+.p90 { width: 90%; }
+.p95 { width: 95%; }
+.p100 { width: 100%; }

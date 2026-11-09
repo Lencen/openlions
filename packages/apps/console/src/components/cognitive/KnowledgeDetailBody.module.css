@@ -1,0 +1,24 @@
+/* components/cognitive/KnowledgeDetailBody · 2026-11-05 P2 批8 呈现层：内联 style 清零
+   声明值逐项照搬（字号 / 行高 / 留白 / 主色）；知识模板正文的块级排版与两处面板留白都下沉到类。
+   详情栅格与字段排版仍由 .dt-stack / .dt-grid-2 与 components/detail 负责。未新增全局类。 */
+
+/* 知识模板正文：普通段落（原来是内联 margin: var(--sp-0-5) 0 var(--sp-2)） */
+.para { margin: var(--sp-0-5) 0 var(--sp-2); }
+
+/* 一级结论「# 」（原来是内联 margin + 主色） */
+.h4 { margin: var(--sp-2-5) 0 var(--sp-1); color: var(--primary); }
+
+/* 二级小节「## 」（原来是内联 margin + fontWeight: 700） */
+.h5 { margin: var(--sp-2) 0 var(--sp-0-5); font-weight: 700; }
+
+/* 引用 / 要点行「> 」（原来是内联 color + fontWeight + margin） */
+.quote { color: var(--primary); font-weight: 600; margin: var(--sp-0-5) 0 var(--sp-2); }
+
+/* 面板内边距（原来是内联 padding: var(--sp-5)） */
+.padLg { padding: var(--sp-5); }
+
+/* 「未找到这条知识」提示（原来是内联 padding + color） */
+.padLgDim { padding: var(--sp-5); color: var(--text-muted); }
+
+/* 标签徽标之间的留白（原来是内联 marginRight: var(--sp-1)） */
+.tagGap { margin-right: var(--sp-1); }

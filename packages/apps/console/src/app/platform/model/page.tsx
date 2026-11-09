@@ -1,8 +1,13 @@
 "use client";
 // 「模型配置」——用户自带 key（路线图 §1.2）。保存写各 app 的 .env(0600)，重启 mind/selfimproving 生效。
+// 2026-11-05 P2 呈现层（批8）：内联 style 清零。
+//   表单字号/行距、字段行栅格、字段名宽度、输入框 flex、保存按钮与提示的间距、
+//   底部出链行下沉到本目录 page.module.css（追加，原有 .crumbDim 未动）。取数与保存逻辑未动。
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PageHero, Pill, PanelCard } from "@/components/ui";
+import { Pill, PanelCard } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 const FIELDS: Array<{ key: string; label: string; hint: string }> = [
   { key: "ANTHROPIC_BASE_URL", label: "Base URL", hint: "兼容 Anthropic 协议；自部署/中转填这里" },
@@ -37,27 +42,31 @@ export default function ModelConfigPage() {
   };
   return (
     <main className="page">
-      <PageHero title="模型配置" subtitle="平台不提供大模型额度：填你自己的模型服务；重启 mind / selfimproving 后生效。" tags={<Pill tone="info">数据不出户</Pill>} />
+      <div className="breadcrumb"><span className={styles.crumbDim}>平台</span><span className="sep">/</span><span className="current">模型配置</span></div>
+      <PageHeader>
+        <PageTitle>模型配置</PageTitle>
+        <div className="page-subtitle">模型供应商、路由与限额</div>
+        <div className="hero-tags"><Pill tone="info">数据不出户</Pill></div>
+      </PageHeader>
       <PanelCard title="模型服务">
-        <div style={{ fontSize: "var(--fs-lg)", lineHeight: 2 }}>
+        <div className={styles.formList}>
           {FIELDS.map((f) => (
-            <div key={f.key} style={{ display: "flex", gap: "var(--sp-3)", alignItems: "center", marginBottom: "var(--sp-2-5)" }}>
-              <label style={{ width: 200, color: "var(--text-dim)" }}>{f.label}<div className="tiny">{f.key}</div></label>
+            <div key={f.key} className={styles.fieldRow}>
+              <label className={styles.fieldLabel}>{f.label}<div className="tiny">{f.key}</div></label>
               <input
-                className="ui-input"
-                style={{ flex: 1 }}
+                className={"ui-input " + styles.fieldInput}
                 placeholder={masked[f.key] ? "已配置：" + masked[f.key] : f.hint}
                 value={form[f.key] || ""}
                 onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
               />
             </div>
           ))}
-          <button className="btn" onClick={save} disabled={loading} style={{ marginTop: "var(--sp-1-5)" }}>保存</button>
-          {msg ? <div style={{ marginTop: "var(--sp-2-5)" }}>{msg}</div> : null}
+          <button className={"btn " + styles.saveBtn} onClick={save} disabled={loading}>保存</button>
+          {msg ? <div className={styles.saveMsg}>{msg}</div> : null}
         </div>
       </PanelCard>
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.footLinks}>
         <span>相关视图：</span>
         <Link href="/system/api">服务与接口 →</Link>
         <Link href="/system/health">健康检查 →</Link>

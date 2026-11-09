@@ -1,0 +1,34 @@
+/* 2026-11-05 P2 批9：DiscussionPanel（通用讨论面板）内联样式下沉。
+   9 处内联值全是静态间距 / 限宽 / 代码块排版，不随数据变，故不引入 data 属性选择器；
+   与 globals 的 disc 系列类组合使用，只补差量。取数、文案、交互与 props 形状未动；本组件不含表格。 */
+
+/* 长文折叠的「展开全文」按钮：改前内联 paddingLeft 0（双类名压过 .ui-btn 的内边距） */
+.linkBtn.linkBtn { padding-left: 0; }
+
+/* 顶部两条提示（加载失败 / 上游提示）：改前内联 marginBottom sp-3 */
+.alertMb { margin-bottom: var(--sp-3); }
+
+/* 发送反馈提示：改前内联 marginBottom 0 */
+.alertMb0 { margin-bottom: 0; }
+
+/* 时间线空态（与 .tiny 组合）：改前内联 padding sp-1-5 0 sp-3 */
+.sectionEmpty { padding: var(--sp-1-5) 0 var(--sp-3); }
+
+/* 时间线正文（与 .dt-text 组合）：改前内联 marginTop sp-1 */
+.textTop { margin-top: var(--sp-1); }
+
+/* 提交产出的完整正文代码块：改前内联 pre-wrap / fs-sm / margin 0 / maxHeight 320 / overflow auto */
+.pre {
+  white-space: pre-wrap;
+  font-size: var(--fs-sm);
+  margin: 0;
+  max-height: 320px;
+  overflow: auto;
+}
+
+/* 「讨论发言」小标题（与 .disc-section-title 组合）：改前内联 marginTop sp-2。
+   双类名压过 globals 里 .disc-section-title 的 margin 简写。 */
+.sectionTitleGap.sectionTitleGap { margin-top: var(--sp-2); }
+
+/* 提问对象下拉（与 .ui-input-wrap 组合）：改前内联 minWidth 230 */
+.agentSelect { min-width: 230px; }

@@ -6,7 +6,7 @@
 //   Demo 节点 8:75 (docs/frontend-redesign-v2/demo-screens/02-workbench_8-75.png), 落地对照 docs/frontend-redesign-v2/给deepseek_前端重构方案.md 附 A 第 592 行。
 //
 // 灰度机制 (Phase2 验收 ④ ui-v2-consumed):
-//   - NEXT_PUBLIC_UI_V2=1 → 渲染完整驾驶舱 (紧凑版, 直接复用 /api/overview 真实数据 + 自研 MetricCard/Sparkline 家族)
+//   - NEXT_PUBLIC_UI_V2=1 → 渲染完整驾驶舱 (紧凑版, 直接复用 /api/overview 真实数据 + 自研 KpiCard/Sparkline 家族)
 //   - 默认 (OFF)         → 渲染"施工中"占位卡 + 跳转 / 总览页的引导, 不破坏现有路由, 行为与改动前一致
 //   这样默认 3004 上 02 工作台是 0 视觉干扰的安全占位; 需要试新视图只需在 .env.local 打开 NEXT_PUBLIC_UI_V2=1, 不需要改代码。
 //
@@ -20,7 +20,7 @@ import { useMemo } from "react";
 import { Alert } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { useApi } from "@/lib/api";
 import { useGlobalFilter } from "@/components/GlobalFilter";
-import { ErrorBlock, MetricCard, PageHero, PanelCard, Pill, StateBlock } from "@/components/ui";
+import { ErrorBlock, KpiCard, PageHero, PanelCard, Pill, StateBlock } from "@/components/ui";
 import { fmtCompact, fmtNum } from "@/lib/format";
 import { uiV2Enabled } from "@/lib/ui-flag";
 import styles from "./page.module.css";
@@ -52,7 +52,7 @@ function WorkbenchPlaceholder() {
 }
 
 /** 屏 02 主驾驶舱 — 4 指标 + 1 决策卡 + 2 列趋势/活动 + 智能体矩阵
- *  数据复用 /api/overview, 不重复 BFF; 渲染走自研 MetricCard + PanelCard, 与 / 总览一致视觉但更紧凑。 */
+ *  数据复用 /api/overview, 不重复 BFF; 渲染走自研 KpiCard + PanelCard, 与 / 总览一致视觉但更紧凑。 */
 function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boolean }) {
   const s = data?.sessions;
   const prod = data?.products;
@@ -86,7 +86,7 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
 
       {/* 4 指标 (与 demo 一致) */}
       <div className="metric-row">
-        <MetricCard
+        <KpiCard
           label="会话流入"
           tone="info"
           value={loadingCards ? "…" : fmtNum(s?.newSessions)}
@@ -95,7 +95,7 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
           trend={s?.trend}
           footer={s?.trendPct != null ? <span className="tiny">vs 上一窗口 {s.trendPct >= 0 ? "+" : ""}{s.trendPct.toFixed(1)}%</span> : null}
         />
-        <MetricCard
+        <KpiCard
           label="认知提炼率"
           tone="ok"
           value={loadingCards ? "…" : (prod?.extractionRate != null ? prod.extractionRate.toFixed(1) : "—")}
@@ -103,7 +103,7 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
           hint={"已提炼 " + fmtNum(prod?.extractedSessions) + " 件"}
           footer={<span className="tiny">{`产物 ${fmtNum(prod?.total)} 条`}</span>}
         />
-        <MetricCard
+        <KpiCard
           label="执行健康度"
           tone={tasks?.errorRate > 2 ? "warn" : "ok"}
           value={loadingCards ? "…" : ((100 - (tasks?.errorRate ?? 0)).toFixed(1))}
@@ -111,7 +111,7 @@ function WorkbenchCockpit({ data, loadingCards }: { data: any; loadingCards: boo
           hint={"成功 " + fmtNum(tasks?.done) + " · 失败 " + fmtNum(tasks?.failed)}
           footer={<span className="tiny">进行中 {fmtNum(tasks?.running)}</span>}
         />
-        <MetricCard
+        <KpiCard
           label="需要人决策"
           tone={decisions?.pending > 0 ? "warn" : "mute"}
           value={loadingCards ? "…" : fmtNum(decisions?.pending ?? 0)}

@@ -1,0 +1,150 @@
+/* /agents-live · 工作安排视图（components/WorkPlanView.tsx 共用件）呈现层 —— 2026-11-05 P2 批12
+   内联 style 清零（40 -> 0）；队列分布条形图宽度改 data-w 档位（2% 一档，误差 <=1%，同 FunnelChart 的档位思路）。
+   动态色走 data-*：任务范围的色（data-scope，与 config/taskScopes 同源）、条形色（data-tone）。
+   本件无数据卡，只改结构（内联 + 裸 table -> 白名单 DataTable），字段/口径/文案一字未改。
+   宽高复用 globals 既有类（.mini-bar / .tiny / .mono / .nowrap / .truncate），不新增全局类、不改 globals.css。 */
+
+/* ── TypeBars（队列分布条形） ── */
+/* 原内联 display: flex + flexDirection: column + gap: var(--sp-1) */
+.bars { display: flex; flex-direction: column; gap: var(--sp-1); }
+
+/* 原内联 display: flex + alignItems: center + gap: var(--sp-2) + fontSize: var(--fs-base) */
+.barRow { display: flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-base); }
+
+/* 类型名：原内联 width: 130 + fontWeight: 600（颜色改 data-scope，见下） */
+.barName { width: 130px; font-weight: 600; color: var(--primary); }
+/* 与 config/taskScopes 的 color 同值；OTHER 的 #64748b 用中性令牌替代表达 */
+.barName[data-scope="MECHANISM"] { color: var(--status-warn); }
+.barName[data-scope="VERIFY"] { color: var(--table-knowledge); }
+.barName[data-scope="DISCUSSION"] { color: var(--table-memory); }
+.barName[data-scope="OTHER"] { color: var(--text-muted); }
+
+/* 条形槽：原内联 flex: 1 + height: 8（叠在 globals 的 .mini-bar 上；双类名压过它的 height: 6px） */
+.barTrack.barTrack { flex: 1; height: 8px; }
+
+/* 条形填充：宽度按 data-w 档位，颜色按 data-tone（原内联 width: % + background: color；
+   双类名压过 globals 的 .mini-bar-fill 背景） */
+.barFill.barFill { background: var(--primary); }
+.barFill[data-tone="warn"] { background: var(--status-warn); }
+.barFill[data-tone="ok"] { background: var(--status-ok); }
+.barFill[data-w="0"] { width: 0%; }
+.barFill[data-w="2"] { width: 2%; }
+.barFill[data-w="4"] { width: 4%; }
+.barFill[data-w="6"] { width: 6%; }
+.barFill[data-w="8"] { width: 8%; }
+.barFill[data-w="10"] { width: 10%; }
+.barFill[data-w="12"] { width: 12%; }
+.barFill[data-w="14"] { width: 14%; }
+.barFill[data-w="16"] { width: 16%; }
+.barFill[data-w="18"] { width: 18%; }
+.barFill[data-w="20"] { width: 20%; }
+.barFill[data-w="22"] { width: 22%; }
+.barFill[data-w="24"] { width: 24%; }
+.barFill[data-w="26"] { width: 26%; }
+.barFill[data-w="28"] { width: 28%; }
+.barFill[data-w="30"] { width: 30%; }
+.barFill[data-w="32"] { width: 32%; }
+.barFill[data-w="34"] { width: 34%; }
+.barFill[data-w="36"] { width: 36%; }
+.barFill[data-w="38"] { width: 38%; }
+.barFill[data-w="40"] { width: 40%; }
+.barFill[data-w="42"] { width: 42%; }
+.barFill[data-w="44"] { width: 44%; }
+.barFill[data-w="46"] { width: 46%; }
+.barFill[data-w="48"] { width: 48%; }
+.barFill[data-w="50"] { width: 50%; }
+.barFill[data-w="52"] { width: 52%; }
+.barFill[data-w="54"] { width: 54%; }
+.barFill[data-w="56"] { width: 56%; }
+.barFill[data-w="58"] { width: 58%; }
+.barFill[data-w="60"] { width: 60%; }
+.barFill[data-w="62"] { width: 62%; }
+.barFill[data-w="64"] { width: 64%; }
+.barFill[data-w="66"] { width: 66%; }
+.barFill[data-w="68"] { width: 68%; }
+.barFill[data-w="70"] { width: 70%; }
+.barFill[data-w="72"] { width: 72%; }
+.barFill[data-w="74"] { width: 74%; }
+.barFill[data-w="76"] { width: 76%; }
+.barFill[data-w="78"] { width: 78%; }
+.barFill[data-w="80"] { width: 80%; }
+.barFill[data-w="82"] { width: 82%; }
+.barFill[data-w="84"] { width: 84%; }
+.barFill[data-w="86"] { width: 86%; }
+.barFill[data-w="88"] { width: 88%; }
+.barFill[data-w="90"] { width: 90%; }
+.barFill[data-w="92"] { width: 92%; }
+.barFill[data-w="94"] { width: 94%; }
+.barFill[data-w="96"] { width: 96%; }
+.barFill[data-w="98"] { width: 98%; }
+.barFill[data-w="100"] { width: 100%; }
+
+/* 条尾计数：原内联 width: 44 + textAlign: right */
+.barCount { width: 44px; text-align: right; }
+
+/* ── 页内头行 / 队列分布 ── */
+/* 原内联 display: flex + alignItems: center + gap: var(--sp-2) + marginBottom: var(--sp-3) + flexWrap */
+.head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); flex-wrap: wrap; }
+/* 原内联 marginLeft: auto（刷新按钮靠右） */
+.mlAuto { margin-left: auto; }
+
+/* 原内联 display: flex + flexDirection: column + gap: var(--sp-3) */
+.queueList { display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* 队列小标题：原内联 marginBottom: var(--sp-1)（叠在 .tiny 上） */
+.queueNote { margin-bottom: var(--sp-1); }
+
+/* 样本列表：原内联 marginTop: var(--sp-2) */
+.samples { margin-top: var(--sp-2); }
+
+/* 样本行：原内联 display: flex + gap: var(--sp-2)（叠在 .tiny 上） */
+.sampleRow { display: flex; gap: var(--sp-2); }
+
+/* 样本标题截断：原内联 maxWidth 420 / 360（配合 globals 的 .truncate） */
+.sampleLinkWide { max-width: 420px; }
+.sampleLinkNarrow { max-width: 360px; }
+
+/* 队列分块：原内联 borderTop: 1px solid var(--border) + paddingTop: var(--sp-2) */
+.queueBlock { border-top: 1px solid var(--border); padding-top: var(--sp-2); }
+
+/* 行内左侧间距：原内联 marginLeft: var(--sp-2) / var(--sp-1) */
+.inlineGap { margin-left: var(--sp-2); }
+.inlineGapSm { margin-left: var(--sp-1); }
+
+/* 紧上间距：原内联 marginTop: var(--sp-1) */
+.mt1 { margin-top: var(--sp-1); }
+
+/* 互斥校验脚注：原内联 borderTop: 1px dashed + paddingTop + color: var(--text-muted)（叠在 .tiny 上） */
+.queueFoot { border-top: 1px dashed var(--border); padding-top: var(--sp-2); color: var(--text-muted); }
+
+/* ── 生成器状态 ── */
+/* 原内联 fontSize: var(--fs-base) + lineHeight: 2 */
+.genBody { font-size: var(--fs-base); line-height: 2; }
+/* 原始输出（原内联 color: var(--text-muted)，配 globals 的 .mono） */
+.monoDim { color: var(--text-muted); }
+/* 生成器说明（原内联 color: var(--text-muted) + lineHeight: 1.7，叠在 .tiny 上） */
+.genNote { color: var(--text-muted); line-height: 1.7; }
+
+/* ── 谁在办什么（表格单元格） ── */
+/* 原内联 fontSize: var(--fs-base) + fontWeight: 600（displayName） */
+.agentName { font-size: var(--fs-base); font-weight: 600; }
+/* 角色/活性行：原内联 marginTop: var(--sp-1) */
+.agentRoleRow { margin-top: var(--sp-1); }
+/* 在办任务列：原内联 display: flex + flexDirection: column + gap: var(--sp-1) */
+.taskList { display: flex; flex-direction: column; gap: var(--sp-1); }
+/* 单条在办任务：原内联 fontSize: var(--fs-base) */
+.taskLine { font-size: var(--fs-base); }
+/* 优先级：原内联 color: scopeDef(t.scope).color + fontWeight: 600 + marginRight: var(--sp-1) */
+.taskPrio { font-weight: 600; margin-right: var(--sp-1); color: var(--primary); }
+.taskPrio[data-scope="MECHANISM"] { color: var(--status-warn); }
+.taskPrio[data-scope="VERIFY"] { color: var(--table-knowledge); }
+.taskPrio[data-scope="DISCUSSION"] { color: var(--table-memory); }
+.taskPrio[data-scope="OTHER"] { color: var(--text-muted); }
+/* 单元格正文：原内联 fontSize: var(--fs-base) */
+.cellBase { font-size: var(--fs-base); }
+
+/* ── 判定规则 ── */
+/* 原内联 fontSize: var(--fs-base) + lineHeight: 2 + color: var(--text-dim) */
+.rules { font-size: var(--fs-base); line-height: 2; color: var(--text-dim); }
+/* 规则分隔行：原内联 marginTop + paddingTop + borderTop: 1px dashed */
+.rulesSep { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px dashed var(--border); }

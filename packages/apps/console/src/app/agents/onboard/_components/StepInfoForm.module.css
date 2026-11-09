@@ -1,0 +1,61 @@
+/* StepInfoForm · P2 呈现层（批9，2026-11-05）
+   Step 0 填写信息：限宽表单、字段标签、输入框/下拉、主按钮，全部从内联 style 下沉到这里。
+   颜色/间距/字号一律复用 globals.css 既有令牌，未新增全局类、未改 globals.css。 */
+
+/* 表单容器限宽（原内联 maxWidth: 500） */
+.form {
+  max-width: 500px;
+}
+
+/* 步骤标题（原内联 fontSize: var(--fs-xl) + marginBottom: var(--sp-4)） */
+.title {
+  font-size: var(--fs-xl);
+  margin-bottom: var(--sp-4);
+}
+
+/* 单个字段外层（原内联 marginBottom: var(--sp-4)，两个字段块共用） */
+.field {
+  margin-bottom: var(--sp-4);
+}
+
+/* 字段标签（原内联 fontSize/color/display/marginBottom） */
+.label {
+  display: block;
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-base);
+  color: var(--text-muted);
+}
+
+/* 输入框与下拉共用的控件样式（原 input / select 两处内联声明完全相同，合并成一个类） */
+.control {
+  width: 100%;
+  padding: var(--sp-2-5) var(--sp-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-lg);
+}
+
+/* 字段提示（原内联 fontSize: var(--fs-sm) + color + marginTop） */
+.hint {
+  margin-top: var(--sp-0-5);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+
+/* 主按钮（原内联 padding/borderRadius/fontSize/cursor/background/color/border） */
+.submit {
+  padding: var(--sp-2-5) var(--sp-6);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--fs-lg);
+  cursor: pointer;
+}
+
+/* 不可用态半透明（原来是内联 opacity 三元；现由 data-disabled 属性选择器承载动态值） */
+.submit[data-disabled="true"] {
+  opacity: 0.4;
+}

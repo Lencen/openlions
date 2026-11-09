@@ -1,0 +1,33 @@
+/* /cognitive/reflection 页内样式（2026-11-05 P2 批6 呈现层改造：内联 style 清零）
+   只放本页私有样式；能复用全局 .panel / .kpi-grid / .nowrap / .mono / .badge 的一律复用。
+   表格本体改由白名单 @/components/DataTable 渲染（.dt 系列样式在 globals.css），本文件只补单元格内容样式。 */
+
+/* 面包屑里的「记忆与知识」灰字（原来是内联 color） */
+.bcDim { color: var(--text-dim); }
+
+/* 标题列链接按钮 / 操作列「详情」按钮（原来是 linkBtn 内联样式对象 CSSProperties） */
+.linkBtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  color: var(--primary);
+  font: inherit;
+  text-align: left;
+}
+
+/* 小字（原来是内联 fontSize: var(--fs-sm)） */
+.sm { font-size: var(--fs-sm); }
+
+/* 小字 + 次级暗色（原来是内联 fontSize + color） */
+.smDim { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 深链接 ↗：代替原来的 className="tiny" + 内联 marginLeft/color，
+   这里把 fs-sm 与 text-dim 一并写全，避免与全局 .tiny 的 color 打架 */
+.detailLink { margin-left: var(--sp-1-5); color: var(--text-dim); font-size: var(--fs-sm); }
+
+/* 错误块外留白（原来是内联 padding: var(--sp-3)） */
+.errPad { padding: var(--sp-3); }
+
+/* 页脚相关视图出链（原来是内联 flex + gap + wrap + marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

@@ -504,6 +504,10 @@ function rowToReflectionData(row: ExtractRow, contentHash: string, sessionUid: s
     sourceType: "SESSION_EXTRACT",
     sourceId: sessionUid,
     agentSource: "SESSION_EXTRACT",
+    // FW-06（2026-11-05）：回链会话。此前不写 -> reflect.ts:297 按 relatedSessionIds 反查拿不到
+    //   -> fullMessages=0 -> 只能 productOnly 反思；实测 35/36 行为 NULL 即此因。
+    //   口径与 db-writer.ts:596 一致（逗号分隔；reflect.ts 兼容 JSON 数组）。
+    relatedSessionIds: sessionUid,
     contentHash,
     theme: str(row.theme) ?? "未分类",
     processingVersion: "v3",

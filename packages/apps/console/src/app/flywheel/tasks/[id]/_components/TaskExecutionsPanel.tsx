@@ -1,9 +1,12 @@
 "use client";
 // 任务详情页 · 智能体执行记录 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 2026-11-05 P2 批12 呈现层：唯一内联 style（折叠头一行布局）下沉到 ./TaskExecutionsPanel.module.css。
+//   列/字段、跳转、文案未动；本面板只展示既有执行记录字段，不新增数据卡 7 以外的口径。
 import { Collapse, Tag } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { PanelCard, StateBlock } from "@/components/ui";
 import { fmtNum, relTime } from "@/lib/format";
 import Block from "./Block";
+import styles from "./TaskExecutionsPanel.module.css";
 
 export default function TaskExecutionsPanel({ data, id }: { data: any; id: string }) {
   return (
@@ -16,7 +19,7 @@ export default function TaskExecutionsPanel({ data, id }: { data: any; id: strin
           items={(data.executions ?? []).map((e: any) => ({
             key: e.id,
             label: (
-              <span style={{ display: "inline-flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", fontSize: "var(--fs-base)" }}>
+              <span className={styles.execLabel}>
                 <span className="actor-chip agent">🤖 {e.agentId}</span>
                 <Tag color={e.status === "COMPLETED" ? "success" : "error"}>{e.status}</Tag>
                 {e.qualityPassed !== null && e.qualityPassed !== undefined ? (

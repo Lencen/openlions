@@ -14,6 +14,10 @@
 /* 页脚相关视图链接行（原来是内联 flex + margin-top） */
 .related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
 
+/* 面包屑上级节点：沿用 globals.css 的 .breadcrumb/.sep/.current 结构，只补"上级用弱色"这一层 */
+.headerMeta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: 0 0 var(--sp-3); }
+.crumbDim { color: var(--text-dim); }
+
 /* —— LineageArtifactsTable —— */
 
 /* 类型列：色相身份沿用 --table-* 令牌，但文字色按 lib/ink.ts 的口径向正文色混一次

@@ -9,7 +9,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
-import AgentShell from "../_components/AgentShell";
+import AgentShell, { AgentTabHeader } from "../_components/AgentShell";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import AgentMissing from "../_components/AgentMissing";
 import AgentSourceError from "../_components/AgentSourceError";
 import DensityHeatmap, { type DensityHeatmapCell } from "@/components/DensityHeatmap";
@@ -39,22 +40,44 @@ function badgeClass(status?: string | null): string {
 
 /** 「标签 → 值」两列（改前是 手写表格<tbody> 里逐行 <th>/<td>） */
 type KvRow = { label: string; value: ReactNode };
+/** 最近会话表：每个单元格都是服务端已渲染好的节点（列定义里没有函数） */
+type SessionTableRow = {
+  title: ReactNode;
+  source: ReactNode;
+  message_count: ReactNode;
+  status: ReactNode;
+  updated_at: ReactNode;
+};
+// 2026-11-05 热修：服务端组件不能把 render 函数传给客户端 DataTable，
+//   列只留可序列化字段，单元格值在服务端预算成 ReactNode/字符串放进 rows。
 const KV_COLUMNS: DataColumn<KvRow>[] = [
-  { key: "label", title: "", render: (r) => r.label },
-  { key: "value", title: "", render: (r) => r.value },
+  { key: "label", title: "" },
+  { key: "value", title: "" },
 ];
 
 export default async function AgentRunsPage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params.id || "");
   const [agentLoad, liveS, sessionsS] = await Promise.all([loadAgent(id), loadLive(id), loadSessions(id, 15)]);
-  if (!agentLoad.ok) return <AgentSourceError id={id} />;
+  // 2026-11-06 D-03：先备好页签页头 —— 名册失败/智能体不存在/正常三条分支都要渲染它，
+  //   否则 SSR 首屏没有 page-header（0.4.31 dev 实测 5 页 70/75 的根因就是只有"正常"分支带页头）。
+  const tabHeader = (
+    <AgentTabHeader
+      id={id}
+      tab="运行"
+      title="智能体详情 · 运行"
+      subtitle="实时状态、执行统计与最近产出"
+      agent={agentLoad.ok ? agentLoad.agent : null}
+      live={liveS.data}
+    />
+  );
+  if (!agentLoad.ok) return <AgentSourceError id={id} header={tabHeader} />;
   const agent = agentLoad.agent;
   const live = liveS.data;
   const sessions = sessionsS.data;
   const degraded: string[] = [];
   if (!liveS.ok) degraded.push("实时状态 /api/agents-live");
   if (!sessionsS.ok) degraded.push("会话档案 /api/session-list");
-  if (!agent && !live) return <AgentMissing id={id} />;
+  if (!agent && !live) return <AgentMissing id={id} header={tabHeader} />;
   const sess = sessions.items;
   const exec = live?.execStats ?? {};
   const lastExec = live?.lastExecution ?? null;
@@ -84,27 +107,31 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
     { label: "产出质量", value: lastOut?.quality != null ? `${Math.round(Number(lastOut.quality) * 100)}%` : "-" },
     { label: "累计产出", value: (lastOut as any)?.n != null ? String((lastOut as any).n) : "-" },
   ];
-  const sessionColumns: DataColumn<any>[] = [
-    {
-      key: "title",
-      title: "标题",
-      render: (s) => (
-        <Link className={styles.sessionLink} href={`/sessions/detail?id=${encodeURIComponent(s.session_uid)}`}>{s.title || s.session_uid}</Link>
-      ),
-    },
-    { key: "source", title: "来源", width: 130, render: (s) => <span className={styles.monoSm}>{s.source || "-"}</span> },
-    { key: "message_count", title: "消息", width: 60, align: "right", render: (s) => <>{s.message_count ?? 0}</> },
-    { key: "status", title: "状态", width: 100, render: (s) => <span className={badgeClass(s.status)}>{s.status || "-"}</span> },
-    {
-      key: "updated_at",
-      title: "更新时间",
-      width: 120,
-      render: (s) => <span className={styles.monoSm}>{fmtTime(s.updated_at || s.uploaded_at)}</span>,
-    },
+  const sessionColumns: DataColumn<SessionTableRow>[] = [
+    { key: "title", title: "标题" },
+    { key: "source", title: "来源", width: 130 },
+    { key: "message_count", title: "消息", width: 60, align: "right" },
+    { key: "status", title: "状态", width: 100 },
+    { key: "updated_at", title: "更新时间", width: 120 },
   ];
+  const sessionRows: SessionTableRow[] = sess.map((s) => ({
+    title: (
+      <Link className={styles.sessionLink} href={`/sessions/detail?id=${encodeURIComponent(s.session_uid)}`}>{s.title || s.session_uid}</Link>
+    ),
+    source: <span className={styles.monoSm}>{s.source || "-"}</span>,
+    message_count: <>{s.message_count ?? 0}</>,
+    status: <span className={badgeClass(s.status)}>{s.status || "-"}</span>,
+    updated_at: <span className={styles.monoSm}>{fmtTime(s.updated_at || s.uploaded_at)}</span>,
+  }));
 
   return (
-    <AgentShell id={id} active="runs" agent={agent} live={live}>
+    <AgentShell
+      id={id}
+      active="runs"
+      agent={agent}
+      live={live}
+      header={tabHeader}
+    >
       {degraded.length ? (
         <div className={styles.alertRow}>
           <Alert type="warning" showIcon title="部分数据源降级" description={degraded.join("；")} />
@@ -124,7 +151,7 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
           <div className="panel-header"><span className="panel-title">实时状态</span></div>
           <TableCopyButton />
           <div className={styles.kvTable + " " + styles.kvW120}>
-            <DataTable columns={KV_COLUMNS} rows={liveRows} rowKey={(r) => r.label} />
+            <DataTable columns={KV_COLUMNS} rows={liveRows} />
           </div>
         </div>
 
@@ -135,7 +162,6 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
             <DataTable
               columns={KV_COLUMNS}
               rows={scopeRows}
-              rowKey={(r) => r.label}
               empty={{ title: "暂无已办记录" }}
             />
           </div>
@@ -147,7 +173,7 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
           <div className="panel-header"><span className="panel-title">最近一次执行</span></div>
           {lastExec ? (
             <div className={styles.kvTable + " " + styles.kvW110}>
-              <DataTable columns={KV_COLUMNS} rows={lastExecRows} rowKey={(r) => r.label} />
+              <DataTable columns={KV_COLUMNS} rows={lastExecRows} />
             </div>
           ) : (
             <div className={styles.emptyBlock}>暂无执行记录</div>
@@ -158,7 +184,7 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
           <div className="panel-header"><span className="panel-title">最近一次产出</span></div>
           {lastOut ? (
             <div className={styles.kvTable + " " + styles.kvW110}>
-              <DataTable columns={KV_COLUMNS} rows={lastOutRows} rowKey={(r) => r.label} />
+              <DataTable columns={KV_COLUMNS} rows={lastOutRows} />
             </div>
           ) : (
             <div className={styles.emptyBlock}>暂无产出记录</div>
@@ -176,8 +202,7 @@ export default async function AgentRunsPage({ params }: { params: { id: string }
         <TableCopyButton />
         <DataTable
           columns={sessionColumns}
-          rows={sess}
-          rowKey={(s) => s.session_uid}
+          rows={sessionRows}
           empty={{ title: "暂无会话档案" }}
         />
       </div>

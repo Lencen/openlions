@@ -1,0 +1,16 @@
+/* /cost 明细表样式（2026-11-05 P2 批8：内联 style 清零）
+   成功率/估算令牌的动态文字色改由 data-ok / data-on 属性选择器承载；间距用类。 */
+
+.entryName { font-size: var(--fs-base); font-weight: 600; }
+
+/* 成功率：>=95% 绿，其余黄 */
+.rate { color: var(--status-warn); }
+.rate[data-ok="true"] { color: var(--status-ok); }
+
+/* 估算令牌：有值黄，无值弱化 */
+.estimated { color: var(--text-muted); }
+.estimated[data-on="true"] { color: var(--status-warn); }
+
+.unmeasuredNote { margin-left: var(--sp-1); }
+
+.desc { margin-top: var(--sp-2); line-height: 1.7; }

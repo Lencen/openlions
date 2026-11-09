@@ -8,6 +8,8 @@ import ReflectionsHeader from "./_components/ReflectionsHeader";
 import ReflectionsListTable from "./_components/ReflectionsListTable";
 import { useGlobalFilter } from "@/components/GlobalFilter";
 import ErrorAlert from "@/components/ErrorAlert";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import { t } from "@/i18n";
 import styles from "./page.module.css";
 
 export default function ReflectionsPage() {
@@ -44,7 +46,15 @@ export default function ReflectionsPage() {
   const rows = items;
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <ReflectionsHeader loading={loading} rowsCount={rows.length} st={st} stats={stats} />
+      {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #11）：面包屑 / 标题 / 一句说明上移到本文件，
+          ReflectionsHeader 只剩指标带。标题与说明逐字取自口径表；副标题尾部保留改前就有的
+          条数与成功/失败/覆盖（口径未变），不新增别的统计。 */}
+      <div className="breadcrumb"><span className={styles.reflCrumbDim}>飞轮</span><span className="sep">/</span><span className="current">反思</span></div>
+      <PageHeader>
+        <PageTitle>反思</PageTitle>
+        <div className="page-subtitle">反思条目与提炼结果{loading ? " · 加载中…" : " · " + rows.length + " 条 · 全库 " + t('status.ok') + " " + (st?.ok ?? "?") + " / " + t('status.failed') + " " + (st?.failed ?? "?") + " · 发现覆盖 " + (((stats?.structuredFindings?.rate ?? 0) * 100).toFixed(1)) + "%"}</div>
+      </PageHeader>
+      <ReflectionsHeader st={st} />
       {err ? <div className={styles.pageErrWrap}><ErrorAlert title="反思列表加载失败" message={err} onRetry={() => { mutate(); }} /></div> : null}
       <ReflectionsListTable rows={rows} loading={loading} expandedId={expandedId} detail={detail} onOpen={open} onReload={reload} />
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}

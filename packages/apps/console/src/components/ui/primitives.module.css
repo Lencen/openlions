@@ -1,0 +1,71 @@
+/* 2026-11-05 P2 批6（frontend-line-2）—— components/ui/primitives.tsx 的内联样式下沉。
+   口径：动态色一律走 data-* + 属性选择器；宽高/间距用令牌；不新增全局类（app/globals.css 一行未改）。
+   兼容性说明：
+     1) .m-value / .state-block / .metric-card 等是 globals 里的既有类，这里只**追加**类，不覆盖它们的既有声明，
+        靠"两段选择器"（类 + data 属性）提权，改前用 style 承载的颜色逐条等价。
+     2) PanelCard 的 tone 入参历史上可写任意 CSS 值（调用方传的是 var(--status-warn) 这类令牌）。
+        这里把 `var(--x)` 解成令牌名做 data-tone；只有 globals.css 里真实存在的令牌才有规则，
+        其余退回透明（与改前 `background: 非法值` 的渲染结果一致）。新增令牌要在这里补一行。 */
+
+/* ── MetricCard 数值色 / 数据时刻 / 趋势行：2026-11-05（ord-027 收敛）随实现体一起下线。
+   同款规则已迁到 components/KPICard.module.css（.value / .meta / .asof / .delta）。
+   本文件中这 4 个类名（mValue / asOfRow / asOfText / mDelta）已无引用，勿再使用。 ── */
+
+/* ── StateBlock ── */
+.sbLoading { padding: var(--sp-2) 0; }
+.skItem { margin-bottom: var(--sp-2-5); }
+.sbDesc { margin-top: var(--sp-2); }
+
+/* ── ErrorBlock ── */
+.errBlock { color: var(--status-crit); }
+
+/* ── PanelCard ── */
+.panelCard :global(.ui-card-body) { padding: var(--sp-4); }
+/* 0,3,0：压过 globals 里 .ui-card-sm .ui-card-body（0,2,0），不依赖样式表加载顺序 */
+.panelCard:global(.ui-card-sm) :global(.ui-card-body) { padding: var(--sp-4); }
+.pcTitle { display: inline-flex; align-items: center; gap: var(--sp-2); }
+.pcBar { width: 3px; height: 14px; border-radius: var(--radius-xs); display: inline-block; background: transparent; }
+.pcBar[data-tone="default"] { background: var(--primary); }
+.pcBar[data-tone="accent-primary"] { background: var(--accent-primary); }
+.pcBar[data-tone="accent-quiet"] { background: var(--accent-quiet); }
+.pcBar[data-tone="border"] { background: var(--border); }
+.pcBar[data-tone="border-hi"] { background: var(--border-hi); }
+.pcBar[data-tone="border-strong"] { background: var(--border-strong); }
+.pcBar[data-tone="info"] { background: var(--info); }
+.pcBar[data-tone="module-audit"] { background: var(--module-audit); }
+.pcBar[data-tone="module-builtin"] { background: var(--module-builtin); }
+.pcBar[data-tone="module-core"] { background: var(--module-core); }
+.pcBar[data-tone="module-extension"] { background: var(--module-extension); }
+.pcBar[data-tone="module-settings"] { background: var(--module-settings); }
+.pcBar[data-tone="primary"] { background: var(--primary); }
+.pcBar[data-tone="primary-dim"] { background: var(--primary-dim); }
+.pcBar[data-tone="status-crit"] { background: var(--status-crit); }
+.pcBar[data-tone="status-fail"] { background: var(--status-fail); }
+.pcBar[data-tone="status-none"] { background: var(--status-none); }
+.pcBar[data-tone="status-ok"] { background: var(--status-ok); }
+.pcBar[data-tone="status-pending"] { background: var(--status-pending); }
+.pcBar[data-tone="status-warn"] { background: var(--status-warn); }
+.pcBar[data-tone="table-knowledge"] { background: var(--table-knowledge); }
+.pcBar[data-tone="table-memory"] { background: var(--table-memory); }
+.pcBar[data-tone="table-practice"] { background: var(--table-practice); }
+.pcBar[data-tone="table-reflection"] { background: var(--table-reflection); }
+.pcBar[data-tone="table-skill"] { background: var(--table-skill); }
+.pcBar[data-tone="text"] { background: var(--text); }
+.pcBar[data-tone="text-3"] { background: var(--text-3); }
+.pcBar[data-tone="text-dim"] { background: var(--text-dim); }
+.pcBar[data-tone="text-hi"] { background: var(--text-hi); }
+.pcBar[data-tone="text-muted"] { background: var(--text-muted); }
+
+/* ── PanelCard 跨列（span 1..12，档位类，替代内联 gridColumn） ── */
+.span1 { grid-column: span 1; }
+.span2 { grid-column: span 2; }
+.span3 { grid-column: span 3; }
+.span4 { grid-column: span 4; }
+.span5 { grid-column: span 5; }
+.span6 { grid-column: span 6; }
+.span7 { grid-column: span 7; }
+.span8 { grid-column: span 8; }
+.span9 { grid-column: span 9; }
+.span10 { grid-column: span 10; }
+.span11 { grid-column: span 11; }
+.span12 { grid-column: span 12; }

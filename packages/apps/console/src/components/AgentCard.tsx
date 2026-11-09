@@ -1,4 +1,5 @@
 import { useRouter } from "next/navigation";
+import styles from "./AgentCard.module.css";
 
 interface Props {
   name: string;
@@ -25,37 +26,39 @@ function avatarText(avatar?: string, name?: string) {
   return (name || "").trim().slice(0, 1).toUpperCase() || "·";
 }
 
+// 2026-11-05 P2 批9：10 处内联 style 清零 -> AgentCard.module.css；
+//   可点击光标改由 data-clickable 属性选择器承载。
 export default function AgentCard({ name, framework, terminal, sessions, status, predecessor, avatar, dimmed, agentId, lastSeen, permissions, currentTask }: Props) {
   const router = useRouter();
   // [UI-S6 / 屏06] 卡片点击进入对象主页 (嵌套页签路由); 权限调整入口在详情页内保留。
   const click = () => { if (agentId) router.push(`/agents/${encodeURIComponent(agentId)}/overview`); };
   return (
-    <div className={`agent-card ${dimmed ? "dimmed" : ""}`}
-      onClick={click} style={{ cursor: agentId ? "pointer" : "default" }}>
+    <div className={`agent-card ${dimmed ? "dimmed" : ""} ${styles.card}`}
+      onClick={click} data-clickable={!!agentId}>
       <div className="agent-avatar">{avatarText(avatar, name)}</div>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "var(--fs-md)", fontWeight: 600 }}>{name}</div>
-        <div style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)" }}>
+      <div className={styles.body}>
+        <div className={styles.name}>{name}</div>
+        <div className={styles.meta}>
           {framework} · {terminal}
           {sessions !== undefined && ` · 会话 ${sessions.toLocaleString()}`}
           {permissions !== undefined && ` · 权限 ${permissions}`}
           {predecessor && ` · 前任: ${predecessor}`}
         </div>
-        {lastSeen && <div style={{ fontSize: "var(--fs-xs)", color: "var(--text-dim)", marginTop: "var(--sp-0-5)" }}>
+        {lastSeen && <div className={styles.lastSeen}>
           最后活跃: {lastSeen}
         </div>}
-        <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-1-5)", marginTop: "var(--sp-1)", fontSize: "var(--fs-sm)" }}>
+        <div className={styles.taskRow}>
           {currentTask ? (
             <>
-              <span className="badge" style={{ background: "var(--primary)", color: "var(--on-primary)", padding: "var(--sp-0-5) var(--sp-2)", borderRadius: "var(--radius-md)" }}>工作中</span>
+              <span className={"badge " + styles.workingBadge}>工作中</span>
               <a href={"/flywheel/tasks?focus=" + currentTask.id} onClick={(e) => e.stopPropagation()}
-                 style={{ color: "var(--primary)", textDecoration: "underline", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 180, display: "inline-block" }}>
+                 className={styles.taskLink}>
                 {currentTask.title || currentTask.id.slice(0, 12)}
               </a>
-              {currentTask.theme && <span style={{ color: "var(--text-dim)" }}>· {currentTask.theme}</span>}
+              {currentTask.theme && <span className={styles.dimText}>· {currentTask.theme}</span>}
             </>
           ) : (
-            <span style={{ color: "var(--text-dim)" }}>空闲</span>
+            <span className={styles.dimText}>空闲</span>
           )}
         </div>
       </div>

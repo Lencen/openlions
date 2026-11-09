@@ -24,6 +24,25 @@ const nextConfig = {
       { source: buildApiRewriteSource(), destination: 'http://localhost:3000/api/:path' },
     ];
   },
+  // 2026-11-05 商业线裁决 C：/flywheel/business（含 [dim]）下线 -> 真 301 /market。
+  //   为什么放在 next.config 而不是 page.tsx 里 redirect()：
+  //   ① 判据 scripts/check-offline-301.cjs 判的是**字面 301**（旧路由 301 + Location 以目标结尾 + 目标 200）；
+  //      App Router 里 next/navigation 的 redirect() 返回 307，过不了这条判据（仓内既有 307 先例：
+  //      app/audit/page.tsx、app/cognitive/knowledge/governance/page.tsx，都是页内跳转不是下线）。
+  //   ② 处置规范 docs/design/uiux-bento-2026-11/OFFLINE-SCOPE-078.md §3 把「next.config redirects」
+  //      与「页内 redirect()」并列为两种实现；而 ord-078 要求页目录/组件原样保留 60 天，
+  //      config 级 redirect 在进入路由前返回，页面文件可完全不动（只加一行说明注释）。
+  //   statusCode 显式写 301：Next 14 里 permanent: true 产出的是 308，不等于 301。
+  async redirects() {
+    return [
+      { source: '/flywheel/business', destination: '/market', statusCode: 301 },
+      { source: '/flywheel/business/:dim', destination: '/market', statusCode: 301 },
+      // 2026-11-06 商业线裁决（R-01 收口）：余下 3 条下线页也走 301
+      { source: '/workbench', destination: '/', statusCode: 301 },
+      { source: '/system/comm', destination: '/messages', statusCode: 301 },
+      { source: '/agents/config', destination: '/agents', statusCode: 301 },
+    ];
+  },
   transpilePackages: ['echarts', 'echarts-for-react', 'antd', '@ant-design/icons'],
 };
 

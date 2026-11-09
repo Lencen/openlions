@@ -2,6 +2,13 @@
    只放本页真正需要、globals.css 里没有的几条；
    能复用 .page / .tiny / .panel / .card-grid 的一律复用。 */
 
+/* 页头面包屑上级段（沿用 .breadcrumb 结构，只补弱化色） */
+.crumbDim { color: var(--text-dim); }
+
+/* 实时状态条：左侧计数药丸、右侧数据时刻（原 PageHero 的左右两栏，页头改 PageHeader 后单列一行） */
+.liveStrip { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); flex-wrap: wrap; }
+.liveMeta { text-align: right; }
+
 /* 数据源降级提示与下方看板留白（原来是内联 margin-bottom） */
 .warnAlert { margin-bottom: var(--sp-4); }
 

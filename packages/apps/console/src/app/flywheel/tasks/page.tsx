@@ -56,6 +56,9 @@ export default function TasksBoard() {
   // 2026-11-05（数据卡 7 §6）：积压数取 FlywheelJob 队列（既有只读端点 /api/flywheel-flow 的 queues）。
   //   完成(7d) / 失败(7d) / P95(7d) 在 console 没有只读接口 -> 卡片显示「不可得」+ 原因，不写 0。
   const flowQ = useApi<any>("/api/flywheel-flow", { pollMs: 0 });
+  // 2026-11-06（数据卡 7 §6）：完成/失败/P95 的只读值改由 /api/flywheel/tasks-metrics 提供；
+  //   取不到仍是「不可得 + 原因」，绝不写 0（与卡 7 的 n/a 规则一致）。
+  const tmQ = useApi<any>("/api/flywheel/tasks-metrics", { pollMs: 60000 });
 
   useEffect(() => {
     const id = setTimeout(() => setThemeQ(qInput.trim()), 250);
@@ -240,18 +243,24 @@ export default function TasksBoard() {
               />
               <KpiCard
                 label="飞轮任务完成数（近7日）"
-                value="不可得"
-                hint="原因：本平台没有飞轮作业近 7 日完成数的只读接口 · 不写 0"
+                value={tmQ.data?.done7d != null ? fmtNum(tmQ.data.done7d) : "不可得"}
+                hint={tmQ.data?.done7d != null
+                  ? "源：近 7 日已完成任务（按完成时间）· 阈值 ≥ 20（低于即停滞）"
+                  : "原因：" + (tmQ.data?.reason || tmQ.error?.message || "接口未返回") + " · 不写 0"}
               />
               <KpiCard
                 label="飞轮任务失败数（近7日）"
-                value="不可得"
-                hint="原因：同「完成数（近7日）」——没有飞轮作业近 7 日窗口的只读接口 · 不写 0"
+                value={tmQ.data?.failed7d != null ? fmtNum(tmQ.data.failed7d) : "不可得"}
+                hint={tmQ.data?.failed7d != null
+                  ? "源：近 7 日失败任务（按创建时间）· 阈值 ≤ 10"
+                  : "原因：" + (tmQ.data?.reason || tmQ.error?.message || "接口未返回") + " · 不写 0"}
               />
               <KpiCard
                 label="飞轮任务 P95 耗时（近7日，秒）"
-                value="不可得"
-                hint="字典条目「飞轮任务 P95 耗时（近7日，秒）」；异常阈值 300s（卡片 7 异常注：2026-11-04 实测 53s，非本页实时值）· 无只读接口 · 不写 0"
+                value={tmQ.data?.p95s != null ? String(tmQ.data.p95s) : "不可得"}
+                hint={tmQ.data?.p95s != null
+                  ? "样本 " + (tmQ.data.p95Sample ?? "?") + " 条 · 阈值 ≤ 300 秒（样本 <10 条应判不可判）"
+                  : "原因：" + (tmQ.data?.reason || tmQ.error?.message || "接口未返回") + " · 不写 0"}
               />
             </div>
 

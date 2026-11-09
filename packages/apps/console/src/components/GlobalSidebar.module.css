@@ -1,0 +1,29 @@
+/* GlobalSidebar · P2 呈现层（批8，2026-11-05）
+   侧栏固定定位、规划中图标、Menu 原子件的边框/底色、页脚状态点颜色，全部从内联 style 下沉到这里。
+   颜色/尺寸一律复用 globals.css 的既有令牌，未新增全局类、未改 globals.css。 */
+
+/* 侧栏固定定位（原内联 position/top/bottom/left/overflowY）—— .main 的 margin-left 依赖它 */
+.asideFixed {
+  position: fixed;
+  top: var(--topnav-h);
+  bottom: 0;
+  left: 0;
+  overflow-y: auto;
+}
+
+/* 「规划中」锁图标：靠右 + 告警色（原内联 marginLeft/fontSize/color） */
+.lockedIcon {
+  margin-left: auto;
+  font-size: var(--fs-xs);
+  color: var(--status-warn);
+}
+
+/* Menu 原子件：去掉末侧分隔线、底色透明（原内联 borderInlineEnd/background） */
+.menuPlain {
+  border-inline-end: none;
+  background: transparent;
+}
+
+/* 页脚状态点：颜色由 data-tone 表达（原内联 background；.dot 的尺寸/圆角仍在 globals .sidebar-footer） */
+.footerDot[data-tone="ok"] { background: var(--status-ok); }
+.footerDot[data-tone="primary"] { background: var(--primary); }

@@ -1,0 +1,63 @@
+/* AgentCard · P2 呈现层（批9，2026-11-05）
+   卡片光标/可点击态、正文排版、当前任务行与链接截断，全部从内联 style 下沉到这里。
+   卡片外观仍由 globals 的 .agent-card / .agent-avatar / .badge 提供，这里只补差量；
+   未新增全局类、未改 globals.css。 */
+
+/* 卡片基础光标 + 可点击态（原内联 cursor: agentId ? "pointer" : "default"，动态值走 data-clickable） */
+.card { cursor: default; }
+.card[data-clickable="true"] { cursor: pointer; }
+
+/* 正文列（原内联 flex: 1） */
+.body { flex: 1; }
+
+/* 名称（原内联 fontSize: var(--fs-md) + fontWeight: 600） */
+.name {
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+/* 框架 · 终端 · 会话/权限/前任（原内联 fontSize: var(--fs-xs) + color: var(--text-muted)） */
+.meta {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* 最后活跃（原内联 fontSize/color/marginTop） */
+.lastSeen {
+  margin-top: var(--sp-0-5);
+  font-size: var(--fs-xs);
+  color: var(--text-dim);
+}
+
+/* 工作状态行（原内联 display: flex + alignItems + gap + marginTop + fontSize） */
+.taskRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+  margin-top: var(--sp-1);
+  font-size: var(--fs-sm);
+}
+
+/* "工作中"药丸：在 .badge 基础上换主色。双类名是为了压过 globals 的 .badge
+   （原来靠内联样式兜底，改成组件类后同权重就要比源顺序，不稳） */
+.workingBadge.workingBadge {
+  padding: var(--sp-0-5) var(--sp-2);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+/* 当前任务链接：主色 + 下划线 + 单行截断（原内联 color/textDecoration/whiteSpace/
+   overflow/textOverflow/maxWidth/display） */
+.taskLink {
+  display: inline-block;
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--primary);
+  text-decoration: underline;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 弱化文字：任务主题与"空闲"两处共用（原两处内联 color: var(--text-dim)） */
+.dimText { color: var(--text-dim); }

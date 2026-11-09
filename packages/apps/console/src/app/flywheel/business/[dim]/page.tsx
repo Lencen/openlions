@@ -1,9 +1,11 @@
 "use client";
+// 2026-11-05 商业线裁决：301 -> /market，目录保留 60 天
 import { useParams } from "next/navigation";
 import ErrorAlert from "@/components/ErrorAlert";
 import { useBusinessSnapshot } from "../_components/useBusiness";
 import BusinessShell from "../_components/BusinessShell";
-import MetricCard from "../_components/MetricCard";
+import { KpiCard } from "@/components/ui";
+import { businessKpiProps } from "../_components/businessKpi";
 import DimensionBody from "../_components/DimensionBody";
 import ActionList from "../_components/ActionList";
 import { DIMENSIONS, dimensionMetrics, dimensionActions } from "../_components/caliber";
@@ -38,7 +40,7 @@ export default function FlywheelBusinessDimensionPage() {
     <BusinessShell data={data} active={spec.id} title={spec.code + " " + spec.title} subtitle={spec.question + " · 责任人：" + spec.owner}
       onRefresh={refresh} refreshing={refreshing}>
       <div className="card-grid cols-4" data-testid="dimension-cards">
-        {metrics.map((m) => <MetricCard key={m.key} m={m} s={s} />)}
+        {metrics.map((m) => <KpiCard key={m.key} {...businessKpiProps(m, s)} />)}
       </div>
       <DimensionBody id={spec.id} s={s} />
       {spec.id !== "d8" ? <ActionList actions={actions} s={s} /> : null}

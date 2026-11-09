@@ -4,6 +4,10 @@
 //   - 列表组件不卸载, 搜索词 / 排序 / 页码 / 滚动位置全部保持;
 //   - 仍保留完整详情页深链接 (抽屉内 "在新标签打开完整详情页"), 详情页路由不删;
 //   - 抽屉开合状态写回 URL (?open=<id>), 可分享可刷新。
+// 2026-11-05 P2 批8 呈现层：本文件 7 处内联 style 全部下沉到同名 CSS Module；
+//   抽屉正文的内边距原来是 Drawer 的 styles.body 内联对象（antd 兼容形态），
+//   改为 className + :global(.ui-drawer-body) 压到原语正文容器（值与 globals 默认档位同值 sp-4）。
+//   开合状态、深链接、文案与组件 props 形状均未动。
 import type { ReactNode } from "react";
 import { Drawer } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import MemoryDetailBody from "./MemoryDetailBody";
@@ -11,6 +15,7 @@ import KnowledgeDetailBody from "./KnowledgeDetailBody";
 import PracticeDetailBody from "./PracticeDetailBody";
 import SkillDetailBody from "./SkillDetailBody";
 import ReflectionDetailBody from "./ReflectionDetailBody";
+import styles from "./CognitiveDetailDrawer.module.css";
 
 export type CognitiveKind = "memory" | "knowledge" | "practice" | "skill" | "reflection";
 
@@ -24,9 +29,9 @@ const META: Record<CognitiveKind, { label: string; href: (id: string) => string 
 
 function DrawerHead({ title, id }: { title: string; id: string }) {
   return (
-    <div style={{ marginBottom: "var(--sp-3)", paddingBottom: "var(--sp-2)", borderBottom: "1px solid var(--border)" }}>
-      <div style={{ fontSize: "var(--fs-lg)", fontWeight: 600, lineHeight: 1.5 }}>{title}</div>
-      <div className="tiny mono" style={{ wordBreak: "break-all" }}>{id}</div>
+    <div className={styles.head}>
+      <div className={styles.headTitle}>{title}</div>
+      <div className={"tiny mono " + styles.headId}>{id}</div>
     </div>
   );
 }
@@ -74,19 +79,19 @@ export default function CognitiveDetailDrawer({
       title={
         <span>
           {meta.label}详情 · 侧边预览
-          <span className="tiny" style={{ marginLeft: "var(--sp-2)", fontWeight: 400 }}>列表未离开，筛选条件与位置保持</span>
+          <span className={"tiny " + styles.titleHint}>列表未离开，筛选条件与位置保持</span>
         </span>
       }
-      styles={{ body: { padding: "var(--sp-4)" } }}
+      className={styles.body}
       destroyOnHidden
     >
       {!id ? null : (
         <div>
-          <div style={{ display: "flex", gap: "var(--sp-2-5)", alignItems: "center", flexWrap: "wrap", marginBottom: "var(--sp-2-5)" }}>
-            <a href={meta.href(id)} target="_blank" rel="noreferrer" style={{ fontSize: "var(--fs-base)", color: "var(--primary)" }}>
+          <div className={styles.actionRow}>
+            <a href={meta.href(id)} target="_blank" rel="noreferrer" className={styles.detailLink}>
               ↗ 在新标签打开完整详情页（深链接）
             </a>
-            <span className="tiny" style={{ color: "var(--text-dim)" }}>关闭抽屉（Esc / 点遮罩 / ✕）后仍在原列表位置与筛选条件下</span>
+            <span className={"tiny " + styles.hint}>关闭抽屉（Esc / 点遮罩 / ✕）后仍在原列表位置与筛选条件下</span>
           </div>
           {body}
         </div>

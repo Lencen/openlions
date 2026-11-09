@@ -1,0 +1,89 @@
+/* 2026-11-05 P2 批10：/terminals/detail 终端详情（客户端页）内联样式下沉。
+   内联 style 72 处 -> 0；手写 tbl 表格 10 张 -> 白名单 @/components/DataTable。
+   页签选中态是唯一动态样式，改由 [data-active] 属性选择器承载（值与原内联三元一一对应）；
+   其余是字段行、分组小标题、提示行的间距与弱化色，以及表格单元格的小字 / 换行。
+   未新增全局类、未改 globals.css；取数、路由、URL 参数、文案、字段名与导出 props 形状未动。 */
+
+/* 顶部四灯网格下间距（原内联 marginBottom gap-block） */
+.kpiGrid { margin-bottom: var(--gap-block); }
+
+/* KPI 卡标题不换行（原内联 whiteSpace nowrap） */
+.panelTitleNowrap { white-space: nowrap; }
+
+/* KPI 卡内文（原内联 padding tight / sect） */
+.kpiBody { padding: var(--gap-tight) var(--gap-sect); }
+
+/* KPI 数值（原内联 fontSize 20 + fontWeight 700） */
+.kpiValue { font-size: 20px; font-weight: 700; }
+
+/* KPI 卡底部状态片（原内联 marginTop 4） */
+.kpiBadge { margin-top: 4px; }
+
+/* 独立面板的下间距（原内联 marginBottom gap-block） */
+.panelBlock { margin-bottom: var(--gap-block); }
+
+/* 面板内提示段（原内联 padding tight / sect，配合 globals 的 .tiny） */
+.notePad { padding: var(--gap-tight) var(--gap-sect); }
+
+/* 页签条（原内联 display flex + gap tight + wrap） */
+.tabBar { display: flex; gap: var(--gap-tight); flex-wrap: wrap; }
+
+/* 页签按钮未选中档（原内联 border 0 / 透明底 / pointer / padding / 字重 400 / 透明下边线） */
+.tabBtn {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 4px 10px;
+  font-weight: 400;
+  border-bottom: 2px solid transparent;
+}
+
+/* 页签按钮选中档（原内联 fontWeight 700 + 下边线 accent） */
+.tabBtn[data-active="true"] {
+  font-weight: 700;
+  border-bottom-color: var(--accent, #1f5fbf);
+}
+
+/* 页签内容区内边距（原内联 padding gap-sect） */
+.tabBody { padding: var(--gap-sect); }
+
+/* 字段行 / 字段名 / 字段值（原 Field 组件内联 flex + gap + padding + 宽 140 + 弱化色 + 断词） */
+.fieldRow { display: flex; gap: var(--gap-block); padding: var(--gap-label) 0; }
+.fieldLabel { width: 140px; flex: 0 0 140px; color: var(--text-dim); }
+.fieldValue { flex: 1; word-break: break-all; }
+
+/* 版本升级提示（原内联 marginTop -4 + marginBottom gap-label + paddingLeft 148） */
+.versionHint { margin-top: -4px; margin-bottom: var(--gap-label); padding-left: 148px; }
+
+/* 分组容器（原内联 marginTop gap-block） */
+.section { margin-top: var(--gap-block); }
+
+/* 分组小标题带弱化色（原内联 marginBottom gap-label + color text-dim） */
+.subheadDim { margin-bottom: var(--gap-label); color: var(--text-dim); }
+
+/* 分组小标题不带弱化色（原内联只有 marginBottom gap-label） */
+.subhead { margin-bottom: var(--gap-label); }
+
+/* 大块标题（原内联 marginTop gap-block + marginBottom gap-label + color text-dim） */
+.blockHead { margin-top: var(--gap-block); margin-bottom: var(--gap-label); color: var(--text-dim); }
+
+/* 紧跟字段的脚注（原内联 marginTop gap-label） */
+.noteTop { margin-top: var(--gap-label); }
+
+/* 上提 4px 的脚注（原内联 marginTop -4 + marginBottom gap-label） */
+.noteTight { margin-top: -4px; margin-bottom: var(--gap-label); }
+
+/* 块下间距（原内联 marginTop gap-block） */
+.noteBlock { margin-top: var(--gap-block); }
+
+/* 弱化正文（原内联 color text-dim，配合 globals 的 .tiny） */
+.dimText { color: var(--text-dim); }
+
+/* 表格内长文本单元格换行（原内联 whiteSpace normal） */
+.wrap { white-space: normal; }
+
+/* 待接入表「预计」副行（原内联 color text-dim + marginTop 2；原为 div，改成块级 span 以保持结构合法） */
+.eta { display: block; color: var(--text-dim); margin-top: 2px; }
+
+/* 页脚自证行（原内联 marginTop gap-block + color text-dim） */
+.pageFoot { margin-top: var(--gap-block); color: var(--text-dim); }

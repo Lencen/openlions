@@ -5,7 +5,9 @@ import DataTable from "@/components/common/DataTable";
 import { PanelCard, StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { fmtNum, fmtPct, fmtTokens, relTime } from "@/lib/format";
+import styles from "./CostTables.module.css";
 
+// 2026-11-05 P2 批8：内联 style 清零 —— 入口名字号、成功率/估算令牌的动态色、间距全部下沉 CostTables.module.css。
 export default function CostTables({ data, byEntry, loadingAll }: { data: any; byEntry: any[]; loadingAll: boolean }) {
   return (
     <div className="card-grid cols-2">
@@ -18,12 +20,13 @@ export default function CostTables({ data, byEntry, loadingAll }: { data: any; b
           columns={[
             { title: "入口", dataIndex: "entry", render: (v: string, row: any) => (
               <div>
-                <div style={{ fontSize: "var(--fs-base)", fontWeight: 600 }}>{v}</div>
+                {/* 2026-11-05 P2 批8：入口名字号/字重下沉到 module.css */}
+                <div className={styles.entryName}>{v}</div>
                 <div className="tiny">{row.model}</div>
               </div>
             ) },
             { title: "调用", dataIndex: "calls", width: 62, render: (v: number) => <span className="mono">{fmtNum(v)}</span> },
-            { title: "成功", dataIndex: "successRate", width: 66, render: (v: number) => <span className="mono" style={{ color: v >= 0.95 ? "var(--status-ok)" : "var(--status-warn)" }}>{fmtPct(v, 0)}</span> },
+            { title: "成功", dataIndex: "successRate", width: 66, render: (v: number) => <span className={"mono " + styles.rate} data-ok={v >= 0.95}>{fmtPct(v, 0)}</span> },
             {
               title: <Tooltip title={t("cost.col.measured.tip")}><span>{t("cost.col.measured")}</span></Tooltip>,
               dataIndex: "tokens",
@@ -35,9 +38,9 @@ export default function CostTables({ data, byEntry, loadingAll }: { data: any; b
               dataIndex: "estimatedTokens",
               width: 104,
               render: (v: number, row: any) => (
-                <span className="mono" style={{ color: v > 0 ? "var(--status-warn)" : "var(--text-muted)" }}>
+                <span className={"mono " + styles.estimated} data-on={v > 0}>
                   {v > 0 ? fmtTokens(v) : "—"}
-                  {row.unmeasured ? <span className="tiny" style={{ marginLeft: "var(--sp-1)" }}>{t("cost.extraUnmeasured", { n: fmtNum(row.unmeasured) })}</span> : null}
+                  {row.unmeasured ? <span className={"tiny " + styles.unmeasuredNote}>{t("cost.extraUnmeasured", { n: fmtNum(row.unmeasured) })}</span> : null}
                 </span>
               ),
             },
@@ -63,7 +66,7 @@ export default function CostTables({ data, byEntry, loadingAll }: { data: any; b
             ]}
           />
         )}
-        <div className="tiny" style={{ marginTop: "var(--sp-2)", lineHeight: 1.7 }}>
+        <div className={"tiny " + styles.desc}>
           {t("cost.unmeasured.desc")}
         </div>
       </PanelCard>

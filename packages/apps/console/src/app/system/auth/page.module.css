@@ -1,0 +1,13 @@
+/* /system/auth 页内样式（2026-11-05 P2 批8 呈现层：内联 style 清零）
+   窄面板 / 面包屑暗色 / 表下脚注都下沉到类；表格本体已换成白名单 DataTable（样式复用 globals 的 .dt）。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 错误条的留白（原来是内联 marginBottom） */
+.errorWrap { margin-bottom: var(--sp-3); }
+
+/* 面板底部「Key 由接入审批签发…」脚注（原来是内联 fontSize + color + marginTop） */
+.footNote { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1-5); }
+
+/* 脚注里的行内链接（原来是内联 color） */
+.link { color: var(--primary); }

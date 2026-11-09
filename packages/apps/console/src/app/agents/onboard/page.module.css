@@ -2,6 +2,9 @@
    向导页本身很薄（分步控件在 _components/ 下；那些文件随所属批次改造）。
    这里只放：取数失败提示的上边距 + 页脚"相关视图"出链行。 */
 
+/* 面包屑首段（分组层）压暗；末段由 globals.css 的 .breadcrumb .current 承担 */
+.crumbDim { color: var(--text-dim); }
+
 .alertRow {
   margin-bottom: var(--sp-3);
 }

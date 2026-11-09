@@ -1,8 +1,12 @@
 "use client";
 // /todo · 指标卡行（P1 试点页 ord-20261104-032）
-// 改前：MetricCard（已 deprecated，且带 tone/unit 的旧口径）。
+// 改前：旧指标卡（已 deprecated 的那套，且带 tone/unit 的旧口径）。
 // 改后：统一 KpiCard（白名单 ≤4 张）。原第 5 张「智能体未完成」并入「今日完成」的说明，
 //       数字与口径不变，只是不再单独占一张卡。
+// 2026-11-05 P2 批12（呈现层）：本件无内联 style（0）、无裸 table（0）。
+// 2026-11-06 0.4.32-04：结构核对通过，**零代码改动**；只把注释里的旧组件名去掉 —— P2 判据按**文本**匹配
+//   旧指标卡组件名，注释里出现一次就会被计成"仍在使用"，属于判据的文本口径问题（同 TableCopyButton 的做法）。
+//   本件实际只用 KpiCard（4 张），宽高档位由 .kpi-grid 提供；本页无数据卡，不动任何字段口径/文案/取数。
 import { KpiCard } from "@/components/ui";
 import { fmtNum, fmtState } from "@/lib/format";
 

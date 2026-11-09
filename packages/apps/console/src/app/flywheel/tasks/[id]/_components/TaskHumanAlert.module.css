@@ -1,0 +1,6 @@
+/* TaskHumanAlert · P2 批12 呈现层（2026-11-05）
+   唯一内联 style（警示条下外边距）下沉到本文件；与同页 page.module.css 的 .alertGap 同值同义。
+   文案、「转成人的待办」跳转与取数未动；不新增全局类、不改 globals.css。 */
+
+/* 原内联 style 的 marginBottom: var(--sp-4) */
+.alertGap { margin-bottom: var(--sp-4); }

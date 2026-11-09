@@ -1,0 +1,89 @@
+/* ListControls · P2 呈现层（批9，2026-11-05）
+   列表通用工具条：搜索框、排序下拉、翻页、快速筛选行，全部从内联 style 下沉到这里。
+   快速筛选的选中态（原内联三元样式对象）改由 data-active 属性选择器承载；
+   颜色/间距/字号一律复用 globals.css 既有令牌，ui-btn 仍复用全局类，
+   未新增全局类、未改 globals.css。 */
+
+/* 工具条整体底部分隔线（原内联 border-bottom: 1px solid var(--border)） */
+.wrap { border-bottom: 1px solid var(--border); }
+
+/* 第一行：搜索 + 排序 + 翻页（原内联 display/flexWrap/alignItems/gap/padding） */
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2-5);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+/* 搜索框：占据剩余宽度（原内联 flex/minWidth/padding/border/background/color/fontSize） */
+.search {
+  flex: 1;
+  min-width: 160px;
+  padding: var(--sp-1-5) var(--sp-2-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+
+/* 两个排序下拉共用（原 select 两处内联声明完全相同，合并成一个类） */
+.sortSelect {
+  padding: var(--sp-1-5) var(--sp-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text);
+  font-size: var(--fs-base);
+}
+
+/* 翻页组（原内联 display: flex + gap + alignItems） */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+}
+
+/* 页码 / 总数（原内联 fontSize/color/whiteSpace） */
+.pageInfo {
+  font-size: var(--fs-base);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* 快速筛选行（原内联 display/flexWrap/alignItems/gap/padding） */
+.quickRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-4) var(--sp-3);
+}
+
+/* "快捷筛选"前缀（原内联 fontSize: var(--fs-sm) + color: var(--text-dim)） */
+.quickLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+}
+
+/* 快速筛选按钮选中态（原来是内联三元样式对象；现在按钮只发 data-active）。
+   双类名 + 属性选择器：权重 0-3-0，既压得过 globals 的 .ui-btn，也压得过 .ui-btn:hover
+   （同权重就要比源顺序，改成组件类后不能再靠内联样式兜底） */
+.quickBtn.quickBtn[data-active="true"] {
+  border-color: var(--primary);
+  background: var(--primary-dim);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* "清除筛选"文字按钮（原内联 background/border/padding/cursor/color/fontSize/textDecoration） */
+.quickClear {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--text-dim);
+  font-size: var(--fs-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}

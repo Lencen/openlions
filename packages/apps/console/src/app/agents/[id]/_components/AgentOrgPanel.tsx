@@ -6,6 +6,10 @@
 import { useEffect, useState } from "react";
 import { Button, Input, Select, Tag } from "@/components/primitives";
 import { useGlobalNonce } from "@/components/GlobalFilter";
+// 2026-11-05 P2 批9：内联 style 清零（10 -> 0），下沉到同目录 AgentOrgPanel.module.css；
+//   提示行的成功 / 失败颜色改为 data-tone 属性选择器，其余为静态布局与三处输入宽度。
+//   取数、接口、文案、授权字段与 props 形状未动；本组件不含表格。
+import styles from "./AgentOrgPanel.module.css";
 
 export default function AgentOrgPanel({ agentId }: { agentId: string }) {
   const [data, setData] = useState<any>(null);
@@ -24,7 +28,7 @@ export default function AgentOrgPanel({ agentId }: { agentId: string }) {
   useEffect(() => { load(); }, [agentId, gf]);
 
   // 2026-10-13 round 76-AE: 加载失败时 msg 已写但被这个 early-return 吞掉 -> 永远显示"加载中"。改为把 msg 显示出来。
-  if (!data) return <div className="tiny" style={{ color: msg?.startsWith("失败") ? "var(--status-crit)" : undefined }}>{msg || "加载组织数据…"}</div>;
+  if (!data) return <div className={"tiny " + styles.msg} data-tone={msg?.startsWith("失败") ? "crit" : undefined}>{msg || "加载组织数据…"}</div>;
 
   const flatten = (ns: any[]): any[] => ns.flatMap((n) => [n, ...flatten(n.children || [])]);
   const myDept = flatten(data.departments || []).find((d: any) => (d.agents || []).includes(agentId));
@@ -39,22 +43,22 @@ export default function AgentOrgPanel({ agentId }: { agentId: string }) {
   };
 
   return (
-    <div style={{ fontSize: "var(--fs-base)", lineHeight: 1.8 }}>
-      {msg ? <div className="tiny" style={{ color: msg.startsWith("失败") ? "var(--status-crit)" : "var(--status-ok)" }}>{msg}</div> : null}
-      <div style={{ display: "grid", gap: "var(--sp-2-5)", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+    <div className={styles.wrap}>
+      {msg ? <div className={"tiny " + styles.msg} data-tone={msg.startsWith("失败") ? "crit" : "ok"}>{msg}</div> : null}
+      <div className={styles.grid}>
         <div className="panel"><div className="panel-header"><span className="panel-title">部门归属</span></div>
           {myDept ? <div><b>📁 {myDept.name}</b> <span className="tiny">({myDept.desc || ""})</span></div> : <div className="tiny">未加入部门（组织架构页可将智能体加入部门）</div>}
         </div>
         <div className="panel"><div className="panel-header"><span className="panel-title">所在小组</span></div>
           {myGroups.length === 0 ? <div className="tiny">未加入小组</div> : myGroups.map((g: any) => (
-            <div key={g.id} style={{ marginBottom: "var(--sp-1)" }}><Tag style={{ marginRight: "var(--sp-1)" }}>{g.name}</Tag><span className="tiny">({g.members.length} 成员)</span></div>
+            <div key={g.id} className={styles.groupRow}><Tag className={styles.tagRight}>{g.name}</Tag><span className="tiny">({g.members.length} 成员)</span></div>
           ))}
         </div>
         <div className="panel"><div className="panel-header"><span className="panel-title">资源权限</span></div>
-          <div style={{ display: "flex", gap: "var(--sp-1-5)", flexWrap: "wrap", marginBottom: "var(--sp-1-5)" }}>
-            <Input placeholder="资源类型" value={rt} onChange={(e: any) => setRt(e.target.value)} style={{ width: 110 }} />
-            <Input placeholder="资源键" value={rk} onChange={(e: any) => setRk(e.target.value)} style={{ width: 100 }} />
-            <Select style={{ width: 90 }} value={rp} onChange={(v: any) => setRp(String(v))}
+          <div className={styles.rbacBar}>
+            <Input placeholder="资源类型" value={rt} onChange={(e: any) => setRt(e.target.value)} className={styles.inputType} />
+            <Input placeholder="资源键" value={rk} onChange={(e: any) => setRk(e.target.value)} className={styles.inputKey} />
+            <Select className={styles.selectPerm} value={rp} onChange={(v: any) => setRp(String(v))}
               options={[{ value: "read", label: "只读" }, { value: "write", label: "读写" }, { value: "exec", label: "执行" }, { value: "admin", label: "管理" }]} />
             <Button size="small" type="primary" disabled={!rt || !rk} onClick={grant}>授权</Button>
           </div>

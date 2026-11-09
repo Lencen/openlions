@@ -1093,6 +1093,7 @@ background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--pr
 .kpi-delta { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: var(--fs-xs); width: fit-content; background: var(--bg-surface2); color: var(--text-dim); }
 .kpi-delta.up { background: color-mix(in srgb, var(--status-ok) 14%, transparent); color: var(--status-ok); }
 .kpi-delta.down { background: color-mix(in srgb, var(--status-crit) 14%, transparent); color: var(--status-crit); }
+
 /* 2026-10-20 R4：趋势卡 hero 档（资产页 / 复用 trend-card） */
 .trend-card-hero { border-top: 3px solid transparent; border-image: linear-gradient(90deg, var(--flow-1), var(--flow-2), var(--flow-3)) 1; box-shadow: var(--shadow-card-hover); }
 .trend-card-hero .trend-val { font-size: 44px; line-height: 1.05; letter-spacing: -0.03em; }
@@ -1122,7 +1123,11 @@ background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--pr
 
 /* R5 第三轮：残留 20/15/10 档（特异性更高的既有规则） */
 .card-icon.card-icon, .card-title.card-title { font-size: 18px; }
-.mono.mono { font-size: 18px; }
+/* 2026-11-05 D-01 收敛：原来是 .mono.mono（0,2,0），会压过组件的单类模块选择器（0,1,0），
+   导致"元素带 mono + 模块类要设字号"时字号被抬到 18px（批9 踩到，历史 .sm 写法也被它盖着）。
+   改成 :where(.mono)（贡献 0 特异性）：默认仍是 18px，但任何显式字号类（.tiny / .sm / 模块类）都能正常覆盖。
+   判据：node scripts/check-mono-specificity.cjs -> PASS。 */
+:where(.mono) { font-size: 18px; }
 .fw-foot.fw-foot { font-size: var(--fs-sm); }
 
 /* R5 第四轮：10 → 11（注释类）、14 → 13（副标题类） */

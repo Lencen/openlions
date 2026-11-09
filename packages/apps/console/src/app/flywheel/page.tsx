@@ -12,8 +12,9 @@ import { fmtTime } from "@/lib/format";
 import { DataTable, ErrorBlock, PageHeader, PageTitle, Pill, StateBlock, StateChip } from "@/components/ui";
 import type { DataColumn } from "@/components/ui";
 import { toHourly } from "./_components/shared";
-import type { DashboardData } from "./_components/shared";
+import { card9MetricsFromChecks, type Card9Metrics, type DashboardData } from "./_components/shared";
 import FlywheelKpis from "./_components/FlywheelKpis";
+import Card9Checks from "./_components/Card9Checks";
 import FlywheelStages from "./_components/FlywheelStages";
 import FlywheelHealthPanel from "./_components/FlywheelHealthPanel";
 import FlywheelImprovementPanel from "./_components/FlywheelImprovementPanel";
@@ -43,6 +44,12 @@ export default function FlywheelOverviewPage() {
   // 取数未改动。
   const { data: d, loading, error, mutate } = useApi<DashboardData>("/api/flywheel-dashboard");
   const { data: health, loading: healthLoading, error: healthError } = useApi<any>("/api/flywheel-health");
+  // 2026-11-06 · 0.4.32-03 · 数据卡 9：指标带数据**只从 /api/flywheel/card9 取**（platform-data 提供的判据接口），
+  //   再由 card9MetricsFromChecks 适配成指标带形状 —— 不再在 /api/flywheel-health 里自带一份 SQL，
+  //   避免同一组数字两处口径漂移（本次收口）。
+  //   （既有字段未改）。取不到时保持 null —— 指标带显示「未知」+ 原因，不写 0。
+  const { data: c9 } = useApi<any>("/api/flywheel/card9", { pollMs: 60000 });
+  const card9: Card9Metrics | null = card9MetricsFromChecks(c9?.checks, c9?.asOf);
 
   const forbidden = isForbidden((error as Error)?.message ? String((error as Error).message) : "");
 
@@ -113,7 +120,7 @@ export default function FlywheelOverviewPage() {
   }
 
   const totalActive = d.tableStats.reduce((s, t) => s + t.active, 0);
-  const totalH1 = d.tableStats.reduce((s, t) => s + t.h1, 0);
+  // 2026-11-06 · 0.4.32-03：指标带换成数据卡 9 的四条后，本页不再消费 1h 新增（totalH1 已移除）。
   // R3 口径统一：体检文案里的"近 24h 认知写入"用的是 health.five24h，
   //   两处曾出现 3,295 vs 3,297 的差（两个接口取数时刻不同）。这里让页首 KPI 与文案同源。
   const healthSum = health && (health as any).five24h
@@ -171,16 +178,18 @@ export default function FlywheelOverviewPage() {
     <main className="page">
       {header}
 
-      {/* ---------- ② 指标带：4 张（24h 新增 / 存量 / 反思聚合 / 24h 错误） ---------- */}
+      {/* ---------- ② 指标带：数据卡 9 的四条（① 提炼失败率 ② 认知链 24h 新增 ③ 飞轮积压 ④ 六段覆盖率） ----------
+          2026-11-06 · 0.4.32-03：顺序按卡 9 行 15；指标带只报「值」+ 口径来源，
+          阈值 / pass-fail 判定在下方判据条（同一个数只在一处带异常色标）。
+          数据源 = /api/flywheel/card9（判据接口），经 card9MetricsFromChecks 适配；指标带只报值。 */}
       <FlywheelKpis
-        totalActive={totalActive}
-        totalH24={totalH24}
-        totalH1={totalH1}
-        tableStats={d.tableStats}
-        reflectionStats={d.reflectionStats}
-        totalErrors={totalErrors}
-        trendEvents={(d.trend?.events || []).map((x: any) => Number(x.c) || 0)}
+        card9={card9}
+        loading={healthLoading}
+        error={healthError ? String((healthError as Error)?.message || healthError) : null}
       />
+
+      {/* 数据卡 9 判据条（2026-11-06）：4 条阈值与当前值同屏，避免"看板全绿但认知链断了" */}
+      <Card9Checks />
 
       {/* 空态：指标归零也照常展示，这里只补一句「为什么是 0」（看板模板 C 的空态规则）。 */}
       {isEmptyDashboard ? (
@@ -263,10 +272,21 @@ export default function FlywheelOverviewPage() {
         <span className="tiny">
           数据更新 {d.timestamp ? fmtTime(d.timestamp) : "—"} · 每 10 秒自动刷新 · 最后活动 {lastTs}
         </span>
-        <DataMoment items={[{ label: "看板", at: d.timestamp }, { label: "健康", at: health?.ts }]} showPrefix={false} />
+        {/* 2026-11-06 · 0.4.32-03：健康接口给的是 asOf（原读 health.ts 恒为 undefined -> 页脚「健康 未知」）；
+            指标带单独标一条，因为它是打开页面时现算的一块。 */}
+        <DataMoment
+          items={[
+            { label: "看板", at: d.timestamp },
+            { label: "健康", at: health?.asOf ?? health?.ts },
+            { label: "指标带", at: card9?.asOf },
+          ]}
+          showPrefix={false}
+        />
         <span className="tiny">
-          口径：近 24h 新增认知 = health.five24h 五表合计（与体检面板同源）；六段数值 = 该段最近 5 分钟经过的事件条数；
-          近 1h / 24h 为同口径累计；「存量」= 五表全量。段级覆盖率口径待数据卡（当前显示 —）。
+          口径：指标带 = 数据卡 9（2026-11-06 标定）——① 提炼失败率（提炼记录中失败的占比）
+          ② 认知链 24h 新增（只认成功的反思记录）③ 飞轮积压（排队中 + 处理中）④ 六段覆盖率 n/a（口径未定义，缺口 G1，不写 0）；
+          阈值与 pass/fail 判定见上方「卡 9 判据条」；取不到一律「未知」+ 原因，不写 0。
+          六段数值 = 该段最近 5 分钟经过的事件条数；近 1h / 24h 为同口径累计；「存量」= 五表全量。
         </span>
       </footer>
 

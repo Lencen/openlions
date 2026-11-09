@@ -3,12 +3,16 @@
 // 为什么需要：整改前平台没有任何一页能把 token 与组件一次性看全，于是「哪个页面用了 9px、
 //   哪个卡片多了一层边框」只能靠人肉翻页；评审 §1 结论里「成熟设计系统都有一页 gallery」。
 // 用途：①视觉回归基线（截图对比）②新页面抄样式时的唯一参照 ③设计合规门的人工兜底。
+// 2026-11-06 token-ratchet：呈现层改造 —— 内联 style 34 -> 0、棘轮裸值 5 -> 0（下沉同目录 page.module.css）。
+//   字号尺度的"示例字号/字重"改走 [data-fs]（值取自 TYPE_SCALE 的令牌名），颜色示例的底色改走
+//   [data-swatch]（值就是色令牌名）；示例本身仍按真实令牌渲染，所以这一页仍是唯一的视觉参照。
+//   未改取数、接口、路由、文案、字段名与导出 props 形状；页头结构与 globals.css 未动。
 import Icon from "@/components/Icon";
 import KPICard from "@/components/KPICard";
-import { MetricCard } from "@/components/ui";
 import DataTable, { StateChip } from "@/components/DataTable";
 import DensityToggle from "@/components/DensityToggle";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 const TYPE_SCALE: { token: string; sample: string; hint: string }[] = [
   { token: "--fs-3xl / 30px", sample: "325,918", hint: "主数值（每屏最多一个）" },
@@ -49,12 +53,12 @@ const SAMPLE_ROWS = [
 
 export default function DesignPage() {
   return (
-    <div className="layout"><main className="main" style={{ padding: "var(--sp-5)" }}>
+    <div className="layout"><main className="main">
       <PageHeader>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "var(--sp-4)" }}>
+        <div className={styles.headerRow}>
           <PageTitle>设计规范</PageTitle>
           {/* 2026-10-25：密度是高级偏好，放这里而不是顶栏 —— 顶栏加控件会挤掉通知按钮（实测遮挡点击）。 */}
-          <div style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)" }}>
+          <div className={styles.densityBox}>
             <span className="tiny">界面密度</span>
             <DensityToggle />
           </div>
@@ -65,27 +69,27 @@ export default function DesignPage() {
         </div>
       </PageHeader>
 
-      <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <section className="panel">
         <div className="panel-header"><span className="panel-title">字号尺度</span><span className="tiny">正文 14 · 微标 12 为下限，禁止 9/10px</span></div>
-        <div style={{ padding: "var(--sp-4)" }}>
+        <div className={styles.panelBody}>
           {TYPE_SCALE.map((t) => (
-            <div key={t.token} style={{ display: "flex", alignItems: "baseline", gap: "var(--sp-4)", padding: "var(--sp-2) 0", borderBottom: "1px dashed var(--border)" }}>
-              <code style={{ minWidth: 150, color: "var(--text-muted)", fontSize: "var(--fs-xs)" }}>{t.token}</code>
-              <span style={{ fontSize: `var(${t.token.split(" ")[0]})`, fontWeight: t.token.includes("3xl") || t.token.includes("2xl") ? 600 : 400 }}>{t.sample}</span>
-              <span className="tiny" style={{ marginLeft: "auto" }}>{t.hint}</span>
+            <div key={t.token} className={styles.typeRow}>
+              <code className={styles.typeToken}>{t.token}</code>
+              <span className={styles.typeSample} data-fs={t.token.split(" ")[0].replace("--fs-", "")}>{t.sample}</span>
+              <span className={"tiny " + styles.typeHint}>{t.hint}</span>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <section className="panel">
         <div className="panel-header"><span className="panel-title">颜色</span><span className="tiny">一个主色 + 四个状态色；颜色只表达状态与层级，不做装饰</span></div>
-        <div style={{ padding: "var(--sp-4)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "var(--sp-3)" }}>
+        <div className={styles.swatchGrid}>
           {COLORS.map((c) => (
-            <div key={c.varName} style={{ display: "flex", alignItems: "center", gap: "var(--sp-3)", padding: "var(--sp-2) var(--sp-3)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)" }}>
-              <span style={{ width: 20, height: 20, borderRadius: 4, background: `var(${c.varName})`, border: "1px solid var(--border)", flex: "none" }} />
+            <div key={c.varName} className={styles.swatchCard}>
+              <span className={styles.swatchChip} data-swatch={c.varName} />
               <span>
-                <span style={{ fontSize: "var(--fs-sm)", display: "block" }}>{c.name} <code style={{ color: "var(--text-muted)", fontSize: "var(--fs-xs)" }}>{c.varName}</code></span>
+                <span className={styles.swatchName}>{c.name} <code className={styles.swatchVar}>{c.varName}</code></span>
                 <span className="tiny">{c.use}</span>
               </span>
             </div>
@@ -93,34 +97,34 @@ export default function DesignPage() {
         </div>
       </section>
 
-      <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <section className="panel">
         <div className="panel-header"><span className="panel-title">图标</span><span className="tiny">24×24 线性、currentColor、1.7 描边；emoji 只允许出现在用户内容里</span></div>
-        <div style={{ padding: "var(--sp-4)", display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "var(--sp-3)" }}>
+        <div className={styles.iconGrid}>
           {ICONS.map((n) => (
-            <div key={n} style={{ display: "flex", alignItems: "center", gap: "var(--sp-2)", color: "var(--text-dim)" }}>
+            <div key={n} className={styles.iconCell}>
               <Icon name={n} size={18} />
-              <code style={{ fontSize: "var(--fs-xs)", color: "var(--text-muted)" }}>{n}</code>
+              <code className={styles.iconName}>{n}</code>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <section className="panel">
         <div className="panel-header"><span className="panel-title">指标卡 · 两种</span><span className="tiny">解剖固定：标签 12 → 数值 26–30 + 单位 → 说明 12</span></div>
-        <div style={{ padding: "var(--sp-4)", display: "grid", gap: "var(--sp-4)" }}>
+        <div className={styles.kpiStack}>
           <div className="kpi-grid">
             <KPICard label="进入会话" value="284" delta="▲ 12% 较前一日" deltaDir="up" hint="待提炼 1,546 段" />
             <KPICard label="沉淀资产" value="331" delta="▲ 4% 较前一日" deltaDir="up" hint="平均质量 0.63" />
           </div>
           <div className="metric-row">
-            <MetricCard label="未完成待办" size="hero" tone="info" value="82" unit="条" hint="全部未完成 · 当前视图 12 条" />
-            <MetricCard label="需要人决策" tone="warn" value="13" unit="条" hint="人类负责的未完成项" />
-            <MetricCard label="逾期" tone="ok" value="0" unit="条" hint="没有逾期待办" />
+            <KPICard label="未完成待办" size="hero" tone="info" value="82" unit="条" hint="全部未完成 · 当前视图 12 条" />
+            <KPICard label="需要人决策" tone="warn" value="13" unit="条" hint="人类负责的未完成项" />
+            <KPICard label="逾期" tone="ok" value="0" unit="条" hint="没有逾期待办" />
           </div>
         </div>
       </section>
 
-      <section className="panel" style={{ marginBottom: "var(--sp-4)" }}>
+      <section className="panel">
         <div className="panel-header"><span className="panel-title">表格与状态片</span><span className="tiny">数值右对齐等宽；状态用色点 + 文字，不只靠颜色</span></div>
         <DataTable
           rows={SAMPLE_ROWS}
@@ -135,22 +139,22 @@ export default function DesignPage() {
 
       <section className="panel">
         <div className="panel-header"><span className="panel-title">空 / 加载 / 错误</span><span className="tiny">三种态都要设计；错误说人话，技术细节折叠</span></div>
-        <div style={{ padding: "var(--sp-4)", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "var(--sp-3)" }}>
-          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "var(--sp-4)", textAlign: "center" }}>
+        <div className={styles.stateGrid}>
+          <div className={styles.stateCard}>
             <Icon name="inbox" size={20} />
-            <div style={{ fontSize: "var(--fs-base)", fontWeight: 600, marginTop: "var(--sp-2)" }}>还没有数据</div>
-            <div className="tiny" style={{ marginTop: 4 }}>换个时间范围，或等下一轮同步。</div>
+            <div className={styles.stateTitle}>还没有数据</div>
+            <div className={"tiny " + styles.stateNote}>换个时间范围，或等下一轮同步。</div>
           </div>
-          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "var(--sp-4)" }}>
-            <div className="dt-skel" style={{ width: "60%", marginBottom: 8 }} />
-            <div className="dt-skel" style={{ marginBottom: 8 }} />
-            <div className="dt-skel" style={{ width: "80%" }} />
+          <div className={styles.stateCard}>
+            <div className={"dt-skel " + styles.skelWide} />
+            <div className={"dt-skel " + styles.skelRow} />
+            <div className={"dt-skel " + styles.skelNarrow} />
           </div>
-          <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-md)", padding: "var(--sp-4)", textAlign: "center" }}>
+          <div className={styles.stateCard}>
             <Icon name="alert" size={20} />
-            <div style={{ fontSize: "var(--fs-base)", fontWeight: 600, marginTop: "var(--sp-2)" }}>数据暂时取不到</div>
-            <div className="tiny" style={{ marginTop: 4 }}>页面其余部分可用，可重试。</div>
-            <details className="tech-detail" style={{ textAlign: "left" }}><summary>技术详情</summary><code>upstream timeout (code=ETIMEDOUT)</code></details>
+            <div className={styles.stateTitle}>数据暂时取不到</div>
+            <div className={"tiny " + styles.stateNote}>页面其余部分可用，可重试。</div>
+            <details className={"tech-detail " + styles.techDetails}><summary>技术详情</summary><code>upstream timeout (code=ETIMEDOUT)</code></details>
           </div>
         </div>
       </section>

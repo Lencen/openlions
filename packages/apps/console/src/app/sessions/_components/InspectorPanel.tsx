@@ -6,11 +6,18 @@
 // 关键约束: 不重复请求数据; 所有统计在服务端算完, HTML 直接带数字 (curl 可验)。
 // A-F 图型引用: 本组件用 <DistributionBar> (C 型, 已存在 BarChart 包装) 画长度直方图; 角色/模型
 //   排行复用 <RankBar> (E 型, KPICard 内的条形基元)。InspectorPanel 自身不引图表库, 只调语义化封装。
+// 2026-11-05 P2 批6：内联 style 清零（样式下沉 InspectorPanel.module.css）。
+//   平台处置原为手写 table 标签：本组件是服务端组件，不能给客户端 DataTable 传 render/rowKey 函数
+//   （Next 14 会抛 "Functions cannot be passed directly to Client Components" 并 500，0.4.28 已实测复现），
+//   故改用平台表格原子件 primitives.Table（showHeader=false），行/字段/文案/状态徽标一条不少。
 
+import type { ReactNode } from "react";
 import BarChart from "@/components/BarChart";
 import KPICard from "@/components/KPICard";
 import TableCopyButton from "@/components/TableCopyButton";
+import { Table } from "@/components/primitives";
 import { statusLabel } from "@/config/systemLabels";
+import styles from "./InspectorPanel.module.css";
 
 export interface InspectorMessage {
   messageUid: string;
@@ -108,10 +115,24 @@ export default function InspectorPanel({ messages, registryStatus, processingNot
     spanMs < 86_400_000 ? `${(spanMs / 3_600_000).toFixed(1)} 小时` :
     `${(spanMs / 86_400_000).toFixed(1)} 天`;
 
+  // 平台处置徽标：2026-10-26：活库状态键是 DONE，这里原来只认 PROCESSED/FAILED/PENDING →
+  //   9,899 行 DONE 会落到 badge-blue 并**原样印出英文 "DONE"**（与 SessionsTable 同一个漏点）。
+  const badgeCls =
+    registryStatus === "DONE" || registryStatus === "PROCESSED" ? "badge badge-green" :
+    registryStatus === "FAILED" ? "badge badge-red" :
+    registryStatus === "PENDING" ? "badge badge-yellow" :
+    "badge badge-blue";
+  // 「标签 → 值」两列（改前是 .tbl 里逐行 <th>/<td>，行/文案不变）
+  const kvRows: Array<{ key: string; label: string; value: ReactNode }> = [
+    { key: "status", label: "归档状态", value: <span className={badgeCls}>{registryStatus ? (statusLabel(registryStatus) || registryStatus) : "—"}</span> },
+    { key: "empty", label: "空消息", value: <span className={styles.numCell}>{emptyCount.toLocaleString()} 条</span> },
+    ...(processingNote ? [{ key: "note", label: "处理备注", value: <span className={styles.noteCell}>{processingNote}</span> }] : []),
+  ];
+
   return (
-    <aside aria-label="会话检查器" style={{ display: "flex", flexDirection: "column", gap: "var(--sp-3)" }}>
+    <aside aria-label="会话检查器" className={styles.inspector}>
       {/* 顶部 KPI: 总数 / 总字数 / 平均长度 / 时间跨度 */}
-      <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
+      <div className={"kpi-grid " + styles.kpiTwo}>
         <KPICard label="消息总数" value={total.toLocaleString()} />
         <KPICard label="总字符数" value={totalChars.toLocaleString()} />
         <KPICard label="平均长度" value={`${avgChars.toLocaleString()} 字`} />
@@ -124,9 +145,9 @@ export default function InspectorPanel({ messages, registryStatus, processingNot
           <span className="panel-title">角色分布</span>
         </div>
         {byRole.length === 0 ? (
-          <div style={{ padding: "var(--sp-3)", color: "var(--text-dim)" }}>无消息可统计</div>
+          <div className={styles.emptyNote}>无消息可统计</div>
         ) : (
-          <div style={{ padding: "var(--sp-3)" }}>
+          <div className={styles.pad3}>
             <BarChart
               bars={byRole.map((r) => ({
                 label: r.label,
@@ -144,9 +165,9 @@ export default function InspectorPanel({ messages, registryStatus, processingNot
           <span className="panel-title">消息长度直方图</span>
         </div>
         {total === 0 ? (
-          <div style={{ padding: "var(--sp-3)", color: "var(--text-dim)" }}>无消息可统计</div>
+          <div className={styles.emptyNote}>无消息可统计</div>
         ) : (
-          <div style={{ padding: "var(--sp-3)" }}>
+          <div className={styles.pad3}>
             <BarChart
               bars={buckets.map((b, i) => ({
                 label: b.label,
@@ -165,9 +186,9 @@ export default function InspectorPanel({ messages, registryStatus, processingNot
           <span className="panel-title">模型使用</span>
         </div>
         {byModel.length === 0 ? (
-          <div style={{ padding: "var(--sp-3)", color: "var(--text-dim)" }}>无消息可统计</div>
+          <div className={styles.emptyNote}>无消息可统计</div>
         ) : (
-          <div style={{ padding: "var(--sp-3)" }}>
+          <div className={styles.pad3}>
             <BarChart
               bars={byModel.map((m) => ({
                 label: m.model,
@@ -185,37 +206,18 @@ export default function InspectorPanel({ messages, registryStatus, processingNot
           <span className="panel-title">平台处置</span>
         </div>
         <TableCopyButton />
-        <table className="tbl">
-          <tbody>
-            <tr>
-              <th style={{ width: 110 }}>归档状态</th>
-              <td>
-                <span
-                  className={
-                    // 2026-10-26：活库状态键是 DONE，这里原来只认 PROCESSED/FAILED/PENDING →
-                    //   9,899 行 DONE 会落到 badge-blue 并**原样印出英文 "DONE"**（与 SessionsTable 同一个漏点）。
-                    registryStatus === "DONE" || registryStatus === "PROCESSED" ? "badge badge-green" :
-                    registryStatus === "FAILED" ? "badge badge-red" :
-                    registryStatus === "PENDING" ? "badge badge-yellow" :
-                    "badge badge-blue"
-                  }
-                >
-                  {registryStatus ? (statusLabel(registryStatus) || registryStatus) : "—"}
-                </span>
-              </td>
-            </tr>
-            <tr>
-              <th>空消息</th>
-              <td className="num">{emptyCount.toLocaleString()} 条</td>
-            </tr>
-            {processingNote ? (
-              <tr>
-                <th>处理备注</th>
-                <td style={{ color: "var(--text-dim)", fontSize: "var(--fs-base)" }}>{processingNote}</td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
+        <Table
+          showHeader={false}
+          pagination={false}
+          size="middle"
+          rowKey="key"
+          className={styles.kvWrap}
+          dataSource={kvRows}
+          columns={[
+            { title: "字段", dataIndex: "label" },
+            { title: "值", dataIndex: "value" },
+          ]}
+        />
       </div>
     </aside>
   );

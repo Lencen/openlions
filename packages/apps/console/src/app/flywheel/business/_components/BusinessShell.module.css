@@ -1,0 +1,59 @@
+/* 2026-11-05 P2 批6（B/飞轮业务）：BusinessShell（飞轮业务看板顶栏 + 维度 tab + 快照状态条）内联样式下沉。
+   · 维度 tab 的选中态（前景/底色/字重）改成 [data-on="true"] 属性选择器；
+   · 快照状态条的左描边色与状态词颜色改成 [data-tone] 属性选择器（ok/warn/crit）；
+   · 其余为静态布局类；文字层级继续复用 globals 的 .tiny。 */
+
+.headRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.meta { text-align: right; line-height: 1.7; }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 4px;
+}
+.tab {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  color: var(--text-dim);
+  background: transparent;
+  font-weight: 400;
+}
+.tab[data-on="true"] {
+  color: var(--primary);
+  background: var(--primary-dim);
+  font-weight: 600;
+}
+
+.banner {
+  padding: var(--sp-2) var(--sp-3);
+  border-left: 3px solid var(--status-ok);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.banner[data-tone="warn"] { border-left-color: var(--status-warn); }
+.banner[data-tone="crit"] { border-left-color: var(--status-crit); }
+
+.bannerText { line-height: 1.6; }
+.tone { color: var(--status-ok); }
+.banner[data-tone="warn"] .tone { color: var(--status-warn); }
+.banner[data-tone="crit"] .tone { color: var(--status-crit); }
+
+.mutedText { color: var(--text-muted); }
+.dimText { color: var(--text-dim); }
+
+.about { padding: var(--sp-3); }
+.aboutText { line-height: 1.75; margin-top: 6px; }
+.critLine { color: var(--status-crit); }

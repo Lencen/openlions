@@ -1,5 +1,12 @@
 "use client";
-// 任务详情页 · 页头 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 任务详情页 · 页头下的标识条
+// 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #12）：面包屑/标题/一句说明已上移到 page.tsx，
+//   原 page-hero 里的 hero-title/hero-sub（任务标题）随之让位给页头 + 面包屑末段；
+//   这里只保留任务编号与类型/主题/优先级、状态标签、同类任务入口、时间与刷新。
+//   文件名沿用 TaskHero（仅 page.tsx 引用），不改名以免扩大改动面。
+// 2026-11-05 P2 批12（呈现层）：本件 4 处内联 style 清零，样式下沉到同目录 TaskHero.module.css；
+//   任务范围色（sd.color）是动态值，改由 data-scope + --scope 属性选择器承载（映射同 config/taskScopes.ts）；
+//   页头结构、文案、取数与对外 props（id / task / onRefresh）一行没动；本件不含表格。
 import { Button, Tag, Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { ReloadOutlined } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t as tr } from "@/i18n";
@@ -7,6 +14,7 @@ import { Pill } from "@/components/ui";
 import { TASK_SCOPES, scopeDef, scopeOfType } from "@/config/taskScopes";
 import { relTime } from "@/lib/format";
 import { STATUS_TAG } from "./constants";
+import styles from "./TaskHero.module.css";
 
 export default function TaskHero({
   id,
@@ -18,10 +26,9 @@ export default function TaskHero({
   onRefresh: () => void;
 }) {
   return (
-    <div className="page-hero">
+    <div className={styles.taskBar}>
       <div>
-        <div className="hero-title">{task?.title || "任务详情"}</div>
-        <div className="hero-sub">
+        <div className={styles.taskIdLine}>
           <span className="mono">{id}</span>
           {task ? (
             <>
@@ -34,9 +41,10 @@ export default function TaskHero({
         <div className="hero-tags">
           {task ? (() => {
             const sd = scopeDef(scopeOfType(task.improvementType));
+            // 2026-11-05 P2 批12：底色/描边/字色改由 data-scope 交给 CSS，配方仍是 13% 底 / 33% 描边 / 自身色字
             return (
               <Tooltip title={sd.desc}>
-                <span className="pill" style={{ background: "color-mix(in srgb, " + sd.color + " 13%, transparent)", color: sd.color, borderColor: "color-mix(in srgb, " + sd.color + " 33%, transparent)", fontWeight: 600 }}>
+                <span className={"pill " + styles.scopePill} data-scope={sd.key}>
                   {tr('taskDetail.scope', { label: sd.label })}{sd.inImprovementMetric ? "（计入改进任务）" : "（不计入改进任务）"}
                 </span>
               </Tooltip>
@@ -50,15 +58,17 @@ export default function TaskHero({
           {task?.retryCount ? <Pill tone="crit">重试 {task.retryCount} 次</Pill> : null}
         </div>
       </div>
-      <div className="hero-meta">
+      <div className={"hero-meta " + styles.taskBarMeta}>
         {task ? (
-          <div style={{ marginBottom: "var(--sp-1-5)" }}>
+          <div className={styles.scopeRow}>
             同类任务：
             {TASK_SCOPES.filter((s) => s.key !== "ALL").map((s) => (
               <a
                 key={s.key}
                 href={"/flywheel/tasks?scope=" + s.key}
-                style={{ marginLeft: "var(--sp-1-5)", fontSize: "var(--fs-sm)", color: s.key === scopeOfType(task.improvementType) ? s.color : "var(--text-dim)", fontWeight: s.key === scopeOfType(task.improvementType) ? 600 : 400 }}
+                className={styles.scopeLink}
+                data-scope={s.key}
+                data-active={s.key === scopeOfType(task.improvementType)}
               >
                 {s.short}
               </a>
@@ -70,7 +80,7 @@ export default function TaskHero({
         更新 {task ? relTime(task.updatedAt) : "-"}
         {task?.completedAt ? <><br />完成 {relTime(task.completedAt)}</> : null}
         <br />
-        <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} style={{ marginTop: "var(--sp-1-5)" }}>刷新</Button>
+        <Button size="small" icon={<ReloadOutlined />} onClick={onRefresh} className={styles.refresh}>刷新</Button>
       </div>
     </div>
   );

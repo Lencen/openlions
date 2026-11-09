@@ -12,6 +12,31 @@ import AgentBaseInfo from "./_components/AgentBaseInfo";
 import AgentServiceMatrix from "./_components/AgentServiceMatrix";
 import AgentTierPanel from "./_components/AgentTierPanel";
 import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+// 2026-11-05 P2 批8：内联 style 清零（样式下沉 ./page.module.css）；取数/字段/路由参数未动。
+import styles from "./page.module.css";
+
+/** 页头（面包屑 / 标题 / 一句说明）。2026-11-06 D-03：抽成组件后同时给 Suspense fallback 用 ——
+ *  AgentDetailInner 依赖 useSearchParams，SSR 阶段整块走 fallback；页头若不进 fallback，
+ *  首屏 HTML 就没有 page-header。标题右侧的状态 chip 依赖取数结果，故只在拿到 me 时渲染
+ *  （与修前 loading 态一致：数据未到时本来就没有 chip）。文案 / 面包屑一字未改。 */
+function AgentDetailHeader({ me }: { me?: any }) {
+  return (
+    <>
+      <div className="breadcrumb">
+        <span className={styles.crumbDim}>成员</span>
+        <span className="sep">/</span>
+        <span className={styles.crumbDim}>智能体</span>
+        <span className="sep">/</span>
+        <span className="current">详情</span>
+      </div>
+      <PageHeader>
+        <PageTitle>智能体详情{me ? <AgentHeader me={me} /> : null}</PageTitle>
+        <div className="page-subtitle">单个智能体的档案与能力明细</div>
+      </PageHeader>
+    </>
+  );
+}
 
 function AgentDetailInner() {
   const params = useSearchParams();
@@ -109,26 +134,30 @@ function AgentDetailInner() {
   const permMap: Record<string, any> = {};
   for (const p of (me.permissions ?? [])) permMap[p.service_name] = p;
   return (<div className="layout-with-sidebar"><main className="main">
-    <AgentHeader me={me} agentId={agentId} />
+    {/* 2026-11-06 页头口径统一（UIUX PAGE-HEADER-31 §3 #8）+ D-03：
+        面包屑 / 标题 / 一句说明在 AgentDetailHeader 里（同一份同时供 Suspense fallback 使用），
+        AgentHeader 退化为标题旁的状态 chip。标题与说明逐字取自口径表（英文 agent -> 智能体）；
+        取数 / 接口 / 路由参数与正文均未动。 */}
+    <AgentDetailHeader me={me} />
     {/* 2026-10-16 round 77-AH（决策③逐源 + 77-M 清单最后一项）: 本页有 **2 个源** ——
         /api/agent-list（智能体本体, 顶层有 asOf）与 /api/agent-services（业务授权矩阵）。
         后者按上面第 24 行自己写明的：返回的是**裸数组** ✗ -> 加不了顶层键,
         故按 77-AB 建立的口径**显式传 null 让它显示「未知」**, 绝不借用 agent-list 的时刻 ✓。 */}
-    <div className="tiny" style={{ textAlign: "right", color: "var(--text-dim)" }}>
+    <div className={"tiny " + styles.momentRow}>
       <DataMoment
         items={[
           { label: "智能体", at: (a as any)?.asOf },
           { label: "业务授权", at: Array.isArray(data) ? null : (data as any)?.asOf },
         ]}
-        style={{ marginLeft: 0 }}
+        flush
       />
     </div>
-    <div style={{ marginBottom: "var(--sp-3)" }}>
-      <Link href={`/terminals/detail?agent_id=${encodeURIComponent(agentId)}`} style={{ color: "var(--primary)", fontSize: "var(--fs-sm)" }}>
+    <div className={styles.mb3}>
+      <Link href={`/terminals/detail?agent_id=${encodeURIComponent(agentId)}`} className={styles.termLink}>
         查看终端详情（12 层信息结构）→
       </Link>
     </div>
-    {(error || listError) && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="智能体详情加载失败" description={String(((error || listError) as Error)?.message || (error || listError)).slice(0, 200)} /></div>}
+    {(error || listError) && <div className={styles.mb3}><Alert type="error" message="智能体详情加载失败" description={String(((error || listError) as Error)?.message || (error || listError)).slice(0, 200)} /></div>}
     <div className="grid-2">
       <AgentBaseInfo me={me} agentId={agentId} />
 
@@ -162,7 +191,7 @@ function AgentDetailInner() {
     {/* 2026-09-10: 通用讨论模块 (针对该 agent 的沟通记录) */}
     <DiscussionPanel entityType="agent" entityId={me.agent_id || agentId} title="智能体讨论与协作" />
     {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-    <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+    <div className={"tiny " + styles.relatedRow}>
       <span>相关视图：</span>
       <Link href="/agents">全部智能体 →</Link>
       <Link href="/system/permissions">业务授权矩阵 →</Link>
@@ -171,5 +200,18 @@ function AgentDetailInner() {
 }
 
 export default function AgentDetailPage() {
-  return (<Suspense fallback={<div>加载中...</div>}><AgentDetailInner /></Suspense>);
+  // 2026-11-06 D-03：fallback 里带上页头（并保留原来的「加载中...」），
+  //   这样 SSR 首屏 HTML 也有 page-header；数据到后由 AgentDetailInner 渲染同一页头（含状态 chip）。
+  return (
+    <Suspense
+      fallback={
+        <div className="layout-with-sidebar"><main className="main">
+          <AgentDetailHeader />
+          <div>加载中...</div>
+        </main></div>
+      }
+    >
+      <AgentDetailInner />
+    </Suspense>
+  );
 }

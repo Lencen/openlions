@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-11-09T10:29:00+08:00",
+  "owner": "commercialization-line",
+  "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
+  "types": {
+    "REQ": "需求",
+    "BUG": "缺陷",
+    "SEC": "安全",
+    "TASK": "任务"
+  },
+  "states": {
+    "done": "已完成",
+    "doing": "进行中",
+    "blocked": "阻塞",
+    "todo": "待开始"
+  },
+  "trains": [
+    {
+      "version": "0.4.30",
+      "status": "已发车",
+      "eta": "2026-11-06",
+      "items": [
+        {
+          "type": "REQ",
+          "id": "0.4.30-01",
+          "title": "Q3/Q4、UIUX 83 页、301、插件 Todo-level",
+          "state": "done",
+          "owner": "multi"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.30-02",
+          "title": "reply-batch/fanout 窗口修复",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.30-03",
+          "title": "0.4.30 生产切流与 R-01 复验",
+          "state": "done",
+          "owner": "devops-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.31",
+      "status": "已发车（known reply-fanout）",
+      "eta": "2026-11-06",
+      "items": [
+        {
+          "type": "BUG",
+          "id": "0.4.31-01",
+          "title": "重复消息：line-send 去重 + noReply/STOP",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.31-02",
+          "title": "pending_no_watermark / cursor（客户端 .07）",
+          "state": "blocked",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.31-03",
+          "title": "飞轮 F1/F2/F3：记账、UTC 新鲜度、模型告警",
+          "state": "done",
+          "owner": "flywheel-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.31-04",
+          "title": "模型 .env 被升级覆盖",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.31-05",
+          "title": "D-03 SSR 空壳：data-page + loading 页头",
+          "state": "done",
+          "owner": "uiux-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.31-06",
+          "title": "版本看板只读页",
+          "state": "done",
+          "owner": "platform-data-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.32",
+      "status": "已发车（known reply-fanout）",
+      "eta": "2026-11-09",
+      "items": [
+        {
+          "type": "REQ",
+          "id": "0.4.32-01",
+          "title": "FW-05 新主题独立 FIFO",
+          "state": "done",
+          "owner": "flywheel-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.32-02",
+          "title": "message-level nudge",
+          "state": "done",
+          "owner": "dsh-plugin-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.32-03",
+          "title": "数据卡两页 /flywheel 与 /flywheel/tasks",
+          "state": "done",
+          "owner": "uiux-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.32-04",
+          "title": "TodoMetrics 结构（无卡）",
+          "state": "done",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.32-05",
+          "title": "可观测性 122 FAIL 分组",
+          "state": "done",
+          "owner": "uiux-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.32-06",
+          "title": "pageKey 旧路由引用 / R-01 代码判据",
+          "state": "done",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.32-07",
+          "title": "T1 升级窗口预检",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.32-08",
+          "title": "M3 Token Plan 额度耗尽 -> 提炼 429 / card-9 ④ FAIL",
+          "state": "done",
+          "owner": "flywheel-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.33",
+      "status": "代码完成，待构建（安全车）",
+      "eta": "2026-11-20",
+      "items": [
+        {
+          "type": "SEC",
+          "id": "0.4.33-01",
+          "title": "入站身份/未注册发送者",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.33-02",
+          "title": "RBAC/最小权限（shadow，未 enforce）",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.33-03",
+          "title": "密钥轮换/审计",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.33-04",
+          "title": "安全项清单与准入判据",
+          "state": "done",
+          "owner": "macs-backend-2"
+        }
+      ]
+    }
+  ]
+}

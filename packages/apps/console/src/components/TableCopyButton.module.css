@@ -1,0 +1,12 @@
+/* TableCopyButton · P2 呈现层（批8，2026-11-05）
+   复制/导出按钮组与复制结果提示从内联 style 下沉到这里；颜色用 globals.css 令牌。 */
+
+/* 按钮组容器（原内联 display/alignItems/gap） */
+.wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* 复制结果提示（原内联 color；字号仍由 .tiny 提供） */
+.tip { color: var(--status-ok); }

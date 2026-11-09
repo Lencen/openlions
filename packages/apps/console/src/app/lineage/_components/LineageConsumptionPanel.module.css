@@ -1,0 +1,23 @@
+/* /lineage · 使用情况面板（2026-11-05 P2 批9 呈现层）
+   内联 style 清零：面板纵向堆叠、三格统计的间距、统计数值字号、说明段行高、最近注入列表。
+   本面板没有动态色/进度宽度这类动态值，故不含 data-* 选择器。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+/* 面板主体纵向堆叠（原内联 display/flexDirection/gap: var(--sp-2-5)） */
+.stack { display: flex; flex-direction: column; gap: var(--sp-2-5); }
+
+/* 三格统计的列间距（原内联 gap: var(--sp-4)，配合 globals 的 .stat-inline） */
+.statGap { gap: var(--sp-4); }
+
+/* 统计数值（原内联 fontSize: var(--fs-xl) + fontWeight: 600，配合 globals 的 .mono）。
+   选择器写两遍是同名类叠加：globals 里有 .mono.mono 的 18px 档，单类压不住它。 */
+.statValue { font-size: var(--fs-xl); font-weight: 600; }
+
+/* 说明段行高（原内联 lineHeight: 1.7，配合 globals 的 .tiny） */
+.note { line-height: 1.7; }
+
+/* 最近注入列表（原内联 display/flexDirection/gap: var(--sp-1-5)） */
+.recentList { display: flex; flex-direction: column; gap: var(--sp-1-5); }
+
+/* 单条注入记录（原内联 fontSize / borderTop / paddingTop） */
+.recentRow { font-size: var(--fs-sm); border-top: 1px solid var(--border); padding-top: var(--sp-1-5); }

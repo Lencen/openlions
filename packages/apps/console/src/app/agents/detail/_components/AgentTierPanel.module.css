@@ -1,0 +1,18 @@
+/* /agents/detail · 能力分级面板（2026-11-05 P2 批9 呈现层）
+   内联 style 清零：标题行下间距、能力分级理由后缀、说明列字号、设级按钮紧凑档、底部脚注。
+   原 td 的固定宽度（46 / 90）改由 DataTable 的 width 档位承载，不在本文件重复。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+.headerRow { margin-bottom: var(--sp-2); }
+
+/* 能力分级理由（原内联 fontSize / color / marginLeft） */
+.reason { font-size: var(--fs-sm); color: var(--text-dim); margin-left: var(--sp-2); }
+
+/* 说明列正文档字号（原内联 fontSize: var(--fs-base)） */
+.cellBase { font-size: var(--fs-base); }
+
+/* 「设为该级」按钮的紧凑档（原内联 fontSize / padding） */
+.tierBtn { font-size: var(--fs-sm); padding: var(--sp-0-5) var(--sp-2); }
+
+/* 底部脚注（原内联 fontSize / color / marginTop） */
+.footNote { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1-5); }

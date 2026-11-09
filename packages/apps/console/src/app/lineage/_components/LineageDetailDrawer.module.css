@@ -1,0 +1,43 @@
+/* /lineage · 血缘追溯抽屉（2026-11-05 P2 批6 呈现层改造）
+   内联 style 清零：抽屉内边距、堆叠、标题、质量分/产物类型配色、字段值样式都下沉到本文件。
+   动态色走 data-tone / data-table 属性选择器；抽屉 body 的 padding 用 :global(.ui-drawer-body) 接管
+   （原 Drawer 的 styles.body）。取数、字段、文案未动。 */
+
+/* 原 Drawer styles={{ body: { padding: "var(--sp-4)" } }} */
+.drawer :global(.ui-drawer-body) { padding: var(--sp-4); }
+
+/* 详情加载失败（原内联 crit 色 + fs-base + padding sp-2） */
+.errorText { color: var(--status-crit); font-size: var(--fs-base); padding: var(--sp-2); }
+
+/* 抽屉内容纵向堆叠（原内联 flex column gap sp-4） */
+.stack { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* 标题区（原内联 fs-lg / 600 / marginBottom sp-1） */
+.detailTitle { font-size: var(--fs-lg); font-weight: 600; margin-bottom: var(--sp-1); }
+
+/* 三个小节标题（原内联 600 / fs-md / marginBottom sp-2） */
+.sectionTitle { font-weight: 600; font-size: var(--fs-md); margin-bottom: var(--sp-2); }
+
+/* 正文字号（原内联 fs-base） */
+.baseText { font-size: var(--fs-base); }
+
+/* 质量分配色：qualityTone().cls -> data-tone（原来内联 color） */
+.qualityNum[data-tone="ok"] { color: var(--status-ok); }
+.qualityNum[data-tone="warn"] { color: var(--status-warn); }
+.qualityNum[data-tone="crit"] { color: var(--status-crit); }
+.qualityNum[data-tone="mute"] { color: var(--text-muted); }
+
+/* 派生产物类型配色：TABLE_COLOR -> data-table（原来内联 color） */
+.tableLabel[data-table="Memory"] { color: var(--table-memory); }
+.tableLabel[data-table="Knowledge"] { color: var(--table-knowledge); }
+.tableLabel[data-table="Practice"] { color: var(--table-practice); }
+.tableLabel[data-table="Skill"] { color: var(--table-skill); }
+
+/* 「查看全部字段」下 Descriptions 的上边距（原内联 style marginTop） */
+.descTop { margin-top: var(--sp-2); }
+
+/* 字段值（原内联 fs-sm + word-break） */
+.fieldValue { font-size: var(--fs-sm); word-break: break-word; }
+
+/* <summary> 手型（原内联 cursor） */
+.summary { cursor: pointer; }

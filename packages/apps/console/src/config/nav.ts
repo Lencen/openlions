@@ -14,6 +14,8 @@ export interface NavItem {
   icon: string;
   desc?: string;
   badge?: 'new';
+  /** 2026-11-06: 在全局搜索里标为"工具页"(nav 入口仍在), 见 searchIndex 的 utility 字段 */
+  utility?: boolean;
   /** 2026-09-21: 二级菜单(接入管理 / 飞轮聚合 / 系统子页), antd 语义 children=submenu */
   children?: NavItem[];
   /** 2026-09-21: 预留项(如业务系统), 渲染为禁用 */
@@ -39,7 +41,7 @@ const GROUP_DEFS: { id: string; labelKey: string; color: string }[] = [
 ];
 
 /** 条目定义: [group, id, href?, icon, children?, locked?] — 文案 key = nav.item.<id>.label/desc */
-const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge?: 'new'; children?: { id: string; href: string; icon: string }[]; locked?: boolean }[] = [
+const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge?: 'new'; utility?: boolean; children?: { id: string; href: string; icon: string }[]; locked?: boolean }[] = [
   // ── 工作台 ──
   // ord-078: /workbench 下线（301 → /），入口移除，见 docs/design/uiux-bento-2026-11/OFFLINE-SCOPE-078.md
   { group: 'workbench', id: 'home', href: '/', icon: 'dashboard' },
@@ -150,6 +152,14 @@ const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge
   { group: 'platform', id: 'systemApi', href: '/system/api', icon: 'plug' },
   { group: 'platform', id: 'cost', href: '/cost', icon: 'coins' },
   { group: 'platform', id: 'auditOps', href: '/audit', icon: 'eye' },
+  // 2026-11-06 版本看板（商业化线任务）：0.4.30–0.4.33 四车 × REQ/BUG/SEC/TASK，内容由商业化线维护，页面只读。
+  // ia-ok: 模块级只读入口（一次看四车排期），不是列表过滤视图，也没有父列表可挂 Tab。
+  // utility=true：全局搜索里标为"工具页"（常规从菜单进，搜索也能找到）。
+  { group: 'platform', id: 'versionBoard', href: '/system/version-board', icon: 'package', utility: true },
+  // 2026-11-06 可观测性（0.4.32-03/05）：验收 FAIL 按 owner/类型/严重度分组，只读。
+  // ia-ok: /system/observability 是"平台管理"下的**模块级只读入口**（一次看三组分布），
+  //   不是某列表的过滤视图，也没有父列表可挂 Tab；与 versionBoard（版本看板）职责不同。
+  { group: 'platform', id: 'observability', href: '/system/observability', icon: 'activity' },
   { group: 'platform', id: 'platformLogic', href: '/platform/logic', icon: 'compass' },
   // ia-ok: /design 是“平台管理”下的模块级入口（设计规范总览/视觉基线页），不是任何列表的过滤视图。
   { group: 'platform', id: 'design', href: '/design', icon: 'puzzle' },
@@ -160,7 +170,7 @@ const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge
 ];
 
 /** 把 ITEM_DEFS 展开为带文案的 NavItem 树 */
-function hydrate(def: { id: string; href?: string; icon: string; badge?: 'new'; children?: { id: string; href: string; icon: string }[]; locked?: boolean }): NavItem {
+function hydrate(def: { id: string; href?: string; icon: string; badge?: 'new'; utility?: boolean; children?: { id: string; href: string; icon: string }[]; locked?: boolean }): NavItem {
   const label = t(`nav.item.${def.id}.label`);
   const desc = t(`nav.item.${def.id}.desc`);
   return {
@@ -170,6 +180,7 @@ function hydrate(def: { id: string; href?: string; icon: string; badge?: 'new'; 
     icon: def.icon,
     badge: def.badge,
     locked: def.locked,
+    utility: def.utility,
     desc: desc && !desc.startsWith('nav.item') ? desc : undefined,
     children: def.children ? def.children.map((c) => ({
       id: c.id, href: c.href, icon: c.icon,

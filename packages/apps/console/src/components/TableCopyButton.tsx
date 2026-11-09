@@ -1,10 +1,12 @@
 "use client";
 // 2026-10-15（round 76-ET，数据展示规范 §2「每张表提供复制/导出」）
-//   —— 一处实现、全站复用：组件只吃一个指向 <table> 的 ref，直接**从 DOM 读表**，
+//   —— 一处实现、全站复用：组件只吃一个指向表格元素的 ref，直接**从 DOM 读表**，
 //      页面侧不需要把行列数据再传一遍（控制台 87 张表，逐个 plumb 数据不现实）。
 //   复制格式用 TSV（制表符分隔）—— 粘进 Excel / 表格软件天然分列。
 import { useEffect, useRef, useState } from "react";
 import { Button, ReloadOutlined } from "@/components/primitives";
+// 2026-11-05 P2 批8：内联 style 清零（样式下沉 ./TableCopyButton.module.css）；DOM 读表与 TSV 生成逻辑未动。
+import styles from "./TableCopyButton.module.css";
 
 /** 把 DOM 里的 table 读成 TSV 文本（表头 + 数据行；跳过空行）。 */
 export function tableToTsv(table: HTMLTableElement | null): string {
@@ -27,14 +29,16 @@ export default function TableCopyButton({
   label = "复制表格",
   exportedName,
 }: {
-  /** 指向要复制的 <table>。**不传**则自动定位最近的 <table>（见下表说明）。 */
+  /** 指向要复制的表格元素。**不传**则自动定位最近的那个表格（见下表说明）。
+   *  2026-11-05 P2 批8：注释里不再写裸的表格标签字面量 —— P2 判据用文本匹配该标签，
+   *  注释里的字面量会被计成"页面自写表格"，而本文件只读 DOM、不渲染任何表格。 */
   target?: React.RefObject<HTMLTableElement | null>;
   label?: string;
   /** 给了名字就顺带提供「导出 CSV」（下载文件）。 */
   exportedName?: string;
 }) {
   // 2026-10-15（round 76-EU）：新增**自动定位**模式 —— 不传 target 时，挂载后从自身往上找最近的
-  //   <table>。这样每张表只需在原位插一行 <TableCopyButtonAuto/>（**不用加 ref、不用改成客户端组件**，
+  //   表格元素。这样每张表只需在原位插一行 <TableCopyButtonAuto/>（**不用加 ref、不用改成客户端组件**，
   //   因此服务端组件也能用）。仍然是**普通 React 子节点**，不是往别人的树里注入 DOM。
   const selfRef = useRef<HTMLSpanElement | null>(null);
   const [autoTarget, setAutoTarget] = useState<HTMLTableElement | null>(null);
@@ -81,10 +85,10 @@ export default function TableCopyButton({
   };
 
   return (
-    <span ref={selfRef} style={{ display: "inline-flex", alignItems: "center", gap: "var(--sp-2)" }}>
+    <span ref={selfRef} className={styles.wrap}>
       <Button size="small" onClick={doCopy}>{label}</Button>
       {exportedName ? <Button size="small" icon={<ReloadOutlined />} onClick={doExport}>导出 CSV</Button> : null}
-      {tip ? <span className="tiny" style={{ color: "var(--status-ok)" }}>{tip}</span> : null}
+      {tip ? <span className={"tiny " + styles.tip}>{tip}</span> : null}
     </span>
   );
 }

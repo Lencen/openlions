@@ -6,6 +6,7 @@ import CommandPalette from "@/components/CommandPalette";
 import ThemeToggle, { THEME_PREPAINT_SCRIPT } from "@/components/ThemeToggle";
 import { CHUNK_GUARD_SCRIPT } from "@/components/chunkGuardScript";
 import GlobalSidebar from "@/components/GlobalSidebar";
+import PageMarker from "@/components/PageMarker";
 import { GlobalFilterBar, GlobalFilterProvider } from "@/components/GlobalFilter";
 import { UI_V2_ENABLED } from "@/lib/ui-flag"; // Phase2 灰度开关 (2026-09-19 todo_d520eef2e516468da105)
 import type { ReactNode } from "react";
@@ -34,6 +35,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh" data-theme="dark" data-ui-v2={UI_V2_ENABLED ? "1" : "0"} suppressHydrationWarning>
       <body>
+        {/* 2026-11-06 D-03：页面标记（layout 层 SSR 输出，一处覆盖全站）。
+            data-page = 清单 route pattern（如 /cost、/agents/[id]/runs）；
+            客户端页即使数据没到、页头还没渲染，这个标记也已在 SSR HTML 里。
+            不在清单的路径不写标记（反向样本据此判"确实不在这份清单"）。 */}
+        <PageMarker />
         {/* 防 FOUC: 首帧前按 localStorage / prefers-color-scheme 设好 data-theme
             (内联脚本, 不依赖 React 挂载; 见 ThemeToggle.tsx THEME_PREPAINT_SCRIPT) */}
         <script dangerouslySetInnerHTML={{ __html: THEME_PREPAINT_SCRIPT }} />

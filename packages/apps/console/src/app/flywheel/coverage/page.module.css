@@ -1,0 +1,15 @@
+/* /flywheel/coverage · P2 批8 呈现层（2026-11-05）
+   面包屑上级段弱化色、图表加载骨架的内边距、底部「相关视图」行；
+   健康度表的加粗行由 DataTable 单元格内的 .cellStrong 承载。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+.crumbDim { color: var(--text-dim); }
+
+/* 图表区加载骨架的容器内边距（原内联 padding: var(--sp-5)） */
+.skeletonBox { padding: var(--sp-5); }
+
+/* 健康度表「总分」行加粗（原内联 fontWeight 三元：600 / 400） */
+.cellStrong { font-weight: 600; }
+
+/* 底部相关视图（原内联 flex/gap/flexWrap/marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

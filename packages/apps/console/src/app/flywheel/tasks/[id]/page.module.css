@@ -1,6 +1,14 @@
 /* /flywheel/tasks/[id] · 数据卡 7 行级下钻（2026-11-05）
    只放本页布局类；令牌全部来自 globals.css（不复制色值）。
-   子组件（_components/*）不在本批三文件范围内，保持原样。 */
+   子组件（_components/*）各有自己的 module.css；本文件只放页级布局类。 */
+
+/* —— 页头（2026-11-05 口径统一）—— */
+/* 面包屑首段（分组层）压暗；末段由 globals.css 的 .breadcrumb .current 承担 */
+.crumbDim { color: var(--text-dim); }
+
+/* 2026-11-05：原来这里的 .taskBar / .taskIdLine / .taskBarMeta 三个类已迁到
+   _components/TaskHero.module.css（它们只被 TaskHero 使用，实测 page.tsx 不引用），
+   这样 TaskHero 只 import 一个 module，不再出现"一个组件 import 两个 module"的怪写法。 */
 
 .alertGap { margin-bottom: var(--sp-4); }
 

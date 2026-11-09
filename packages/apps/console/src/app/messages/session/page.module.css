@@ -3,6 +3,9 @@
    「两态」小药丸的动态色改为 data-tone 属性选择器（原内联 TONE 表的 var(--status-*)）。
    列表限高（原内联 maxHeight 180 / 200）走 .stream180 / .stream200 两档。 */
 
+/* 面包屑上级段（沿用 .breadcrumb 结构，只补弱化色） */
+.crumbDim { color: var(--text-dim); }
+
 /* 面板内边距（原内联 padding: var(--sp-3) + marginBottom: var(--sp-4)） */
 .panelPad { padding: var(--sp-3); margin-bottom: var(--sp-4); }
 

@@ -1,0 +1,35 @@
+/* /flywheel/learning（2026-11-05 P2 批6 呈现层改造）
+   内联 style 清零：结论/明细面板的内边距与字号、主题行两端对齐、页脚出链都下沉到本文件。
+   宽高/间距沿用 globals 既有 --sp-* / --fs-* 令牌，不新增全局类。
+   取数（/api/flywheel-dashboard、/api/flywheel-stats）与文案未动。 */
+
+/* 「一句话结论」面板下边距（原内联 marginBottom sp-4） */
+.mb4 { margin-bottom: var(--sp-4); }
+
+/* 结论文案块（原内联 padding sp-3-5/sp-4 + fs-lg + lineHeight 1.7） */
+.proseBox {
+  padding: var(--sp-3-5) var(--sp-4);
+  font-size: var(--fs-lg);
+  line-height: 1.7;
+}
+
+/* 明细两栏的文案块（同上，行高 1.9） */
+.proseBoxWide {
+  padding: var(--sp-3-5) var(--sp-4);
+  font-size: var(--fs-lg);
+  line-height: 1.9;
+}
+
+/* 弱化文字（原内联 color var(--text-dim)） */
+.dim { color: var(--text-dim); }
+
+/* 明细两栏上边距（原内联 marginTop sp-4） */
+.mt4 { margin-top: var(--sp-4); }
+
+/* 主题行：两端对齐（原内联 flex/justify/gap） */
+.themeRow { display: flex; justify-content: space-between; gap: var(--sp-3); }
+.themeName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.themeCount { color: var(--text-dim); }
+
+/* 页脚相关视图出链（原内联 flex/gap/wrap/marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

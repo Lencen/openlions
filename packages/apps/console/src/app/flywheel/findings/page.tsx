@@ -68,7 +68,7 @@ export default function FindingsPage() {
             type="button"
             className={styles.rowToggle}
             aria-expanded={expandedId === r.id}
-            onClick={() => setExpandedId(expandedId === r.id ? null : r.id)}
+            onClick={(e) => { e.stopPropagation(); setExpandedId(expandedId === r.id ? null : r.id); }}
           >
             {expandedId === r.id ? "收起" : "展开"}
           </button>
@@ -115,6 +115,9 @@ export default function FindingsPage() {
           columns={columns}
           rows={items}
           rowKey={(r, i) => String(r.id ?? i)}
+          // 2026-11-05 热修（uiux 批4/5 走查 P0-2）：整行点击展开/收起恢复（改前是 tr onClick）。
+          //   键盘可达仍由「问题」列里的原生按钮承担；按钮自己 stopPropagation，避免与整行点击互相抵消。
+          onRow={(r) => ({ onClick: () => setExpandedId(expandedId === r.id ? null : r.id) })}
         />
         {expanded && (
           <div className={styles.detailPanel}>

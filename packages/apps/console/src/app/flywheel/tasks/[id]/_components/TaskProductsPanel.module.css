@@ -1,0 +1,23 @@
+/* TaskProductsPanel · P2 批12 呈现层（2026-11-05）
+   3 处内联 style 下沉：产物类型配色、产物标题链接字号、质量分配色。
+   动态色改走 data-* 属性选择器：类型 -> data-table（令牌与 constants.ts 的 PRODUCT_COLOR 同值）；
+   质量分 -> data-tone（qualityTone().cls）。
+   列/字段/取数未动；表格仍是既有的 E1 例外 components/common/DataTable（本文件原本就用它，未新增引用）。
+   不新增全局类、不改 globals.css。 */
+
+/* 产物类型：原内联 color: PRODUCT_COLOR[v] + fontWeight 600 + fs-base */
+.prodType { font-weight: 600; font-size: var(--fs-base); }
+.prodType[data-table="Memory"] { color: var(--table-memory); }
+.prodType[data-table="Knowledge"] { color: var(--table-knowledge); }
+.prodType[data-table="Practice"] { color: var(--status-warn); }
+.prodType[data-table="Skill"] { color: var(--primary); }
+
+/* 产物标题链接（原内联 fontSize: fs-base） */
+.prodLink { font-size: var(--fs-base); }
+
+/* 质量分：原内联 color: qualityTone(v).color + fs-base；.mono 类仍保留在元素上 */
+.qualityNum { font-size: var(--fs-base); }
+.qualityNum[data-tone="ok"] { color: var(--status-ok); }
+.qualityNum[data-tone="warn"] { color: var(--status-warn); }
+.qualityNum[data-tone="crit"] { color: var(--status-crit); }
+.qualityNum[data-tone="mute"] { color: var(--text-muted); }

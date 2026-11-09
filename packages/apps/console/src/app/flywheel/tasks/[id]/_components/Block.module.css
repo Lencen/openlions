@@ -1,0 +1,45 @@
+/* /flywheel/tasks/[id] · 契约/产出文本块（Block）—— 2026-11-05 P2 批12 呈现层
+   内联 style 清零（改前 5 处：外层间距、标题行排版、字数色/字重、截断徽标字号、正文块整体），
+   文案/取数/对外 props（title/text/mono/fullLength/taskId）均未动；本件不含表格。
+   注：注释里不写“星号加斜杠”的连续字符，否则 CSS 会提前闭合注释（批8 教训）。 */
+
+/* 外层（改前内联 marginBottom sp-3） */
+.block { margin-bottom: var(--sp-3); }
+
+/* 标题行（改前内联：fs-base、600、primary 色、mb sp-1、flex 居中 + gap sp-2 + wrap） */
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  font-size: var(--fs-base);
+  font-weight: 600;
+  color: var(--primary);
+  margin-bottom: var(--sp-1);
+}
+
+/* 字数（改前内联：muted 色 + 400，压在标题的 600 之上） */
+.count { color: var(--text-muted); font-weight: 400; }
+
+/* 截断徽标（改前内联 fs-xs；底色/字色沿用 globals 的 .pill.warn）。
+   双类名压过 .pill 的 fs-sm。 */
+.truncPill.truncPill { font-size: var(--fs-xs); }
+
+/* 正文块（改前内联：fs-base、行高 1.8、pre-wrap、break-word、surface2 底、
+   1px 边框、radius-md、内边距 sp-2-5/sp-3、dim 色、最高 420px 可滚） */
+.text {
+  font-size: var(--fs-base);
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5) var(--sp-3);
+  color: var(--text-dim);
+  max-height: 420px;
+  overflow: auto;
+}
+
+/* 等宽正文（改前是 style 里 mono ? var(--font-mono) : undefined，无值时不落 fontFamily） */
+.text[data-mono="true"] { font-family: var(--font-mono); }

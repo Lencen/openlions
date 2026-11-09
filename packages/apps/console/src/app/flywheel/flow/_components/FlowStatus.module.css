@@ -1,0 +1,30 @@
+/* 2026-11-05 P2 批9：FlowStatus（飞轮心跳状态 + 积压告警）内联样式下沉。
+   存活与否只影响左边框颜色，改为 data-alive 属性选择器；其余是静态布局类。
+   取数、文案、对外 props 形状未动；本组件不含表格。
+   注：注释里不写“星号加斜杠”的连续字符，否则 CSS 会提前闭合注释（批8 教训）。 */
+
+/* 状态面板：改前内联 borderLeft 4px（ok / warn 两档）+ marginBottom sp-4。
+   双类名是为了稳定压过 globals 的 .panel（同是单类选择器，靠加载顺序不可靠）。 */
+.statusPanel.statusPanel {
+  border-left: 4px solid var(--status-warn);
+  margin-bottom: var(--sp-4);
+}
+.statusPanel.statusPanel[data-alive="true"] { border-left-color: var(--status-ok); }
+
+/* 顶部一行指标（改前内联 flex / gap sp-4 / wrap） */
+.statusRow { display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap; }
+
+/* 状态标题（改前内联 fs-xl + 700） */
+.statusTitle { font-size: var(--fs-xl); font-weight: 700; }
+
+/* 右侧各项指标（改前内联 fs-base + text-dim，4 处复用） */
+.metric { font-size: var(--fs-base); color: var(--text-dim); }
+
+/* 积压告警面板（改前内联 borderLeft crit + marginBottom sp-4） */
+.warnPanel.warnPanel {
+  border-left: 4px solid var(--status-crit);
+  margin-bottom: var(--sp-4);
+}
+
+/* 告警文案（改前内联 fs-md） */
+.warnText { font-size: var(--fs-md); }

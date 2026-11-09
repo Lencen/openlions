@@ -1,0 +1,31 @@
+/* /agents/onboard 步骤指示器样式（2026-11-05 P2 批8：内联 style 清零）
+   选中态（已到达 / 当前步）由 data-done / data-current 属性选择器承载，声明值逐项照搬原内联。 */
+
+.steps { display: flex; gap: 0; margin-bottom: var(--sp-6); }
+.stepItem { flex: 1; text-align: center; }
+
+/* 步骤圆点：未到达 = 表面底 + 弱文字；已到达 = 主色底 + on-accent 字；当前步 = 加粗主色描边 */
+.circle {
+  height: 36px;
+  width: 36px;
+  border-radius: 50%;
+  margin: 0 auto var(--sp-1-5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  background: var(--bg-surface);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.circle[data-done="true"] { background: var(--primary); color: var(--on-accent); }
+.circle[data-current="true"] { border: 2px solid var(--primary); }
+
+/* 步骤文字 */
+.stepLabel { font-size: var(--fs-sm); color: var(--text-muted); }
+.stepLabel[data-done="true"] { color: var(--text); }
+
+/* 步骤之间的连接线：已完成 = 主色 */
+.connector { height: 2px; background: var(--border); margin: var(--sp-2) 20% 0; }
+.connector[data-done="true"] { background: var(--primary); }

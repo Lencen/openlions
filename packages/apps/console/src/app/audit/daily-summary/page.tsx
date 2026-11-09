@@ -1,6 +1,7 @@
 "use client";
 // 2026-09-14 页面瘦身: 分节控件抽到 ./_components/*, 本文件只负责取数与拼装 (<200 行)。
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import DailyHeader from "./_components/DailyHeader";
 import DailyKpis from "./_components/DailyKpis";
 import DailyServices from "./_components/DailyServices";
@@ -11,6 +12,7 @@ import DailyVerdict from "./_components/DailyVerdict";
 import { bjToday } from "./_components/shared";
 import type { DailyReport } from "./_components/shared";
 import { useGlobalNonce } from "@/components/GlobalFilter";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
@@ -81,7 +83,22 @@ export default function DailySummaryPage() {
     <div className="layout-with-sidebar">
       
       <main className="main">
-        <DailyHeader date={date} setDate={changeDate} />
+        {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #16）：面包屑 / 标题 / 一句说明上移到本文件，
+            DailyHeader 退化为页头右侧的日期控件。标题与说明逐字取自口径表；日期选择控件与 ?date= 语义未改。 */}
+        <div className="breadcrumb">
+          <span className={styles.bcDim}>服务</span>
+          <span className="sep">/</span>
+          <Link href="/audit">审计</Link>
+          <span className="sep">/</span>
+          <span className="current">每日摘要</span>
+        </div>
+        <PageHeader className={styles.headerRow}>
+          <div>
+            <PageTitle>每日审计摘要</PageTitle>
+            <div className="page-subtitle">当日操作、变更与异常的汇总</div>
+          </div>
+          <DailyHeader date={date} setDate={changeDate} />
+        </PageHeader>
 
         {loading && <div className={styles.loading}>加载中...</div>}
         {error && <div className={"data-health " + styles.errorBox} data-state="warn"><span className="dh-text">{error}</span></div>}

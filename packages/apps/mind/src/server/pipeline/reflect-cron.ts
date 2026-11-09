@@ -12,6 +12,8 @@
 import { prisma } from "@/lib/prisma";
 // 2026-09-01: LLM API 健康探针 (连续失败暂停反思 1h)
 import { isReflectionPaused } from "./llm-health";
+// FW-05（2026-11-06）：新主题独立 FIFO 配额的选择器（纯函数，可被 scripts/probes/fixture-reflect-fifo.ts 打）
+import { selectThemesForRound, clampQuota } from "./reflect-theme-select";
 
 const REFLECT_THROTTLE_HOURS = 1; // D14 拍板: 整点 cron, 距上次反思 > 1h
 
@@ -37,31 +39,39 @@ export async function findThemesNeedingReflection(opts: { limit?: number; maxAge
   const limit = opts.limit ?? 3;
   // 1. 从 4 类产物表 union 所有 theme + 最新时间
   // 优化: 只取 GROUP BY theme, MAX(updatedAt)
+  // FW-05（2026-11-06）：groupBy 同时取 _min.createdAt —— 这是"主题首次出现时间"，FIFO 配额要用。
+  //   零额外查询：同一 GROUP BY 多取一个聚合列。
   const [memThemes, knoThemes, praThemes, refThemes] = await Promise.all([
     prisma.memory.groupBy({
       by: ["theme"],
       where: { theme: { not: null } },
       _max: { updatedAt: true },
+      _min: { createdAt: true },
     }),
     prisma.knowledge.groupBy({
       by: ["theme"],
       where: { theme: { not: null } },
       _max: { updatedAt: true },
+      _min: { createdAt: true },
     }),
     prisma.practice.groupBy({
       by: ["theme"],
       where: { theme: { not: null } },
       _max: { updatedAt: true },
+      _min: { createdAt: true },
     }),
     prisma.reflection.groupBy({
       by: ["theme"],
       where: { theme: { not: null } },
       _max: { updatedAt: true },
+      _min: { createdAt: true },
     }),
   ]);
 
   // 2. 合并: theme -> 最新产物时间
   const themeMaxProductAt = new Map<string, Date>();
+  // FW-05：主题首次出现时间（四表 _min.createdAt 的最小值），FIFO 配额的排序键
+  const themeFirstSeenAt = new Map<string, number>();
   const collect = (arr: any[]) => {
     for (const row of arr) {
       const t = row.theme;
@@ -69,6 +79,12 @@ export async function findThemesNeedingReflection(opts: { limit?: number; maxAge
       if (!t || !ts) continue;
       const cur = themeMaxProductAt.get(t);
       if (!cur || ts > cur) themeMaxProductAt.set(t, ts);
+      const first: Date | undefined = row._min?.createdAt;
+      if (first) {
+        const f = first.getTime();
+        const cf = themeFirstSeenAt.get(t);
+        if (cf === undefined || f < cf) themeFirstSeenAt.set(t, f);
+      }
     }
   };
   collect(memThemes);
@@ -159,9 +175,25 @@ export async function findThemesNeedingReflection(opts: { limit?: number; maxAge
   });
   // 2026-09-18: 把"为什么没轮到"也打出来(从未反思 / 久未反思 各多少), 便于判断是饿死还是没料
   const neverReflected = fresh.filter((t) => !lastReflectionBy.get(t)).length;
-  console.log(`[reflect-cron] themesNeedReflect=${themesToReflect.length} (近${maxAgeDays}天活跃=${fresh.length}, 其中从未反思=${neverReflected}), total=${themeMaxProductAt.size}, limit=${limit}, 同主题冷却=${themeCooldownHours}h -> 本轮取(主题/窗口内产物量/是否曾反思): ` +
-    fresh.slice(0, limit).map((t) => t + "/" + (productCount.get(t) || 0) + "/" + (lastReflectionBy.has(t) ? "曾" : "从未")).join(" | "));
-  return fresh.slice(0, limit);
+  // FW-05（2026-11-06）：给"从未反思"主题独立配额 + FIFO（首次出现越早越先）。
+  //   为什么：旧口径在 never 组内按"窗口内 Memory 条数"降序，Reflection-only/低料的新主题恒垫底
+  //   （实测：今天 15 个 SESSION_EXTRACT 新 theme 里 mem=2 的排 412 名，570 个积压 x 10/轮 = 21h 起）。
+  //   口径边界：FIFO 是最老先上，不是最新先上；它把无界饥饿变成有界等待 W=ceil(N/quota)*tick。
+  //   REFLECT_NEW_THEME_QUOTA=0 -> 逐字回退旧行为（fixture ③ 断言）。
+  const newThemeQuota = Number(process.env.REFLECT_NEW_THEME_QUOTA ?? "5");
+  const neverSet = new Set(fresh.filter((t) => !lastReflectionBy.get(t)));
+  const sel = selectThemesForRound({
+    fresh,
+    neverReflected: neverSet,
+    firstSeenAt: themeFirstSeenAt,
+    productCount,
+    limit,
+    quota: newThemeQuota,
+  });
+  console.log(`[reflect-cron] themesNeedReflect=${themesToReflect.length} (近${maxAgeDays}天活跃=${fresh.length}, 其中从未反思=${neverReflected}), total=${themeMaxProductAt.size}, limit=${limit}, 同主题冷却=${themeCooldownHours}h, quota=${clampQuota(newThemeQuota, limit)} -> 本轮取(主题/窗口内产物量/是否曾反思): ` +
+    sel.picked.map((t) => t + "/" + (productCount.get(t) || 0) + "/" + (lastReflectionBy.has(t) ? "曾" : "从未")).join(" | ") +
+    ` | fifo=${sel.fifoPicked.map((t) => t + "@" + new Date(themeFirstSeenAt.get(t) || 0).toISOString().slice(0, 10)).join(",")}`);
+  return sel.picked;
 }
 
 // ============================================================================

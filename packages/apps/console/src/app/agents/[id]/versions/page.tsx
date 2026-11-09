@@ -3,8 +3,11 @@
 // 2026-11-05 P2 呈现层（批 4/5）：内联 style 清零 + 两张手写 .tbl 表换成白名单 DataTable。
 //   取数（loadAgent / loadLive）与字段未动。注意：本页是**服务端组件**，不能给客户端 DataTable 传函数，
 //   故把 fmtTime / renderValue 的结果在服务端预算成字符串放进行对象（列、表头、空态文案与改前一致）。
+// 2026-11-05 P2 批6 热修（线上 500）：columns 早已是纯数据列，本次只剩两处「行 key」箭头函数要摘掉
+//   （DataTable 的行 key 参数已改可选，未给时按行下标取 key）；列/行/宽度/空态文案一字未动。
 import type { ReactNode } from "react";
-import AgentShell from "../_components/AgentShell";
+import AgentShell, { AgentTabHeader } from "../_components/AgentShell";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import AgentMissing from "../_components/AgentMissing";
 import AgentSourceError from "../_components/AgentSourceError";
 import { TIER_LABELS, fmtTime, loadAgent, loadLive, parseJson } from "../_data";
@@ -60,12 +63,24 @@ const profileColumns: DataColumn<ProfileView>[] = [
 export default async function AgentVersionsPage({ params }: { params: { id: string } }) {
   const id = decodeURIComponent(params.id || "");
   const [agentLoad, liveS] = await Promise.all([loadAgent(id), loadLive(id)]);
-  if (!agentLoad.ok) return <AgentSourceError id={id} />;
+  // 2026-11-06 D-03：先备好页签页头 —— 名册失败/智能体不存在/正常三条分支都要渲染它，
+  //   否则 SSR 首屏没有 page-header（0.4.31 dev 实测 5 页 70/75 的根因就是只有"正常"分支带页头）。
+  const tabHeader = (
+    <AgentTabHeader
+      id={id}
+      tab="版本"
+      title="智能体详情 · 版本"
+      subtitle="名册、画像与授权的时间线"
+      agent={agentLoad.ok ? agentLoad.agent : null}
+      live={liveS.data}
+    />
+  );
+  if (!agentLoad.ok) return <AgentSourceError id={id} header={tabHeader} />;
   const agent = agentLoad.agent;
   const live = liveS.data;
   const degraded: string[] = [];
   if (!liveS.ok) degraded.push("实时状态 /api/agents-live");
-  if (!agent && !live) return <AgentMissing id={id} />;
+  if (!agent && !live) return <AgentMissing id={id} header={tabHeader} />;
 
   const profile = parseJson(agent?.profile);
   const quota = parseJson(profile.quota);
@@ -91,18 +106,24 @@ export default async function AgentVersionsPage({ params }: { params: { id: stri
   const profileRows: ProfileView[] = profileKeys.map((k) => ({ field: k, value: renderValue(profile[k]) }));
 
   return (
-    <AgentShell id={id} active="versions" agent={agent} live={live}>
+    <AgentShell
+      id={id}
+      active="versions"
+      agent={agent}
+      live={live}
+      header={tabHeader}
+    >
       {degraded.length ? <Alert type="warning" showIcon className={styles.alertRow} title="部分数据源降级" description={degraded.join("；")} /> : null}
       <div className={"panel " + styles.panelGap}>
         <div className="panel-header"><span className="panel-title">变更时间线（{changes.length} 项）</span></div>
         <TableCopyButton />
-        <DataTable columns={changeColumns} rows={changeRows} rowKey={(c) => c.time + c.topic} empty={{ title: "暂无可展示的变更记录" }} />
+        <DataTable columns={changeColumns} rows={changeRows} empty={{ title: "暂无可展示的变更记录" }} />
       </div>
 
       <div className="panel">
         <div className="panel-header"><span className="panel-title">画像字段快照（{profileKeys.length} 项）</span></div>
         <TableCopyButton />
-        <DataTable columns={profileColumns} rows={profileRows} rowKey={(p) => p.field} empty={{ title: "该智能体没有登记画像" }} />
+        <DataTable columns={profileColumns} rows={profileRows} empty={{ title: "该智能体没有登记画像" }} />
       </div>
     </AgentShell>
   );

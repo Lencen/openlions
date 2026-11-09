@@ -13,6 +13,9 @@ import { fmtNum, fmtTime, relTime, truncate } from "@/lib/format";
 import { t } from "@/i18n";
 import { HUMAN_ID } from "@/lib/todos";
 import ConvertToTodoButton from "@/components/ConvertToTodoButton";
+// 2026-11-05 P2 批9：内联 style 清零（9 -> 0），全部下沉到同目录 DiscussionPanel.module.css；
+//   都是静态间距 / 限宽 / 代码块排版，无动态值，故不引入 data 属性选择器。取数、文案、交互与 props 形状未动。
+import styles from "./DiscussionPanel.module.css";
 
 export interface DiscussionPanelProps {
   entityType: string;
@@ -46,7 +49,7 @@ function CollapsibleBody({ text, limit = 420 }: { text: string; limit?: number }
   return (
     <div>
       <div className="disc-body">{open ? body : truncate(body, limit)}</div>
-      <Button type="link" size="small" style={{ paddingLeft: 0 }} onClick={() => setOpen(!open)}>
+      <Button type="link" size="small" className={styles.linkBtn} onClick={() => setOpen(!open)}>
         {open ? "收起" : `展开全文（${fmtNum(body.length)} 字）`}
       </Button>
     </div>
@@ -166,10 +169,10 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
       }
     >
       {error ? (
-        <Alert type="error" showIcon style={{ marginBottom: "var(--sp-3)" }} title="讨论加载失败" description={error} />
+        <Alert type="error" showIcon className={styles.alertMb} title="讨论加载失败" description={error} />
       ) : null}
       {warnings.length ? (
-        <Alert type="warning" showIcon style={{ marginBottom: "var(--sp-3)" }} title="上游提示" description={warnings.join("；")} />
+        <Alert type="warning" showIcon className={styles.alertMb} title="上游提示" description={warnings.join("；")} />
       ) : null}
 
       {/* ---------- 上: 平台协作时间线 ---------- */}
@@ -180,7 +183,7 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
       {loading && !data ? (
         <Skeleton active paragraph={{ rows: 3 }} title={false} />
       ) : timeline.length === 0 ? (
-        <div className="tiny" style={{ padding: "var(--sp-1-5) 0 var(--sp-3)" }}>
+        <div className={"tiny " + styles.sectionEmpty}>
           该实体没有平台自动时间线（时间线由任务类实体自动合成: 发布 → 认领 → 提交产出 → 状态流转）。
         </div>
       ) : (
@@ -199,12 +202,12 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
                     <span className="tiny">{fmtTime(t.at)}</span>
                     <span className="tiny">· {relTime(t.at)}</span>
                   </div>
-                  <div className="dt-text" style={{ marginTop: "var(--sp-1)" }}>{t.kind === "submit" ? truncate(t.text, 600) : truncate(t.text, 300)}</div>
+                  <div className={"dt-text " + styles.textTop}>{t.kind === "submit" ? truncate(t.text, 600) : truncate(t.text, 300)}</div>
                   {t.kind === "submit" && String(t.text || "").length > 600 ? (
                     <Collapse
                       size="small"
                       ghost
-                      items={[{ key: "1", label: `查看完整产出（${fmtNum(String(t.text).length)} 字）`, children: <pre style={{ whiteSpace: "pre-wrap", fontSize: "var(--fs-sm)", margin: 0, maxHeight: 320, overflow: "auto" }}>{t.text}</pre> }]}
+                      items={[{ key: "1", label: `查看完整产出（${fmtNum(String(t.text).length)} 字）`, children: <pre className={styles.pre}>{t.text}</pre> }]}
                     />
                   ) : null}
                 </div>
@@ -215,7 +218,7 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
       )}
 
       {/* ---------- 下: 讨论发言流 ---------- */}
-      <div className="disc-section-title" style={{ marginTop: "var(--sp-2)" }}>
+      <div className={"disc-section-title " + styles.sectionTitleGap}>
         讨论发言
         <span className="tiny">{loading && !data ? "加载中…" : `${fmtNum(data?.count ?? rows.length)} 条`}</span>
       </div>
@@ -275,7 +278,7 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
         <div className="disc-actions">
           <Select
             size="small"
-            style={{ minWidth: 230 }}
+            className={styles.agentSelect}
             allowClear
             showSearch
             optionFilterProp="label"
@@ -291,7 +294,7 @@ export default function DiscussionPanel({ entityType, entityId, title }: Discuss
           <span className="disc-hint">Ctrl/⌘ + Enter 发送 · 回答会自动回写讨论串</span>
         </div>
         {feedback ? (
-          <Alert type={feedback.type === "ok" ? "success" : "error"} showIcon title={feedback.msg} style={{ marginBottom: 0 }} />
+          <Alert type={feedback.type === "ok" ? "success" : "error"} showIcon title={feedback.msg} className={styles.alertMb0} />
         ) : null}
         <div className="disc-hint">
           数据源: mind <code>/api/v1/flywheel/discussions</code> (console 代理 <code>/api/discussions</code>) · 不做定时轮询, 需要最新状态请点右上角刷新。

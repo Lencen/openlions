@@ -1,0 +1,80 @@
+/* KpiCard 超集样式（2026-11-05 ord-027 收敛）
+   卡片底座与 hero 档仍在 app/globals.css（.kpi-card / .kpi-card-hero，47 个老调用点依赖）；
+   这里只放**收敛新增的单元**：数值色 / 单位 / 图标 / 数据时刻 / 趋势文本色 / 脚注。
+   口径：动态色一律 data-* + 属性选择器，不覆盖 globals 的既有声明。
+   写作约束：注释里不出现星号紧跟斜杠的连续字符（会让构建失败）。 */
+
+/* ── 数值色（tone 语义由调用方定；mute = 正文色） ── */
+.value[data-tone="info"] { color: var(--primary); }
+.value[data-tone="ok"] { color: var(--status-ok); }
+.value[data-tone="warn"] { color: var(--status-warn); }
+.value[data-tone="crit"] { color: var(--status-crit); }
+.value[data-tone="mute"] { color: var(--text); }
+
+/* ── 单位 / 图标 ── */
+.unit { font-size: var(--fs-base); color: var(--text-muted); font-family: var(--font-sans); margin-left: 4px; font-weight: 400; }
+.icon { display: inline-flex; align-items: center; margin-right: 6px; color: var(--text-muted); }
+
+/* ── 数据时刻 / 趋势行 ── */
+.meta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-0-5); }
+.asof { font-size: var(--fs-xs); color: var(--text-dim); }
+.asof[data-stale="true"] { color: var(--status-warn); }
+.delta { font-size: var(--fs-xs); }
+.delta[data-tone="info"] { color: var(--primary); }
+.delta[data-tone="ok"] { color: var(--status-ok); }
+.delta[data-tone="warn"] { color: var(--status-warn); }
+.delta[data-tone="crit"] { color: var(--status-crit); }
+.delta[data-tone="mute"] { color: var(--text-muted); }
+
+/* ── 脚注（贴底；与老 .metric-card .m-foot 同款） ── */
+.foot { font-size: var(--fs-sm); color: var(--text-muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* ── business 档（2026-11-05 phase2 收编）：原 app/flywheel/business/_components/MetricCard 的解剖，逐条等价 ── */
+.biz {
+  padding: var(--sp-3);
+  min-width: 0;
+  border-left: 3px solid var(--info);
+}
+.biz[data-status="ok"] { border-left-color: var(--status-ok); }
+.biz[data-status="warn"] { border-left-color: var(--status-warn); }
+.biz[data-status="crit"] { border-left-color: var(--status-crit); }
+.biz[data-status="nodata"] { border-left-color: var(--text-muted); }
+.biz[data-status="info"] { border-left-color: var(--info); }
+
+.bizLabel { min-height: 18px; }
+
+.bizValue {
+  margin: 4px 0;
+  font-size: var(--fs-2xl);
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.bizSub { color: var(--text-dim); }
+
+.bizFoot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+
+.bizLine { line-height: 1.55; }
+.bizLineFirst { margin-top: 8px; line-height: 1.55; }
+
+.bizNote { margin-top: 4px; line-height: 1.55; color: var(--info); }
+.biz[data-status="ok"] .bizNote { color: var(--status-ok); }
+.biz[data-status="warn"] .bizNote { color: var(--status-warn); }
+.biz[data-status="crit"] .bizNote { color: var(--status-crit); }
+.biz[data-status="nodata"] .bizNote { color: var(--text-muted); }
+
+.bizVerify { margin-top: 6px; overflow-wrap: anywhere; }
+.bizDrill { display: inline-block; margin-top: 6px; }
+
+/* 状态 chip：盒模型仍由 globals 的 .badge 提供，这里只补五档色（与原业务 Pill 的色值一致） */
+.bizPill {
+  border: 1px solid currentColor;
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+}
+.bizPill[data-status="ok"] { color: var(--status-ok); background: color-mix(in srgb, var(--status-ok) 12%, transparent); }
+.bizPill[data-status="warn"] { color: var(--status-warn); background: color-mix(in srgb, var(--status-warn) 14%, transparent); }
+.bizPill[data-status="crit"] { color: var(--status-crit); background: color-mix(in srgb, var(--status-crit) 14%, transparent); }
+.bizPill[data-status="nodata"] { color: var(--text-muted); background: color-mix(in srgb, var(--text-muted) 12%, transparent); }
+.bizPill[data-status="info"] { color: var(--info); background: color-mix(in srgb, var(--info) 12%, transparent); }

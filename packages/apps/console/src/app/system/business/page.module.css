@@ -1,0 +1,26 @@
+/* /system/business 页内样式（2026-11-05 P2 批8 呈现层：内联 style 清零）
+   表格本体换成白名单 DataTable（复用 globals 的 .dt），原来挂在 <td> 上的等宽 / 字号 / 300px 省略号
+   改由单元格内的 span 承担；面包屑暗色与页脚链接行同样下沉到类。未新增全局类，未改 globals.css。 */
+
+.bcDim { color: var(--text-dim); }
+
+/* 加载中的一行（原来是内联 padding: var(--sp-4) var(--sp-2)） */
+.pad4x2 { padding: var(--sp-4) var(--sp-2); }
+
+/* 小字号单元格（原来是内联 fontSize: var(--fs-sm)） */
+.fsSm { font-size: var(--fs-sm); }
+
+/* 端点列（原来是内联 fontFamily / fs-xs / maxWidth 300px / 省略号）：
+   改成 span 后要 display:block 才能吃到 max-width 与 text-overflow */
+.endpoint {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 页脚「相关视图」行（原来是内联 flex + gap + marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

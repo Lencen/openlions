@@ -17,13 +17,13 @@
     # 只读预检：不动代码、不动库
     node ~/lions/current/scripts/lions-upgrade.cjs \
       --home ~/lions \
-      --from=/path/to/lions-0.4.28.tar.gz \
+      --from=/path/to/lions-0.4.33.tar.gz \
       --dry-run
 
     # 真正升级
     node ~/lions/current/scripts/lions-upgrade.cjs \
       --home ~/lions \
-      --from=/path/to/lions-0.4.28.tar.gz
+      --from=/path/to/lions-0.4.33.tar.gz
 
 升级从**安装介质**取新版本；PostgreSQL 数据目录不随升级重建。
 如果本次升级同时要换 PostgreSQL（例如换镜像/大版本），先单独按 PG 文档做备份与迁移。
@@ -63,8 +63,8 @@
 
     channel/
       latest.json
-      lions-0.4.28.manifest.json
-      lions-0.4.28.tar.gz
+      lions-0.4.33.manifest.json
+      lions-0.4.33.tar.gz
 
 也可以直接用发布介质 tar.gz 作为 --from。渠道说明见 [UPGRADE-CHANNEL.md](UPGRADE-CHANNEL.md)。
 

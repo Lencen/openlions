@@ -1,0 +1,29 @@
+/* /flywheel/tasks/[id] · 状态流转 + 平台裁定（TaskTimelinePanels）—— 2026-11-05 P2 批12 呈现层
+   内联 style 清零（改前 7 处：两栏容器、时间线条目、理由行、裁定条目、裁定头行、时间戳、裁定标题），
+   取数（data.transitions / data.verdicts）、文案、对外 props（data）均未动；本件不含表格。
+   注：注释里不写“星号加斜杠”的连续字符，否则 CSS 会提前闭合注释（批8 教训）。 */
+
+/* 两栏容器（改前内联 flex 列 + gap sp-4） */
+.wrap { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+/* 时间线条目（改前内联 fs-base） */
+.tlItem { font-size: var(--fs-base); }
+
+/* 流转理由（改前内联 pre-wrap + mt sp-0-5；字号/色沿用 globals 的 .tiny） */
+.tlReason { white-space: pre-wrap; margin-top: var(--sp-0-5); }
+
+/* 裁定条目（改前内联：下边框 1px、上下内边距 sp-1-5、fs-base） */
+.verdictItem {
+  border-bottom: 1px solid var(--border);
+  padding: var(--sp-1-5) 0;
+  font-size: var(--fs-base);
+}
+
+/* 裁定头行（改前内联 flex + gap sp-2 + 居中 + wrap） */
+.verdictHead { display: flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; }
+
+/* 时间戳贴右（改前内联 marginLeft auto） */
+.verdictTime { margin-left: auto; }
+
+/* 裁定标题（改前内联 pre-wrap + mt sp-0-5） */
+.verdictTitle { margin-top: var(--sp-0-5); white-space: pre-wrap; }

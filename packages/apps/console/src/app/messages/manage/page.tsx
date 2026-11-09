@@ -1,9 +1,14 @@
 "use client";
 // 2026-10-21 消息管理表格（只读）：跨会话筛选 + 游标分页。
 // 与 /messages 的分工：那边是"按会话读上下文"，这边是"跨会话找问题消息"。
+// 2026-11-05 P2 批8（呈现层）：内联 style 清零 + 手写 .tbl 裸表 → 白名单 @/components/DataTable；
+//   列/字段/文案/交互（筛选、保存视图、导出 CSV、改派、翻页）一字未改。
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { PageHero } from "@/components/ui";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import styles from "./page.module.css";
 
 const TRANSPORT_OPTS = [["", "全部传输态"], ["delivered", "已送达"], ["read", "已读"], ["expired", "已过期"], ["failed", "投递失败"]] as const;
 const BRAIN_OPTS = [["", "全部处理态"], ["pending", "未处理"], ["read", "已读未回"], ["replied", "已回复"]] as const;
@@ -116,9 +121,38 @@ export default function MessagesManagePage() {
       .finally(() => setLoading(false));
   };
 
+  // 2026-11-05 P2 批8：列与改前 <thead> 逐列对应（时间/会话/发送方/摘要/传输态/处理态/引用/最后错误/操作）；
+  //   本页是客户端组件（文件头 "use client"），可以传函数列；服务端页面请改用预渲染单元格。
+  const columns: DataColumn<any>[] = [
+    { key: "at", title: "时间", render: (m) => <span className="mono">{fmtAt(m.at)}</span> },
+    { key: "conversation", title: "会话", render: (m) => m.conversation },
+    { key: "from", title: "发送方", render: (m) => <span className="mono">{m.from}</span> },
+    { key: "text", title: "摘要", render: (m) => <span className={styles.clip} title={m.text}>{m.text}</span> },
+    {
+      key: "transport", title: "传输态",
+      render: (m) => <span className={"msg-pill t-" + (m.transport || "queued")}>{m.transport === "expired" ? "已过期" : m.transport === "failed" ? "投递失败" : m.transport === "read" ? "已读" : "已送达"}</span>,
+    },
+    {
+      key: "brain", title: "处理态",
+      render: (m) => <span className={"msg-pill b-" + (m.brain || "unreplied")}>{m.brain === "replied" ? "已回复" : m.brain === "read" ? "已读未回" : "未处理"}</span>,
+    },
+    { key: "replyTo", title: "引用", render: (m) => <span className="mono">{m.replyTo ? "有" : "—"}</span> },
+    { key: "lastError", title: "最后错误", render: (m) => <span className={styles.clip} title={m.lastError || ""}>{m.lastError || "—"}</span> },
+    {
+      key: "op", title: "操作",
+      render: (m) => (
+        <button className="msg-ghost" onClick={() => { setAssignRow(m); setAssignTo(""); setAssignNote(""); setAssignMsg(null); }}>改派</button>
+      ),
+    },
+  ];
+
   return (
     <main className="page">
-      <PageHero title="消息管理" subtitle="跨会话筛选与浏览：按传输态、处理态、时间与关键字找问题消息。当前只读，重放/改派在通信服务管理端。" />
+      <div className="breadcrumb"><span className={styles.crumbDim}>服务</span><span className="sep">/</span><span className={styles.crumbDim}>消息</span><span className="sep">/</span><span className="current">管理</span></div>
+      <PageHeader>
+        <PageTitle>消息管理</PageTitle>
+        <div className="page-subtitle">会话与消息的治理操作入口</div>
+      </PageHeader>
       <div className="msg-manage-bar">
         <select className="msg-select" value={transport} onChange={(e) => setTransport(e.target.value)}>
           {TRANSPORT_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -129,7 +163,7 @@ export default function MessagesManagePage() {
         <select className="msg-select" value={since} onChange={(e) => setSince(e.target.value)}>
           {SINCE_OPTS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
-        <input className="msg-input" style={{ maxWidth: 280 }} placeholder="搜索会话 / 发送方 / 正文"
+        <input className={"msg-input " + styles.searchInput} placeholder="搜索会话 / 发送方 / 正文"
           value={q} onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") setKw(q.trim()); }} />
         <button className="msg-ghost" onClick={() => setKw(q.trim())}>搜索</button>
@@ -142,43 +176,25 @@ export default function MessagesManagePage() {
         ) : null}
         <button className="msg-ghost" onClick={exportCsv} disabled={rows.length === 0} title="导出当前结果（最多 50 行/页）">导出 CSV</button>
         <span className="msg-count">共 {total} 条</span>
-        <Link href="/messages" className="msg-ghost" style={{ marginLeft: "auto" }}>返回消息工作区</Link>
+        <Link href="/messages" className={"msg-ghost " + styles.barEnd}>返回消息工作区</Link>
       </div>
       {loading && rows.length === 0 ? <div className="msg-empty">正在读取…</div> : rows.length === 0 ? (
         <div className="msg-empty">没有符合条件的消息</div>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="tbl">
-            <thead><tr><th>时间</th><th>会话</th><th>发送方</th><th>摘要</th><th>传输态</th><th>处理态</th><th>引用</th><th>最后错误</th><th>操作</th></tr></thead>
-            <tbody>
-              {rows.map((m) => (
-                <tr key={m.id}>
-                  <td className="td-mono">{fmtAt(m.at)}</td>
-                  <td>{m.conversation}</td>
-                  <td className="td-mono">{m.from}</td>
-                  <td className="td-clip" title={m.text}>{m.text}</td>
-                  <td><span className={"msg-pill t-" + (m.transport || "queued")}>{m.transport === "expired" ? "已过期" : m.transport === "failed" ? "投递失败" : m.transport === "read" ? "已读" : "已送达"}</span></td>
-                  <td><span className={"msg-pill b-" + (m.brain || "unreplied")}>{m.brain === "replied" ? "已回复" : m.brain === "read" ? "已读未回" : "未处理"}</span></td>
-                  <td className="td-mono">{m.replyTo ? "有" : "—"}</td>
-                  <td className="td-clip" title={m.lastError || ""}>{m.lastError || "—"}</td>
-                  <td>
-                    <button className="msg-ghost" onClick={() => { setAssignRow(m); setAssignTo(""); setAssignNote(""); setAssignMsg(null); }}>改派</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className={styles.tableScroll}>
+          {/* 2026-11-05 P2 批8：裸 .tbl → 白名单 DataTable（行 key 取消息 id，客户端组件可传函数） */}
+          <DataTable columns={columns} rows={rows} rowKey={(m) => String(m.id)} />
         </div>
       )}
       {assignRow ? (
         <div className="msg-trace-mask" role="dialog" aria-modal="true" aria-label="改派负责人" onClick={() => setAssignRow(null)}>
           <div className="msg-assign-card" onClick={(e) => e.stopPropagation()}>
-            <div className="msg-trace-title" style={{ marginBottom: "var(--sp-2)" }}>改派负责人</div>
-            <div className="msg-ctx-sub" style={{ marginBottom: "var(--sp-2)" }}>消息：{assignRow.text || assignRow.id}</div>
+            <div className={"msg-trace-title " + styles.cardHead}>改派负责人</div>
+            <div className={"msg-ctx-sub " + styles.cardLine}>消息：{assignRow.text || assignRow.id}</div>
             <input className="msg-input" placeholder="负责人（填智能体名，如 agent-x / agent-x）" value={assignTo} onChange={(e) => setAssignTo(e.target.value)} />
-            <input className="msg-input" style={{ marginTop: "var(--sp-2)" }} placeholder="改派原因（必填，会进审计）" value={assignNote} onChange={(e) => setAssignNote(e.target.value)} />
-            {assignMsg ? <div className="msg-ctx-sub" style={{ marginTop: "var(--sp-2)", color: "var(--status-warn)" }}>{assignMsg}</div> : null}
-            <div style={{ display: "flex", gap: "var(--sp-2)", marginTop: "var(--sp-3)", justifyContent: "flex-end" }}>
+            <input className={"msg-input " + styles.fieldGap} placeholder="改派原因（必填，会进审计）" value={assignNote} onChange={(e) => setAssignNote(e.target.value)} />
+            {assignMsg ? <div className={"msg-ctx-sub " + styles.assignMsg}>{assignMsg}</div> : null}
+            <div className={styles.cardActions}>
               <button className="msg-ghost" onClick={() => setAssignRow(null)}>取消</button>
               <button className="msg-ghost" disabled={assignBusy || !assignTo.trim() || !assignNote.trim()} onClick={doAssign}>{assignBusy ? "提交中…" : "确认改派"}</button>
             </div>
@@ -187,7 +203,7 @@ export default function MessagesManagePage() {
       ) : null}
       <div className="msg-manage-foot">
         {nextBefore ? <button className="msg-ghost" onClick={loadMore} disabled={loading}>{loading ? "加载中…" : "加载更多"}</button> : <span className="msg-count">已经到底了</span>}
-        <span className="msg-trace-foot" style={{ border: "none", padding: 0 }}>只读：重放 / 改派请在通信服务管理端执行。</span>
+        <span className={"msg-trace-foot " + styles.footPlain}>只读：重放 / 改派请在通信服务管理端执行。</span>
       </div>
     </main>
   );

@@ -1,0 +1,27 @@
+/* /flywheel/hard-metrics · 飞轮硬指标看板（2026-11-05 P2 批9 呈现层）
+   内联 style 清零：报错行、KPI 行与图表面板的下间距、图表内边距、统计时间行、底部相关视图。
+   周环比的涨跌色是动态值，改由 data-tone 属性选择器承载（值与原内联三元逐一对应）。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+/* 取数失败提示（原内联 color: var(--status-warn)，配合 globals 的 .tiny） */
+.errText { color: var(--status-warn); }
+
+/* KPI 行下间距（原内联 marginBottom: var(--sp-3)，配合 globals 的 .kpi-grid） */
+.kpiRow { margin-bottom: var(--sp-3); }
+
+/* 图表面板下间距（原内联 marginBottom: var(--sp-3)） */
+.panelMb { margin-bottom: var(--sp-3); }
+
+/* 图表区容器内边距（原内联 padding: var(--sp-3)） */
+.chartBox { padding: var(--sp-3); }
+
+/* 统计时间行（原内联 marginBottom: var(--sp-2)，配合 globals 的 .tiny） */
+.metaLine { margin-bottom: var(--sp-2); }
+
+/* 周环比数值：涨绿 / 跌红 / 无环比（原内联三元 color） */
+.delta[data-tone="ok"] { color: var(--status-ok); }
+.delta[data-tone="crit"] { color: var(--status-crit); }
+.delta[data-tone="plain"] { color: inherit; }
+
+/* 底部相关视图（原内联 flex / gap / flexWrap / marginTop） */
+.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }

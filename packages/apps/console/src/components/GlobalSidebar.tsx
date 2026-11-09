@@ -8,6 +8,8 @@ import { Menu, Tag } from "@/components/primitives";
 import { NAV_GROUPS, matchNav, defaultOpenGroups } from "@/config/nav";
 import Icon from "@/components/Icon";
 import Link from "next/link";
+// 2026-11-05 P2 批8：内联 style 清零（样式下沉 ./GlobalSidebar.module.css）；取数/路由/导航结构未动。
+import styles from "./GlobalSidebar.module.css";
 
 // 2026-10-19 B1(信息架构方案 L1-1): 导航项**锚点化**。
 //   原先侧栏是 Menu + onClick/ router.push 跳转, 实测**每页侧栏 0 个 <a href>**
@@ -22,7 +24,7 @@ function NavLabel({ icon, label, desc, badge, locked, href }: {
       <span className="nav-item-icon" aria-hidden="true"><Icon name={icon} size={16} /></span>
       <span className="nav-item-text">{label}</span>
       {badge === "new" ? <Tag className="nav-item-tag" variant="filled">新</Tag> : null}
-      {locked ? <span style={{ marginLeft: "auto", fontSize: "var(--fs-xs)", color: "var(--status-warn)" }} aria-label="规划中"><Icon name="lock" size={14} /></span> : null}
+      {locked ? <span className={styles.lockedIcon} aria-label="规划中"><Icon name="lock" size={14} /></span> : null}
     </>
   );
   if (!href) return <span className="nav-item-label" title={desc}>{inner}</span>;
@@ -95,10 +97,7 @@ export default function GlobalSidebar() {
   );
 
   return (
-    <aside
-      className="sidebar sidebar-nav"
-      style={{ position: "fixed", top: "var(--topnav-h)", bottom: 0, left: 0, overflowY: "auto" }}
-    >
+    <aside className={"sidebar sidebar-nav " + styles.asideFixed}>
       <Menu
         mode="inline"
         items={items as any}
@@ -114,16 +113,16 @@ export default function GlobalSidebar() {
           if (t && typeof t.closest === "function" && t.closest("a")) return;
           router.push(key);
         }}
-        style={{ borderInlineEnd: "none", background: "transparent" }}
+        className={styles.menuPlain}
       />
       <div className="sidebar-footer">
         <div className="row">
-          <span className="dot" style={{ background: "var(--status-ok)" }} />
+          <span className={"dot " + styles.footerDot} data-tone="ok" />
           <span>平台服务</span>
           <span className="num" title={version ? `版本号 ${version.platform}${version.gitSha ? ` · ${version.gitSha}` : ""}（/api/version）` : "版本号读取中或不可达"} data-version-source="/api/version">{version ? `v${version.platform}` : "v—"}</span>
         </div>
         <div className="row">
-          <span className="dot" style={{ background: "var(--primary)" }} />
+          <span className={"dot " + styles.footerDot} data-tone="primary" />
           <span>LIONS Console</span>
         </div>
       </div>

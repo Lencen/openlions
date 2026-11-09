@@ -1,0 +1,44 @@
+/* /system/api · MCP 服务表（McpServiceTable）—— 2026-11-05 P2 批6
+   原先 12 处内联 style 全部下沉到这里；表格本体沿用 .ui-table（primitives.Table 自带）。
+   动态态：无（展开/收起由 Table 的 expandedRowKeys 控制，不靠行内样式）。
+   悬停高亮原来用 onMouseEnter/Leave 直接改 borderColor，改由 .mstToolCard:hover 承担。 */
+
+/* 表头右侧帮助语（原来是内联 fontSize + color） */
+.mstHint { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 行：整行可点（原来是内联 cursor:pointer） */
+.mstRow { cursor: pointer; }
+
+.mstNowrap { white-space: nowrap; }
+.mstSm { font-size: var(--fs-sm); }
+
+/* 端点列：等宽 + 小一号 + 限宽省略（原来是 6 个内联属性） */
+.mstEndpoint {
+  display: inline-block;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+
+/* 展开区（原来是 colSpan 单元格上的底色 + 内边距） */
+.mstToolPanel { background: var(--bg-surface2); padding: var(--sp-3); }
+.mstToolGrid { display: grid; gap: var(--sp-1-5); }
+
+/* 展开区里的工具卡（悬停描边改由 CSS 承担） */
+.mstToolCard {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mstToolCard:hover { border-color: var(--primary); }
+
+.mstToolName { font-weight: 600; font-size: var(--fs-base); color: var(--primary); }
+.mstToolDesc { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1); }
+.mstEmptyTools { font-size: var(--fs-base); color: var(--text-dim); }

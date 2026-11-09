@@ -1,14 +1,17 @@
 "use client";
 // 2026-09-14 页面瘦身: 分节控件抽到 ./_components/*, 本文件只负责取数与拼装 (<200 行)。
+// 2026-11-05 P2 批6：本文件 13 处内联 style 清零，样式追加到同目录 ./page.module.css（apr* 前缀）；
+//   一次性领取券的代码块/复制/收起、命令折叠区（details）、页脚出链都在，取数、URL 与文案未动。
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import KPICard from "@/components/KPICard";
-import ApprovalsHeader from "./_components/ApprovalsHeader";
 import PendingApprovalsTable from "./_components/PendingApprovalsTable";
 import ApprovalHistoryTable from "./_components/ApprovalHistoryTable";
 import type { AuditRow, PendingAgent } from "./_components/shared";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import { t } from "@/i18n";
+import styles from "./page.module.css";
 
 export default function ApprovalsPage() {
   const [agents, setAgents] = useState<PendingAgent[]>([]);
@@ -102,10 +105,18 @@ export default function ApprovalsPage() {
 
   return (
     <div className="layout"><main className="main">
-      <ApprovalsHeader agentCount={agents.length} error={error} loading={loading} />
+      {/* 2026-11-05 页头口径（PAGE-HEADER-31 §3 第 6 行）：成员 / 接入审批 · 待接入与待审批的智能体列表。
+          原来页头在 ./_components/ApprovalsHeader，本页 page.tsx 里没有 <PageHeader>（survey 统计口径看不到），
+          故把面包屑 + 页头 + 错误提示并回本文件；"共 N 待处理" 的计数改由下方 KPI 卡承担，不再在页头重复。 */}
+      <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className="current">接入审批</span></div>
+      <PageHeader>
+        <PageTitle>接入审批</PageTitle>
+        <div className="page-subtitle">待接入与待审批的智能体列表</div>
+      </PageHeader>
+      {error && <div className={styles.err}>⚠ {error}</div>}
         {/* 2026-10-19 B4: 修前本页**没有任何首屏大号数字**(实测 0 个) ✗ —— "有几条待批"只在标题小字里。
             补 ≤3 张: 待审批 / 审批记录 / 涉及智能体(去重)。数据时刻由既有全局机制提供(单源, 不重复标注)✓ */}
-        <div className="kpi-grid" style={{ marginBottom: "var(--sp-3)" }}>
+        <div className={"kpi-grid " + styles.aprKpi}>
           <KPICard label="待审批（个）" value={agents.length} delta={loading ? "加载中" : agents.length ? "需处理" : "暂无待处理"} deltaDir={agents.length ? "down" : "up"} />
           <KPICard label="审批记录（条）" value={history.length} delta="长期保留" />
           <KPICard label="涉及智能体（个）" value={new Set((history as any[]).map((h: any) => h.entity_id)).size} delta="按实体去重" />
@@ -125,22 +136,22 @@ export default function ApprovalsPage() {
       />
 
       {ticket && (
-        <div style={{ margin: "var(--sp-3) 0", padding: "var(--sp-3)", borderRadius: "var(--radius-md)", background: "var(--bg-surface)", border: "1px solid var(--primary)" }}>
-          <div style={{ fontSize: "var(--fs-md)", fontWeight: 600, marginBottom: "var(--sp-1-5)" }}>
+        <div className={styles.aprTicket}>
+          <div className={styles.aprTicketTitle}>
             {t('approvals.ticket.title', { agent: ticket.agent_id })}
           </div>
-          <div style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", marginBottom: "var(--sp-1-5)" }}>
-            <code style={{ flex: 1, fontSize: "var(--fs-base)", wordBreak: "break-all", padding: "var(--sp-1) var(--sp-2)", borderRadius: "var(--radius-xs)", background: "var(--bg)" }}>{ticket.value}</code>
+          <div className={styles.aprTicketRow}>
+            <code className={styles.aprTicketCode}>{ticket.value}</code>
             <button onClick={() => navigator.clipboard.writeText(ticket.value)}
-              style={{ padding: "var(--sp-1) var(--sp-2)", fontSize: "var(--fs-sm)", borderRadius: "var(--radius-xs)", cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text)" }}>
+              className={styles.aprTicketBtn}>
               {t('approvals.ticket.copy')}
             </button>
             <button onClick={() => setTicket(null)}
-              style={{ padding: "var(--sp-1) var(--sp-2)", fontSize: "var(--fs-sm)", borderRadius: "var(--radius-xs)", cursor: "pointer", background: "var(--bg-hover)", border: "1px solid var(--border)", color: "var(--text)" }}>
+              className={styles.aprTicketBtn}>
               {t('approvals.ticket.dismiss')}
             </button>
           </div>
-          <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)" }}>
+          <div className={styles.aprTicketNote}>
             {t('approvals.ticket.note', {
               services: ticket.services.join(", ") || t('common.none'),
               expiresAt: ticket.expires_at,
@@ -150,16 +161,16 @@ export default function ApprovalsPage() {
           </div>
           {/* 2026-10-15 文案业务化: 端点与命令是**给装机人的原文**, 收进折叠区(与 flywheel/lineage 页既有做法一致),
               正文只说业务语言 —— 既不把内部术语写在正文, 也不删掉可执行细节。 */}
-          <details style={{ marginTop: "var(--sp-1-5)" }}>
-            <summary style={{ cursor: "pointer", fontSize: "var(--fs-sm)" }}>{t('approvals.ticket.commandSummary')}</summary>
-            <pre style={{ fontSize: "var(--fs-sm)", padding: "var(--sp-2)", borderRadius: "var(--radius-sm)", background: "var(--bg)", overflowX: "auto", margin: "var(--sp-1-5) 0 0" }}>
+          <details className={styles.aprTicketDetails}>
+            <summary className={styles.aprTicketSummary}>{t('approvals.ticket.commandSummary')}</summary>
+            <pre className={styles.aprTicketPre}>
 {`curl -X POST <MIND>/api/v1/agent/claim-service-key \\
   -H 'Content-Type: application/json' \\
   -d '{"agent_id":"${ticket.agent_id}","ticket":"${ticket.value}"}'
 
 MCP_API_KEY=${ticket.value} ./install-agent.sh ${ticket.agent_id}`}
             </pre>
-            <div style={{ fontSize: "var(--fs-sm)", color: "var(--text-muted)", marginTop: "var(--sp-1)" }}>
+            <div className={styles.aprTicketHint}>
               {t('approvals.ticket.commandHint')}
             </div>
           </details>
@@ -168,7 +179,7 @@ MCP_API_KEY=${ticket.value} ./install-agent.sh ${ticket.agent_id}`}
 
       <ApprovalHistoryTable history={history} onRefresh={loadHistory} />
       {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className="tiny" style={{ display: "flex", gap: "var(--sp-4)", flexWrap: "wrap", marginTop: "var(--sp-4)" }}>
+      <div className={"tiny " + styles.aprLinks}>
         <span>相关视图：</span>
         <Link href="/agents">智能体总览 →</Link>
         <Link href="/system/permissions">业务授权矩阵 →</Link>

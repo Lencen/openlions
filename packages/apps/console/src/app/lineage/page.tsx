@@ -9,8 +9,9 @@ import { Alert } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 A
 import { useApi, useLazyApi } from "@/lib/api";
 import { t } from "@/i18n";
 import { useGlobalFilter } from "@/components/GlobalFilter";
-import { ErrorBlock } from "@/components/ui";
-import LineageHero from "./_components/LineageHero";
+import { ErrorBlock, Pill } from "@/components/ui";
+import { fmtNum } from "@/lib/format";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import LineageLane from "./_components/LineageLane";
 import LineageArtifactsTable from "./_components/LineageArtifactsTable";
 import LineageBacklogPanel from "./_components/LineageBacklogPanel";
@@ -19,6 +20,32 @@ import LineageConsumptionPanel from "./_components/LineageConsumptionPanel";
 import LineageCompositionPanels from "./_components/LineageCompositionPanels";
 import LineageDetailDrawer from "./_components/LineageDetailDrawer";
 import styles from "./page.module.css";
+
+// 2026-11-05 页头口径统一（PAGE-HEADER-31 §3）：原来用自写的 LineageHero（内含 PageHero）当页头，
+//   换成白名单 PageHeader；标题 / 一句说明 / 面包屑逐字取表（数据 / 血缘）。取数、表格、抽屉与交互均未动。
+function LineageHeader({ data, agent, theme }: { data?: any; agent?: string | null; theme?: string | null }) {
+  return (
+    <>
+      <div className="breadcrumb">
+        <span className={styles.crumbDim}>数据</span>
+        <span className="sep">/</span>
+        <span className="current">血缘</span>
+      </div>
+      <PageHeader>
+        <PageTitle>血缘</PageTitle>
+        <div className="page-subtitle">数据与产物的上下游关系</div>
+      </PageHeader>
+      {/* 2026-11-05：原 LineageHero 的 tags/meta（当前窗口 / 生效筛选 / 窗口内新增产物）不随 hero 一起丢，
+          收成页头下一行；解析对象与改前一致（data.range.label、f.agent、f.theme、data.products.total）。 */}
+      <div className={"tiny " + styles.headerMeta}>
+        <Pill tone="info">{data?.range?.label || "近 24 小时"}</Pill>
+        {agent ? <Pill tone="mute">{t('lineage.filterAgent', { id: agent })}</Pill> : null}
+        {theme ? <Pill tone="mute">主题: {theme}</Pill> : null}
+        <span>窗口内新增产物 {fmtNum(data?.products?.total)}</span>
+      </div>
+    </>
+  );
+}
 
 export default function LineagePage() {
   const f = useGlobalFilter();
@@ -30,7 +57,7 @@ export default function LineagePage() {
   if (error) {
     return (
       <main className="page">
-        <LineageHero data={undefined} minimal />
+        <LineageHeader data={undefined} />
         <ErrorBlock message={String(error?.message || "")} onRetry={mutate} />
       </main>
     );
@@ -46,7 +73,7 @@ export default function LineagePage() {
 
   return (
     <main className="page">
-      <LineageHero data={data} agent={f.agent} theme={f.theme} />
+      <LineageHeader data={data} agent={f.agent} theme={f.theme} />
 
       {data?.warnings?.length ? (
         <Alert type="warning" showIcon className={styles.warnAlert} title="部分数据源降级" description={data.warnings.join("；")} />

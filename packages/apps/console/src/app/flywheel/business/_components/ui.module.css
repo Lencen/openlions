@@ -1,0 +1,54 @@
+/* 2026-11-05 P2 批6（B/飞轮业务）：飞轮业务看板通用小组件（Pill / Panel / Note / SimpleTable / MetricLine）的内联样式下沉。
+   · Pill 的按状态配色（ok/warn/crit/nodata/info）改成 [data-status] 属性选择器，
+     色值与改前 STATUS_META 完全一致（ok/nodata/info 用 12% 底色，warn/crit 用 14% 底色）；
+   · 其余为静态布局类；文字层级继续复用 globals 的 .tiny / .panel-header / .panel-title。 */
+
+/* ---- Pill ---- */
+.pill {
+  border: 1px solid currentColor;
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+}
+.pill[data-status="ok"] {
+  color: var(--status-ok);
+  background: color-mix(in srgb, var(--status-ok) 12%, transparent);
+}
+.pill[data-status="warn"] {
+  color: var(--status-warn);
+  background: color-mix(in srgb, var(--status-warn) 14%, transparent);
+}
+.pill[data-status="crit"] {
+  color: var(--status-crit);
+  background: color-mix(in srgb, var(--status-crit) 14%, transparent);
+}
+.pill[data-status="nodata"] {
+  color: var(--text-muted);
+  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+}
+.pill[data-status="info"] {
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 12%, transparent);
+}
+
+/* ---- Panel ---- */
+/* .panel-header 已有 flex/space-between，这里只补改前多出来的 8px 间距 */
+.panelHead { gap: var(--sp-2); }
+.panelBody { padding: var(--sp-3); }
+
+/* ---- Note ---- */
+.note { line-height: 1.6; color: var(--text-muted); }
+.note[data-tone="warn"] { color: var(--status-warn); }
+.note[data-tone="crit"] { color: var(--status-crit); }
+
+/* ---- SimpleTable 空态 ---- */
+.emptyNote { padding: var(--sp-2) 0; }
+
+/* ---- MetricLine ---- */
+.metricLine {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+.metricValue { text-align: right; font-weight: 500; }

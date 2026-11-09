@@ -1,13 +1,21 @@
 "use client";
+// 2026-11-05 P2 批6（B/飞轮业务）：内联 style 清零（13 → 0）。
+//   维度 tab 的选中态 -> [data-on]；快照状态条（degraded/stale/ok）的左描边与状态词颜色 -> [data-tone]；
+//   其余静态布局/字号下沉到 BusinessShell.module.css，文字层级复用 globals 的 .tiny。
+//   取数、路由、URL 参数、文案与 props 形状均未动。
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { ApiResponse } from "./types";
 import { DIMENSIONS, cp, ci, ctime } from "./caliber";
 import DataMoment from "@/components/DataMoment";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./BusinessShell.module.css";
 
 const TABS = [
-  { id: "overview", href: "/flywheel/business", label: "总览" },
+  // 2026-11-05 商业线裁决 C：/flywheel/business 已 301 -> /market，所以"总览"这个 Tab 直接指向 /market
+  //   （否则 check-offline-301 第 4 条会把它算成"保留目录里还有指向旧路由的链接"）。
+  //   目录保留 60 天指的是**代码不删**，不是内容冻结；维度页仍走 d.href（那两条也已被 301 覆盖）。
+  { id: "overview", href: "/market", label: "总览" },
   ...DIMENSIONS.map((d) => ({ id: d.id, href: d.href, label: d.code + " " + d.title })),
 ];
 
@@ -28,19 +36,20 @@ export default function BusinessShell({
   const regime = b.regime || {};
   const win = (s && s.window) || {};
   const fileName = data.path ? data.path.split("/").pop() : "—";
-  const tone = data.degraded ? "var(--status-crit)" : data.stale ? "var(--status-warn)" : "var(--status-ok)";
+  // 2026-11-05 P2 批6：状态词与描边色不再算成 CSS 变量字符串，改由 data-tone 交给 CSS 选择器
+  const tone = data.degraded ? "crit" : data.stale ? "warn" : "ok";
   const toneLabel = data.degraded ? "业务扩展缺失" : data.stale ? "快照偏旧" : "快照正常";
 
   return (
     <div className="layout-with-sidebar">
       <main className="main" data-testid="flywheel-business">
         <PageHeader>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: "var(--sp-3)", flexWrap: "wrap" }}>
+          <div className={styles.headRow}>
             <div>
               <PageTitle>飞轮业务看板 · {title}</PageTitle>
               <div className="page-subtitle">{subtitle}</div>
             </div>
-            <div className="tiny" style={{ textAlign: "right", color: "var(--text-muted)", lineHeight: 1.7 }}>
+            <div className={"tiny " + styles.meta}>
               <div>数据截至 {ctime(data.asOf)}（Asia/Shanghai）</div>
               <div>窗口 {win.label || "—"} · {win.timezone || "UTC"}</div>
               <div>阶段 {regime.current || "—"} · {regime.label || "未标注"} · 跨阶段可比：{regime.comparable === false ? "否" : "是"}</div>
@@ -50,29 +59,23 @@ export default function BusinessShell({
           </div>
         </PageHeader>
 
-        <nav aria-label="业务维度" style={{ display: "flex", gap: 4, flexWrap: "wrap", borderBottom: "1px solid var(--border)", paddingBottom: 8, marginBottom: 4 }}>
+        <nav aria-label="业务维度" className={styles.tabs}>
           {TABS.map((t) => {
             const on = active === t.id;
             return (
-              <Link key={t.id} href={t.href} data-tab={t.id}
-                style={{
-                  padding: "6px 10px", borderRadius: "var(--radius-sm)", whiteSpace: "nowrap",
-                  color: on ? "var(--primary)" : "var(--text-dim)",
-                  background: on ? "var(--primary-dim)" : "transparent",
-                  fontWeight: on ? 600 : 400,
-                }}>
+              <Link key={t.id} href={t.href} data-tab={t.id} data-on={on} className={styles.tab}>
                 {t.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="panel" style={{ padding: "var(--sp-2) var(--sp-3)", borderLeft: "3px solid " + tone, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "var(--sp-3)", flexWrap: "wrap" }}>
-          <div className="tiny" style={{ lineHeight: 1.6 }}>
-            <strong style={{ color: tone }}>{toneLabel}</strong>
-            {data.ageMinutes != null ? <span style={{ color: "var(--text-muted)" }}> · 生成于 {data.ageMinutes} 分钟前</span> : null}
-            {data.notice ? <span style={{ color: "var(--text-dim)" }}> · {data.notice}</span> : null}
-            {!data.notice ? <span style={{ color: "var(--text-muted)" }}> · 文件 {fileName} · 来源 {data.source === "business" ? "业务扩展快照" : "权威快照"}</span> : null}
+        <div className={"panel " + styles.banner} data-tone={tone}>
+          <div className={"tiny " + styles.bannerText}>
+            <strong className={styles.tone}>{toneLabel}</strong>
+            {data.ageMinutes != null ? <span className={styles.mutedText}> · 生成于 {data.ageMinutes} 分钟前</span> : null}
+            {data.notice ? <span className={styles.dimText}> · {data.notice}</span> : null}
+            {!data.notice ? <span className={styles.mutedText}> · 文件 {fileName} · 来源 {data.source === "business" ? "业务扩展快照" : "权威快照"}</span> : null}
           </div>
           <button className="ui-btn ui-btn-small ui-btn-default" onClick={onRefresh} disabled={refreshing} type="button">
             {refreshing ? "生成中…" : "重新生成快照"}
@@ -81,9 +84,9 @@ export default function BusinessShell({
 
         {children}
 
-        <section className="panel" style={{ padding: "var(--sp-3)" }}>
+        <section className={"panel " + styles.about}>
           <div className="panel-title">口径、血缘与无数据规则</div>
-          <div className="tiny" style={{ color: "var(--text-muted)", lineHeight: 1.75, marginTop: 6 }}>
+          <div className={"tiny " + styles.aboutText}>
             <div>唯一数据入口：<code>run/flywheel-business-snapshot-latest.json</code>（权威契约 v1 + 业务扩展）；页面不直接读业务表。</div>
             <div>权威快照由 <code>node scripts/flywheel-report.cjs --hours=24 --write</code> 产出；业务扩展由 <code>node scripts/flywheel-business-report.cjs --hours=24 --write</code> 产出。</div>
             <div>无数据 ≠ 达标：所有不可测项用灰色“无数据”标注，并在 D3 的“无数据 / 不完整项”给出原因与复算命令，不画成 0。</div>
@@ -91,7 +94,7 @@ export default function BusinessShell({
             <div>词元：网关通道级为总量；平台内部单列；逐智能体归因只做参考；三者不相加；单价未配，不出精确金额。</div>
             <div>阶段：R1 ≤ 2026-10-08 / R2 2026-10-09–10-21 / R3 ≥ 2026-10-22；跨阶段不直接比较。</div>
             {b.canonicalWarnings && b.canonicalWarnings.length ? <div>权威口径警示：{b.canonicalWarnings.map((w: any) => w.field).join(" / ")}（详见 D3）。</div> : null}
-            {data.degraded ? <div style={{ color: "var(--status-crit)" }}>当前业务扩展缺失：先运行生成命令，再刷新本页。</div> : null}
+            {data.degraded ? <div className={styles.critLine}>当前业务扩展缺失：先运行生成命令，再刷新本页。</div> : null}
           </div>
         </section>
       </main>

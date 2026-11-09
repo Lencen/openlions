@@ -1,0 +1,36 @@
+/* DailyServices · P2 呈现层（批8，2026-11-05）
+   服务状态一行（色点 / 名称 / 端口 / 状态文字）与「健康检查详情」链接从内联 style 下沉到这里。
+   上/下线配色走 data-status 属性选择器；颜色/字号/间距全部复用 globals.css 令牌。 */
+
+/* 页头右侧的「健康检查详情 →」贴右（原内联 marginLeft: auto） */
+.linkEnd { margin-left: auto; }
+
+/* 服务列表容器（原内联 display/gap/flexWrap/padding） */
+.svcList {
+  display: flex;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+  padding: var(--sp-2) 0;
+}
+
+/* 单个服务（原内联 display/alignItems/gap） */
+.svcItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1-5);
+}
+
+/* 状态色点：只补颜色（原内联 background），不改变 .dot 既有的尺寸/形状 */
+.svcDot[data-status="online"] { background: var(--status-ok); }
+.svcDot[data-status="offline"] { background: var(--status-crit); }
+
+/* 服务名（原内联 fontSize: var(--fs-md)） */
+.svcName { font-size: var(--fs-md); }
+
+/* 端口（原内联 fontSize + color） */
+.svcPort { font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* 状态文字：上/下线配色（原内联 fontSize + 条件 color） */
+.svcStatus { font-size: var(--fs-sm); }
+.svcStatus[data-status="online"] { color: var(--status-ok); }
+.svcStatus[data-status="offline"] { color: var(--status-crit); }

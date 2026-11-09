@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Alert, Button, Input } from "@/components/primitives";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import styles from "./page.module.css";
 
 const TEXT_FIELDS: { key: string; label: string; ph: string; rows: number }[] = [
   { key: "description", label: "任务描述", ph: "完整描述任务目标与预期成果", rows: 4 },
@@ -16,6 +17,7 @@ const TEXT_FIELDS: { key: string; label: string; ph: string; rows: number }[] = 
   { key: "qualityStandards", label: "质量标准", ph: "质量底线", rows: 3 },
 ];
 
+// 2026-11-05 P2 批9：10 处内联 style 清零 -> page.module.css（本页无裸表、无动态值，未引 DataTable）。
 export default function NewTaskPage() {
   const router = useRouter();
   const [form, setForm] = useState<Record<string, string>>({
@@ -44,16 +46,16 @@ export default function NewTaskPage() {
     } finally { setBusy(false); }
   }
 
-  const label = (t: string) => <span style={{ display: "block", fontSize: "var(--fs-base)", color: "var(--text-dim)", marginBottom: "var(--sp-1-5)" }}>{t}</span>;
+  const label = (t: string) => <span className={styles.fieldLabel}>{t}</span>;
   return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>飞轮引擎</span><span className="sep">/</span><Link href="/flywheel/tasks" style={{ color: "inherit" }}>改进任务看板</Link><span className="sep">/</span><span className="current">新建</span></div>
+    <div className="breadcrumb"><span className={styles.crumbDim}>飞轮引擎</span><span className="sep">/</span><Link href="/flywheel/tasks" className={styles.crumbLink}>改进任务看板</Link><span className="sep">/</span><span className="current">新建</span></div>
     <PageHeader><PageTitle>新建改进任务</PageTitle><div className="page-subtitle">手工登记一个改进任务；提交后会写飞轮事件、审计，并同步通知 Mind。</div></PageHeader>
-    {err && <div style={{ marginBottom: "var(--sp-3)" }}><Alert type="error" message="创建失败" description={err.slice(0, 200)} /></div>}
-    <form onSubmit={submit} className="panel" style={{ padding: "var(--sp-4)", maxWidth: 900 }}>
-      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "var(--sp-3)", marginBottom: "var(--sp-3-5)" }}>
+    {err && <div className={styles.errBar}><Alert type="error" message="创建失败" description={err.slice(0, 200)} /></div>}
+    <form onSubmit={submit} className={"panel " + styles.form}>
+      <div className={styles.grid3}>
         <div>{label("标题（必填）")}<Input value={form.title} onChange={set("title")} placeholder="简短的任务标题" /></div>
         <div>{label("优先级")}
-          <select className="ui-input" value={form.priority} onChange={set("priority")} style={{ width: "100%", height: 30 }}>
+          <select className={"ui-input " + styles.prioritySelect} value={form.priority} onChange={set("priority")}>
             <option value="P1">P1 — 紧急重要</option>
             <option value="P2">P2 — 计划执行</option>
             <option value="P3">P3 — 有空再做</option>
@@ -61,12 +63,12 @@ export default function NewTaskPage() {
         <div>{label("预估工时")}<Input value={form.estimatedEffort} onChange={set("estimatedEffort")} placeholder="如 30分钟 / 2小时" /></div>
       </div>
       {TEXT_FIELDS.map((f) => (
-        <div key={f.key} style={{ marginBottom: "var(--sp-3-5)" }}>
+        <div key={f.key} className={styles.fieldBlock}>
           {label(f.label + "（必填）")}
-          <textarea className="ui-input ui-textarea" rows={f.rows} value={form[f.key]} onChange={set(f.key)} placeholder={f.ph} style={{ width: "100%" }} />
+          <textarea className={"ui-input ui-textarea " + styles.fill} rows={f.rows} value={form[f.key]} onChange={set(f.key)} placeholder={f.ph} />
         </div>
       ))}
-      <div style={{ display: "flex", gap: "var(--sp-2)" }}>
+      <div className={styles.actions}>
         <Button type="primary" htmlType="submit" disabled={busy}>{busy ? "创建中…" : "创建任务"}</Button>
         <Link href="/flywheel/tasks"><Button type="default" disabled={busy}>取消</Button></Link>
       </div>

@@ -37,14 +37,22 @@ export default function LlmUsagePage() {
   //   pollMs: 0 = 只按需拉取(path 变化时重取: range/nonce)。
   const { data, error, loading, mutate } = useApi<Resp>('/api/llm-usage?range=' + f.range + '&_n=' + f.nonce, { pollMs: 0 });
   const err = error ? String((error as Error)?.message || error) : null;
-  if (err) return <main className='page'><ErrorAlert title="用量数据加载失败" message={err} onRetry={() => { mutate(); }} /></main>;
-  if (loading || !data) return <main className='page'><LoadingBlock lines={4} label='语言模型用量加载中' /></main>;
+  // 2026-11-06 D-03：页头不再写在「数据到了」之后的 return 里 —— 先定页头，再由 错误 / 加载 / 数据 决定正文。
+  //   修前两个早返回只有错误块 / 骨架，首屏（含 SSR HTML）拿不到 page-header。
+  //   标题、说明文案、取数（useApi）、错误块与加载骨架均未改。
+  const header = (
+    <PageHeader>
+      <PageTitle>语言模型用量</PageTitle>
+      <div className='page-subtitle'>实时观测量化引擎消耗与飞轮活跃度；第一张卡随顶栏"时间范围"变化，后两张固定 24 小时 / 7 天</div>
+    </PageHeader>
+  );
+  if (err) return <main className='page'>{header}<ErrorAlert title="用量数据加载失败" message={err} onRetry={() => { mutate(); }} /></main>;
+  if (loading || !data) return <main className='page'>{header}<LoadingBlock lines={4} label='语言模型用量加载中' /></main>;
   const lastByHour = data.last24.byHour;
   const maxC = lastByHour.reduce((m, r) => Math.max(m, r.calls), 1);
   return (
     <main className='page'>
-      <PageHeader><PageTitle>语言模型用量</PageTitle>
-        <div className='page-subtitle'>实时观测量化引擎消耗与飞轮活跃度；第一张卡随顶栏"时间范围"变化，后两张固定 24 小时 / 7 天</div></PageHeader>
+      {header}
       <div className={styles.statGrid}>
         {data.window && <div className='panel'><div className='panel-header'><span className='panel-title'>所选范围（{data.rangeLabel || data.range}）</span></div>
           <div className={styles.bigValue} data-tone="primary">{data.window.totalCalls}</div>

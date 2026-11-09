@@ -1,0 +1,10 @@
+/* 2026-11-06 uiux：容器改用全局 .page（含 margin-left: var(--sidebar-w)）。
+   原来只用 .wrap（仅 padding），内容会滑到左侧栏下面——1440 截图里左表首列被遮。 */
+.wrap { padding: 0; }
+.meta { color: var(--muted, #667085); font-size: 13px; margin: 8px 0 18px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+.grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; }
+.card { border: 1px solid var(--border, #e4e7ec); border-radius: 10px; padding: 12px 14px; background: var(--panel, #fff); }
+.h2 { font-size: 14px; margin: 0 0 10px; }
+.note { color: var(--muted, #667085); font-size: 12px; margin-top: 16px; line-height: 1.6; }
+@media (max-width: 1200px) { .grid { grid-template-columns: 1fr; } .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); } }

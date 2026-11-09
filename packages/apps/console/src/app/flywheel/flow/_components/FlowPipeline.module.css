@@ -1,0 +1,59 @@
+/* 2026-11-05 P2 批6（B/飞轮业务）：FlowPipeline（飞轮 7 步流水线）内联样式下沉。
+   改前每一步的「阶段色」来自接口的 color（var(--info) / var(--table-knowledge) /
+   var(--table-practice) / var(--status-ok) 四个令牌）：它同时用于标题色、动点底色、
+   在动时的边框色与「在动」底色。现改为 [data-tone] 属性选择器承载，色值逐条等价；
+   本文件不改取数，也不改接口返回的 color 字段。 */
+
+.wrap { margin-bottom: var(--sp-4); }
+.headerNote { font-size: var(--fs-sm); color: var(--text-dim); }
+
+.steps { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.step { flex: 1; min-width: 150px; position: relative; }
+
+.stepBox {
+  border: 1px solid var(--border, #2a3a4a);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2-5);
+  background: transparent;
+}
+/* 在动：底色与改前一致（固定绿 6%），边框色跟随阶段色 */
+.stepBox[data-live="true"] { background: rgba(56, 161, 105, 0.06); }
+
+.headRow { display: flex; justify-content: space-between; align-items: center; }
+.stepLabel { font-size: var(--fs-md); font-weight: 700; color: var(--text); }
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: var(--radius-xs);
+  background: var(--text-dim);
+  display: inline-block;
+}
+
+.desc {
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  margin: var(--sp-1) 0;
+  line-height: 1.45;
+}
+.qty { font-size: var(--fs-2xl); font-weight: 800; }
+.unit { font-size: var(--fs-sm); color: var(--text-dim); font-weight: 400; }
+.sub { font-size: var(--fs-sm); color: var(--text-dim); }
+.arrow { position: absolute; right: -9px; top: 42%; color: var(--text-dim); }
+
+/* 阶段色（四个已知令牌，与接口 color 字段的取值一一对应） */
+.step[data-tone="info"] .stepLabel { color: var(--info); }
+.step[data-tone="info"] .dot { background: var(--info); }
+.step[data-tone="info"] .stepBox[data-live="true"] { border-color: var(--info); }
+
+.step[data-tone="knowledge"] .stepLabel { color: var(--table-knowledge); }
+.step[data-tone="knowledge"] .dot { background: var(--table-knowledge); }
+.step[data-tone="knowledge"] .stepBox[data-live="true"] { border-color: var(--table-knowledge); }
+
+.step[data-tone="practice"] .stepLabel { color: var(--table-practice); }
+.step[data-tone="practice"] .dot { background: var(--table-practice); }
+.step[data-tone="practice"] .stepBox[data-live="true"] { border-color: var(--table-practice); }
+
+.step[data-tone="ok"] .stepLabel { color: var(--status-ok); }
+.step[data-tone="ok"] .dot { background: var(--status-ok); }
+.step[data-tone="ok"] .stepBox[data-live="true"] { border-color: var(--status-ok); }

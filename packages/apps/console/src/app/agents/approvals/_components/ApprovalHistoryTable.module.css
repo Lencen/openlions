@@ -1,0 +1,24 @@
+/* 2026-11-05 P2 批9：ApprovalHistoryTable（审批记录 / 操作日志）内联样式下沉，
+   手写 tbl 表改为白名单 @/components/DataTable。
+   操作名的着色原本取 shared.ts 里的 CSS 变量字符串，现按档位映射到 data-tone 属性选择器；
+   时间 / 执行方 / 详情列的原内联字号与弱化色改为类。文案、字段名、导出 props 形状未动。 */
+
+/* 面板顶部留白（改前内联 marginTop sp-4） */
+.panelTop { margin-top: var(--sp-4); }
+
+/* 空态（改前内联 padding sp-7 + 居中 + text-muted） */
+.empty { padding: var(--sp-7); text-align: center; color: var(--text-muted); }
+.emptyHint { margin-top: var(--sp-2); font-size: var(--fs-base); }
+
+/* 操作名：改前内联 fontWeight 600 + info.color */
+.actionLabel { font-weight: 600; }
+.actionLabel[data-tone="ok"] { color: var(--status-ok); }
+.actionLabel[data-tone="crit"] { color: var(--status-crit); }
+.actionLabel[data-tone="warn"] { color: var(--status-warn, #b45309); }
+.actionLabel[data-tone="dim"] { color: var(--text-dim); }
+
+/* 操作 / 执行方下方的副行（改前内联 fontSize fs-sm，原来还挂着没有定义的 uid 类） */
+.sub { font-size: var(--fs-sm); }
+
+/* 详情列（改前内联 fs-base + text-dim） */
+.detail { font-size: var(--fs-base); color: var(--text-dim); }

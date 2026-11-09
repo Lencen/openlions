@@ -11,9 +11,9 @@
 /* 当日无日结数据（原来是内联 padding + color） */
 .emptyPanel { padding: var(--sp-6); color: var(--text-muted); }
 
-/* —— DailyHeader：面包屑 / 页头 / 日期选择器 —— */
+/* —— 页头（面包屑在 page.tsx）/ DailyHeader：只剩日期选择器 —— */
 
-/* 面包屑里「审计」那一级（原来是内联 color） */
+/* 面包屑里「服务」那一级（分组层；原来是内联 color） */
 .bcDim { color: var(--text-dim); }
 
 /* 页头右侧日期控件与标题同一行两端对齐（原来是内联 flex 布局） */

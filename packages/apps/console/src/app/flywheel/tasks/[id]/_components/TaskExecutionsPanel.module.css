@@ -1,0 +1,7 @@
+/* TaskExecutionsPanel · P2 批12 呈现层（2026-11-05）
+   唯一内联 style（执行记录折叠头的一行布局）下沉到本文件。
+   列/字段、跳转、文案未动；不新增全局类、不改 globals.css。 */
+
+/* 折叠头：智能体徽标 · 状态标签 · 质量标签 · 产出字数 · 重试 · 时间挤一行、放不下自动换行
+   （原内联 display/gap/alignItems/flexWrap/fontSize） */
+.execLabel { display: inline-flex; gap: var(--sp-2); align-items: center; flex-wrap: wrap; font-size: var(--fs-base); }

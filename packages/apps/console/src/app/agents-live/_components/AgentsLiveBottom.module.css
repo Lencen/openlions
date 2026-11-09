@@ -1,0 +1,25 @@
+/* /agents-live · 底部「最近执行流水 / 判定规则 / 数据来源」呈现层（2026-11-05 P2 批9）
+   内联 style 清零。本文件没有选中态/状态色/进度宽度这类动态值，故不含 data-* 选择器。
+   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+
+/* 单元格正文档字号（原内联 fontSize: var(--fs-base)：agentId / 任务标题 / 自报用量） */
+.cellBase { font-size: var(--fs-base); }
+
+/* 自报用量的数值（原内联 fontSize，配合 globals 的 .mono）。
+   选择器写两遍是同名类叠加：globals 里有 .mono.mono 的 18px 档，单类压不住它。 */
+.monoBase { font-size: var(--fs-base); }
+
+/* 「本任务 / 窗口累计」后缀（原内联 marginLeft: var(--sp-1)） */
+.tagGap { margin-left: var(--sp-1); }
+
+/* 判定规则正文（原内联 fontSize / lineHeight / color） */
+.rules { font-size: var(--fs-base); line-height: 1.9; color: var(--text-dim); }
+
+/* 规则行的紧上间距（原内联 marginTop: var(--sp-1)） */
+.tightTop { margin-top: var(--sp-1); }
+
+/* 末两行的松上间距（原内联 marginTop: var(--sp-1-5)） */
+.tightTopLoose { margin-top: var(--sp-1-5); }
+
+/* 右下角数据来源（原内联 textAlign: right） */
+.footRight { text-align: right; }

@@ -2,6 +2,8 @@
    本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
    能复用 .msg-live / .msg-live-meta / .tiny 的一律复用。 */
 
+.crumbDim { color: var(--text-dim); }
+
 /* —— LiveBar —— */
 /* 实时状态点：颜色随通道状态（原来是内联 background: tone），改走 data-tone + 属性选择器。
    点的尺寸/圆角仍由 .msg-live-dot（globals.css）给，这里只上色。 */

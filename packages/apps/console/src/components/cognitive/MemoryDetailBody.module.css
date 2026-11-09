@@ -1,0 +1,18 @@
+/* components/cognitive/MemoryDetailBody · 2026-11-05 P2 批8 呈现层：内联 style 清零
+   声明值逐项照搬（字号 / 颜色 / 留白）；「同主题记忆」的表格已换成白名单 DataTable
+   （样式复用 globals 的 .dt），原来挂在 <a>/<td> 上的链接色与最小字号改由单元格类承担。 */
+
+/* 面板内边距（原来是内联 padding: var(--sp-5)） */
+.padLg { padding: var(--sp-5); }
+
+/* 「未找到这条记忆」提示（原来是内联 padding + color） */
+.padLgDim { padding: var(--sp-5); color: var(--text-muted); }
+
+/* 同主题记忆里的标题链接（原来是内联 color + textDecoration: none） */
+.rowLink { color: var(--primary); text-decoration: none; }
+
+/* 更新时间列的小字号（原来是内联 fontSize: var(--fs-sm)，等宽由 .mono 承担） */
+.monoSm { font-size: var(--fs-sm); }
+
+/* 「无同主题记录」提示（原来是内联 color + fontSize） */
+.emptyNote { color: var(--text-dim); font-size: var(--fs-base); }

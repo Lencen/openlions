@@ -7,6 +7,7 @@
 // - 快速筛选 (2026-09-14 UI-7): 高质量 / 近 7 天 / 被引用过 / 待复核, 由页面按表能力传入
 import { t } from "@/i18n";
 import type { QuickFilterOption } from "@/config/cognitiveQuickFilters";
+import styles from "./ListControls.module.css";
 
 interface Props {
   search?: string;
@@ -28,22 +29,24 @@ interface Props {
   loading?: boolean;
 }
 
+// 2026-11-05 P2 批9：10 处内联 style + 1 处三元样式对象清零 -> ListControls.module.css；
+//   快速筛选选中态改由 data-active 属性选择器承载。
 export default function ListControls(p: Props) {
   const totalPages = Math.max(1, Math.ceil((p.total || 0) / p.pageSize));
   const quickFilters = p.quickFilters ?? [];
   return (
-    <div style={{ borderBottom: "1px solid var(--border)" }}>
-      <div style={{ display: "flex", gap: "var(--sp-2-5)", alignItems: "center", flexWrap: "wrap", padding: "var(--sp-3) var(--sp-4)" }}>
+    <div className={styles.wrap}>
+      <div className={styles.toolbar}>
         <input
           value={p.search ?? ""}
           onChange={(e) => p.onSearch(e.target.value)}
           placeholder="搜索..."
-          style={{ flex: 1, minWidth: 160, padding: "var(--sp-1-5) var(--sp-2-5)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--bg-surface)", color: "var(--text)", fontSize: "var(--fs-base)" }}
+          className={styles.search}
         />
         <select
           value={p.sortBy}
           onChange={(e) => p.onSortBy(e.target.value)}
-          style={{ padding: "var(--sp-1-5) var(--sp-2)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--bg-surface)", color: "var(--text)", fontSize: "var(--fs-base)" }}
+          className={styles.sortSelect}
           aria-label="排序字段"
         >
           <option value="updatedAt">{p.hasUpdatedAt === false ? "更新时间(不可用)" : "更新时间"}</option>
@@ -52,21 +55,21 @@ export default function ListControls(p: Props) {
         <select
           value={p.sortOrder}
           onChange={(e) => p.onSortOrder(e.target.value as "asc" | "desc")}
-          style={{ padding: "var(--sp-1-5) var(--sp-2)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", background: "var(--bg-surface)", color: "var(--text)", fontSize: "var(--fs-base)" }}
+          className={styles.sortSelect}
           aria-label="排序方向"
         >
           <option value="desc">↓ 倒序</option>
           <option value="asc">↑ 正序</option>
         </select>
-        <div style={{ display: "flex", gap: "var(--sp-1-5)", alignItems: "center" }}>
+        <div className={styles.pager}>
           <button className="ui-btn" disabled={p.page <= 1} onClick={() => p.onPage(p.page - 1)}>‹ 上一页</button>
-          <span style={{ fontSize: "var(--fs-base)", color: "var(--text-dim)", whiteSpace: "nowrap" }}>{p.loading ? "… / … · 共 … 条" : `${p.page} / ${totalPages} · 共 ${p.total?.toLocaleString?.() ?? p.total} 条`}</span>
+          <span className={styles.pageInfo}>{p.loading ? "… / … · 共 … 条" : `${p.page} / ${totalPages} · 共 ${p.total?.toLocaleString?.() ?? p.total} 条`}</span>
           <button className="ui-btn" disabled={p.page >= totalPages} onClick={() => p.onPage(p.page + 1)}>下一页 ›</button>
         </div>
       </div>
       {quickFilters.length > 0 && (
-        <div data-testid="quick-filters" style={{ display: "flex", gap: "var(--sp-2)", alignItems: "center", flexWrap: "wrap", padding: "0 var(--sp-4) var(--sp-3)" }}>
-          <span style={{ fontSize: "var(--fs-sm)", color: "var(--text-dim)" }}>{t("quick.group")}</span>
+        <div data-testid="quick-filters" className={styles.quickRow}>
+          <span className={styles.quickLabel}>{t("quick.group")}</span>
           {quickFilters.map((f) => {
             const active = p.quick === f.key;
             return (
@@ -74,18 +77,18 @@ export default function ListControls(p: Props) {
                 key={f.key}
                 type="button"
                 data-quick={f.key}
+                data-active={active}
                 aria-pressed={active}
                 title={f.tip}
                 onClick={() => p.onQuick?.(active ? null : f.key)}
-                className="ui-btn"
-                style={active ? { borderColor: "var(--primary)", color: "var(--primary)", background: "var(--primary-dim)", fontWeight: 600 } : undefined}
+                className={"ui-btn " + styles.quickBtn}
               >
                 {active ? "✓ " : ""}{f.label}
               </button>
             );
           })}
           {p.quick && (
-            <button type="button" data-quick-clear onClick={() => p.onQuick?.(null)} style={{ background: "none", border: 0, padding: 0, cursor: "pointer", color: "var(--text-dim)", fontSize: "var(--fs-sm)", textDecoration: "underline" }}>
+            <button type="button" data-quick-clear onClick={() => p.onQuick?.(null)} className={styles.quickClear}>
               {t("quick.clear")}
             </button>
           )}

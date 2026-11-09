@@ -32,6 +32,9 @@
 .queueBlock { margin-top: var(--sp-4); }
 .colTitleGap { margin-bottom: var(--sp-2); }
 
+/* 面包屑上级段（沿用 .breadcrumb 结构，只补弱化色） */
+.crumbDim { color: var(--text-dim); }
+
 /* 底部脚注（原来是内联 borderTop + marginTop；告警态多一个颜色） */
 .footNote { border-top: 1px dashed var(--border); margin-top: var(--sp-3); }
 .footWarn { color: var(--status-warn); }

@@ -2,7 +2,7 @@
 // 概览首页 · 核心 6 指标 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
 import { Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { t } from "@/i18n";
-import { MetricCard } from "@/components/ui";
+import { KpiCard } from "@/components/ui";
 import { fmtCompact, fmtNum, fmtScore, fmtTokens } from "@/lib/format";
 import { TABLE_LABEL } from "./constants";
 import styles from "../page.module.css";
@@ -24,7 +24,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
 
   return (
     <div className="metric-row">
-      <MetricCard
+      <KpiCard
         label="今日会话流入"
         tone="info"
         value={loadingCards ? "…" : fmtNum(s?.newSessions)}
@@ -38,7 +38,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           </>
         }
       />
-      <MetricCard
+      <KpiCard
         label="提炼产物量"
         tone="ok"
         value={loadingCards ? "…" : fmtNum(prod?.total)}
@@ -55,7 +55,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           </>
         }
       />
-      <MetricCard
+      <KpiCard
         label="改进任务完成 / 失败"
         tone={tasks?.failed > 0 ? "warn" : "info"}
         value={loadingCards ? "…" : fmtNum(tasks?.done)}
@@ -78,7 +78,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           </>
         }
       />
-      <MetricCard
+      <KpiCard
         label={t('overview.activeAgent')}
         tone="info"
         value={loadingCards ? "…" : fmtNum(agents?.withTasks)}
@@ -87,7 +87,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
         trend={agents?.trend}
         footer={<span className="tiny">{t('overview.activeAgent.hint')}</span>}
       />
-      <MetricCard
+      <KpiCard
         label={t('overview.token.label')}
         tone="warn"
         value={loadingCards ? "…" : fmtCompact(tokens?.total)}
@@ -110,7 +110,7 @@ export default function OverviewMetrics({ data, loadingCards }: { data: any; loa
           </>
         }
       />
-      <MetricCard
+      <KpiCard
         label="产物质量分"
         tone={(quality?.overall ?? 0) >= 0.6 ? "ok" : "warn"}
         value={loadingCards ? "…" : fmtScore(quality?.overall)}

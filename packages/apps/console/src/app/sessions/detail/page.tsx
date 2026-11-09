@@ -13,6 +13,7 @@ import { statusLabel } from "@/config/systemLabels";
 import { headers } from "next/headers";
 import InspectorPanel, { type InspectorMessage } from "../_components/InspectorPanel";
 import TableCopyButton from "@/components/TableCopyButton";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import { DetailFields } from "@/components/detail";
 import { fmtStamp as fmtTs } from "@/lib/format";
 import styles from "./page.module.css";
@@ -85,13 +86,19 @@ export default async function SessionDetailPage({
   return (
     <div className="layout-with-sidebar">
       <main className="main">
+        {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #20）：面包屑 / 标题 / 一句说明新写。
+            标题与说明逐字取自口径表；取数（/api/session-detail/<uid>）与路由语义一字未改。 */}
         <div className="breadcrumb">
-          <Link href="/">概览</Link>
+          <span className={styles.crumbDim}>服务</span>
           <span className="sep">/</span>
-          <Link href="/sessions">会话中心</Link>
+          <Link href="/sessions">会话</Link>
           <span className="sep">/</span>
-          <span className="current">会话详情</span>
+          <span className="current">详情</span>
         </div>
+        <PageHeader>
+          <PageTitle>会话详情</PageTitle>
+          <div className="page-subtitle">单会话的消息、事件与产出</div>
+        </PageHeader>
 
         {!id ? (
           <div className={"panel " + styles.panelPad6}>

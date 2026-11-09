@@ -1,0 +1,37 @@
+/* FlowQualityAuditPanel · P2 批8 呈现层（2026-11-05）
+   产出质量不变量自检面板：底部外边距 + 左侧状态色条（未加载/违约/通过三态）、
+   右侧元信息、正文行高、观测行弱化色、scorecard 上分割线、趋势涨跌色。
+   三态色原为内联三元 borderLeft，现改 data-tone 属性选择器；不新增全局类、不改 globals.css。 */
+
+/* 面板：原内联 marginBottom + borderLeft。默认态 = 加载中（中性灰） */
+.auditPanel {
+  margin-bottom: var(--sp-4);
+  border-left: 4px solid var(--border);
+}
+/* 违约：红条（原 d.qualityAudit.violations > 0 分支） */
+.auditPanel[data-tone="crit"] { border-left-color: var(--status-crit); }
+/* 通过：绿条（原「有审计且 0 违约」分支） */
+.auditPanel[data-tone="ok"] { border-left-color: var(--status-ok); }
+
+/* 面板头右侧的「最近 N 前 · 通过/违约」元信息（原内联 fontSize/color） */
+.metaText { font-size: var(--fs-sm); color: var(--text-dim); }
+
+/* 有审计数据时的正文（原内联 fontSize/lineHeight） */
+.auditBody { font-size: var(--fs-base); line-height: 1.7; }
+
+/* 观测计数行：弱化色 + 上间距（原内联 color/marginTop） */
+.obsLine { color: var(--text-dim); margin-top: var(--sp-1); }
+
+/* scorecard 区块：上间距 + 虚线分割（原内联 marginTop/paddingTop/borderTop） */
+.scorecard {
+  margin-top: var(--sp-1-5);
+  padding-top: var(--sp-1-5);
+  border-top: 1px dashed var(--border, #2a3a4a);
+}
+
+/* 覆盖率 24h 环比：涨绿跌红（原内联三元 color） */
+.trend[data-dir="up"] { color: var(--status-ok); }
+.trend[data-dir="down"] { color: var(--status-crit); }
+
+/* 无审计数据时的占位行（原内联 fontSize/color） */
+.placeholder { font-size: var(--fs-base); color: var(--text-muted); }

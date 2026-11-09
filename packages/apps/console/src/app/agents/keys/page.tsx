@@ -6,10 +6,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Modal } from "@/components/primitives";
 import { Pill, StateBlock } from "@/components/ui";
-import { StateChip } from "@/components/DataTable";
+import DataTable, { StateChip } from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
 import { humanError } from "@/lib/humanError";
 import { fmtNum, fmtStamp, relTime } from "@/lib/format";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+// 2026-11-05 P2 批8：内联 style 清零 + 手写 .tbl 表换白名单 DataTable（列只留纯数据，单元格预先算好）；
+//   取数（/api/agent-keys/*）、字段、文案、审批流程与二次确认弹窗语义未动。
+import styles from "./page.module.css";
 
 interface KeyPerm { id: string; label: string; risk?: string; why?: string; dailyRequired?: boolean }
 interface KeyReq {
@@ -27,6 +31,28 @@ interface StatusResp {
 
 const RISK_TONE: Record<string, "ok" | "warn" | "crit" | "mute"> = { low: "mute", medium: "warn", high: "crit" };
 const RISK_LABEL: Record<string, string> = { low: "低风险", medium: "中风险", high: "高风险" };
+
+// 2026-11-05 P2 批8：待审批表改为「纯数据列 + 单元格 ReactNode」—— 列定义与行数据都在本文件预算好，
+//   不给 DataTable 传 render/rowKey/onRow 等函数 props（客户端页虽允许，但保持零函数 props 更稳）。
+//   单元格的 class（mono/nowrap/key-scope/key-perms/key-impact）与改前一一对应。
+type KeyRow = {
+  agentId: React.ReactNode;
+  requestedAt: React.ReactNode;
+  scope: React.ReactNode;
+  permissions: React.ReactNode;
+  impact: React.ReactNode;
+  expiresInDays: React.ReactNode;
+  actions: React.ReactNode;
+};
+const KEY_COLUMNS: DataColumn<KeyRow>[] = [
+  { key: "agentId", title: "申请方" },
+  { key: "requestedAt", title: "申请时间" },
+  { key: "scope", title: "身份" },
+  { key: "permissions", title: "要的权限" },
+  { key: "impact", title: "影响面" },
+  { key: "expiresInDays", title: "有效期", align: "right" },
+  { key: "actions", title: "操作", width: 150 },
+];
 
 export default function AgentKeysPage() {
   const [data, setData] = useState<PendingResp | null>(null);
@@ -102,15 +128,52 @@ export default function AgentKeysPage() {
 
   const items = data?.items || [];
 
+  // 2026-11-05 P2 批8：待审批行的单元格在此预算成 ReactNode（列见文件头 KEY_COLUMNS）。
+  //   与改前 <td> 一一对应：mono / nowrap / key-scope / key-perms / key-impact / 操作列不换行。
+  const keyRows: KeyRow[] = items.map((it) => ({
+    agentId: <span className="mono">{it.agentId}</span>,
+    requestedAt: <span className="nowrap">{it.requestedAt ? relTime(it.requestedAt) : "—"}</span>,
+    scope: (
+      <>
+        <div className="key-scope">{it.scopeLabel || it.scope || "—"}</div>
+        {it.requiresHumanConfirm ? <div className="tiny key-danger">需要人工确认</div> : null}
+      </>
+    ),
+    permissions: (
+      <div className="key-perms">
+        {(it.permissions || []).map((p) => (
+          <span key={p.id} title={p.why || ""}>
+            <Pill tone={RISK_TONE[String(p.risk || "").toLowerCase()] || "mute"}>{p.label}</Pill>
+          </span>
+        ))}
+        {!it.permissions?.length ? <span className="tiny">—</span> : null}
+      </div>
+    ),
+    impact: <div className="key-impact">{it.impact || "—"}</div>,
+    expiresInDays: <span className="nowrap">{it.expiresInDays != null ? fmtNum(it.expiresInDays) + " 天" : "—"}</span>,
+    actions: (
+      <span className={styles.actionsCell}>
+        <Button size="small" type="primary" ghost disabled={busy === it.requestId}
+          onClick={() => { setDlg({ req: it, mode: "approve" }); setNote(""); setTtl(String(it.expiresInDays || "")); }}>
+          批准
+        </Button>
+        <Button size="small" className={styles.rejectBtn} disabled={busy === it.requestId}
+          onClick={() => { setDlg({ req: it, mode: "reject" }); setNote(""); }}>
+          拒绝
+        </Button>
+      </span>
+    ),
+  }));
+
   return (
     <div className="layout-with-sidebar"><main className="main">
-      <div className="breadcrumb"><span style={{ color: "var(--text-dim)" }}>智能体</span><span className="sep">/</span><span className="current">钥匙审批</span></div>
+      <div className="breadcrumb"><span className={styles.crumbDim}>智能体</span><span className="sep">/</span><span className="current">钥匙审批</span></div>
       <PageHeader>
         <PageTitle>钥匙审批{items.length ? <StateChip state="warn" text={`${items.length} 条待处理`} /> : null}</PageTitle>
         <div className="page-subtitle">
           批准这把钥匙 = 允许它「开线、发凭证、改归属、看全局、代发通知」；日常收发消息不需要这把。
           与「接入审批」（服务授权）是两件事：这里管的是 key 本身的生命周期。
-          {data?.contractVersion ? <span className="tiny" style={{ marginLeft: "var(--gap-label)" }}>契约 {data.contractVersion}</span> : null}
+          {data?.contractVersion ? <span className={"tiny " + styles.contractTag}>契约 {data.contractVersion}</span> : null}
         </div>
       </PageHeader>
 
@@ -124,42 +187,7 @@ export default function AgentKeysPage() {
             当前没有待审批的钥匙申请。若某个执行体申请了更高身份，这里会出现一条记录（含它要的权限与影响面）。
           </div>
         ) : (
-          <table className="tbl"><thead><tr>
-            <th>申请方</th><th>申请时间</th><th>身份</th><th>要的权限</th><th>影响面</th><th>有效期</th><th style={{ width: 150 }}>操作</th>
-          </tr></thead><tbody>
-            {items.map((it) => (
-              <tr key={it.requestId}>
-                <td className="mono">{it.agentId}</td>
-                <td className="nowrap">{it.requestedAt ? relTime(it.requestedAt) : "—"}</td>
-                <td>
-                  <div className="key-scope">{it.scopeLabel || it.scope || "—"}</div>
-                  {it.requiresHumanConfirm ? <div className="tiny key-danger">需要人工确认</div> : null}
-                </td>
-                <td>
-                  <div className="key-perms">
-                    {(it.permissions || []).map((p) => (
-                      <span key={p.id} title={p.why || ""}>
-                        <Pill tone={RISK_TONE[String(p.risk || "").toLowerCase()] || "mute"}>{p.label}</Pill>
-                      </span>
-                    ))}
-                    {!it.permissions?.length ? <span className="tiny">—</span> : null}
-                  </div>
-                </td>
-                <td className="key-impact">{it.impact || "—"}</td>
-                <td className="num nowrap">{it.expiresInDays != null ? fmtNum(it.expiresInDays) + " 天" : "—"}</td>
-                <td className="nowrap">
-                  <Button size="small" type="primary" ghost disabled={busy === it.requestId}
-                    onClick={() => { setDlg({ req: it, mode: "approve" }); setNote(""); setTtl(String(it.expiresInDays || "")); }}>
-                    批准
-                  </Button>
-                  <Button size="small" style={{ marginLeft: "var(--gap-label)" }} disabled={busy === it.requestId}
-                    onClick={() => { setDlg({ req: it, mode: "reject" }); setNote(""); }}>
-                    拒绝
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody></table>
+          <DataTable columns={KEY_COLUMNS} rows={keyRows} />
         )}
       </DetailLikeSection>
 
@@ -170,9 +198,9 @@ export default function AgentKeysPage() {
           <Button size="small" onClick={() => askStatus(statusAgent)}>查询</Button>
           <span className="tiny">查身份、到期时间、自动续期与最近的鉴权失败</span>
         </div>
-        {statusErr ? <div className="data-health" data-state="crit" style={{ marginTop: "var(--gap-label)" }}><span className="dh-text">{statusErr}</span></div> : null}
+        {statusErr ? <div className={"data-health " + styles.mtLabel} data-state="crit"><span className="dh-text">{statusErr}</span></div> : null}
         {status?.ok ? (
-          <dl className="dt-fields" style={{ marginTop: "var(--gap-tight)" }}>
+          <dl className={"dt-fields " + styles.statusFields}>
             <div className="dt-field"><dt>身份</dt><dd>{status.scopeLabel || status.scope || "—"}</dd></div>
             <div className="dt-field"><dt>状态</dt><dd>{status.status || "—"}</dd></div>
             <div className="dt-field"><dt>到期</dt><dd>{fmtStamp(status.expiresAt) || "—"}</dd></div>

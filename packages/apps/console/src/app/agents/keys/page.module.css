@@ -1,0 +1,21 @@
+/* /agents/keys · P2 呈现层（批8，2026-11-05）
+   面包屑压暗、契约小标、错误提示与钥匙状态字段的上间距、表格操作列不换行，
+   全部从内联 style 下沉到这里；颜色/间距复用 globals.css 令牌，未新增全局类。 */
+
+/* 面包屑第一段（当前层级）压暗，末段用 .breadcrumb .current */
+.crumbDim { color: var(--text-dim); }
+
+/* 页头副标题里的「契约 xxx」小标（原内联 marginLeft: var(--gap-label)） */
+.contractTag { margin-left: var(--gap-label); }
+
+/* 钥匙状态查询失败提示与上方查询栏的距离（原内联 marginTop: var(--gap-label)） */
+.mtLabel { margin-top: var(--gap-label); }
+
+/* 钥匙状态字段列表（原内联 marginTop: var(--gap-tight)） */
+.statusFields { margin-top: var(--gap-tight); }
+
+/* 操作列：两个按钮保持一行（原 <td className="nowrap">） */
+.actionsCell { white-space: nowrap; }
+
+/* 「拒绝」按钮与「批准」的间距（原<Button>上的内联 marginLeft） */
+.rejectBtn { margin-left: var(--gap-label); }

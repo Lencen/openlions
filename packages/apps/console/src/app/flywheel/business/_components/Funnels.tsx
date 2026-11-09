@@ -1,25 +1,42 @@
 "use client";
 import { Panel, Note } from "./ui";
+import styles from "./Funnels.module.css";
 
 // 2026-10-27: 生产/消费链不是同一批对象的逐级转化（新任务可能多于结构化），
 // 不能复用“相对上一段”的漏斗百分比（会出现 796%/1089%）。这里用“占首段”+ 量级条。
+// 2026-11-05 P2 呈现层（批8）：量级条的宽度改 data-w 档位、步骤色改 data-tone 属性选择器，
+//   行栅格/轨道/右对齐数字下沉到 Funnels.module.css；取数口径、文案、Note 内容一条未动。
 type Step = { label: string; count: number; color: string };
+
+/** 步骤色 -> 语义色调（只登记本组件实际用到的几档）；未登记的色按主色处理。 */
+const TONE: Record<string, string> = {
+  "var(--table-memory)": "memory",
+  "var(--table-knowledge)": "knowledge",
+  "var(--table-practice)": "practice",
+  "var(--info)": "info",
+  "var(--status-ok)": "ok",
+  "var(--status-warn)": "warn",
+  "var(--status-crit)": "crit",
+};
+
 function StageBars({ steps }: { steps: Step[] }) {
   const max = Math.max(...steps.map((x) => x.count), 1);
   const base = steps[0] ? steps[0].count : 0;
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+    <div className={styles.bars}>
       {steps.map((x, i) => {
         const share = base > 0 ? (x.count / base) * 100 : null;
+        // 条宽：原来直接写「百分比字符串」；现在四舍五入到 1% 档位交给 data-w（最窄保留 2px 的观感）
+        const pct = Math.max(2, Math.min(100, Math.round((x.count / max) * 100)));
         return (
-          <div key={i} style={{ display: "grid", gridTemplateColumns: "86px minmax(80px, 1fr) 150px", gap: 8, alignItems: "center" }}>
-            <span className="tiny" style={{ color: "var(--text-muted)" }}>{x.label}</span>
-            <div style={{ height: 16, background: "var(--bg-surface2)", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ width: Math.max(2, (x.count / max) * 100) + "%", height: "100%", background: x.color, opacity: 0.72 }} />
+          <div key={i} className={styles.barRow}>
+            <span className={"tiny " + styles.barLabel}>{x.label}</span>
+            <div className={styles.barTrack}>
+              <div className={styles.barFill} data-w={pct} data-tone={TONE[x.color] ?? "primary"} />
             </div>
-            <span className="tiny" style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
+            <span className={"tiny " + styles.barCount}>
               {x.count.toLocaleString("zh-CN")}
-              {share == null ? "" : <span style={{ color: "var(--text-muted)" }}> · 占首段 {share.toFixed(2)}%</span>}
+              {share == null ? "" : <span className={styles.barShare}> · 占首段 {share.toFixed(2)}%</span>}
             </span>
           </div>
         );

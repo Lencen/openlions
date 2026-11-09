@@ -1,10 +1,14 @@
 "use client";
 // lineage 页 · 血缘追溯抽屉 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
+// 2026-11-05 P2 批6：内联 style 清零（样式下沉 LineageDetailDrawer.module.css）；
+//   质量分/产物类型配色走 data-tone / data-table 属性选择器，抽屉 body 内边距改由 CSS 接管。
+//   两张表仍是 primitives.Table（同一行渲染，列/字段/展开语义未动）。
 import { Descriptions, Drawer, Table, Tag, Timeline } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { Pill, StateBlock } from "@/components/ui";
 import { t } from "@/i18n";
 import { fmtNum, fmtScore, fmtTime, qualityTone, relTime, shortId, truncate } from "@/lib/format";
-import { TABLE_COLOR, TABLE_LABEL, VERIFY_TAG } from "./lineageShared";
+import { TABLE_LABEL, VERIFY_TAG } from "./lineageShared";
+import styles from "./LineageDetailDrawer.module.css";
 
 export default function LineageDetailDrawer({
   sel,
@@ -24,18 +28,18 @@ export default function LineageDetailDrawer({
       open={!!sel}
       onClose={onClose}
       size={760}
+      className={styles.drawer}
       title={detail?.found ? `血缘追溯 · ${TABLE_LABEL[detail?.type] || detail?.type}` : "血缘追溯"}
-      styles={{ body: { padding: "var(--sp-4)" } }}
       destroyOnHidden
     >
       {detailError ? (
-        <div style={{ color: "var(--status-crit)", fontSize: "var(--fs-base)", padding: "var(--sp-2)" }}>血缘详情加载失败: {String((detailError as Error)?.message || detailError)}</div>
+        <div className={styles.errorText}>血缘详情加载失败: {String((detailError as Error)?.message || detailError)}</div>
       ) : !detail?.found ? (
         <StateBlock loading={detailLoading} title="正在读取血缘信息…" rows={4} />
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "var(--sp-4)" }}>
+        <div className={styles.stack}>
           <div>
-            <div style={{ fontSize: "var(--fs-lg)", fontWeight: 600, marginBottom: "var(--sp-1)" }}>{detail.title}</div>
+            <div className={styles.detailTitle}>{detail.title}</div>
             <div className="tiny mono">{detail.type} · {detail.id}</div>
           </div>
 
@@ -81,7 +85,7 @@ export default function LineageDetailDrawer({
             bordered
             title="质量与验证"
             items={[
-              { key: "q", label: "质量分", children: <span style={{ color: qualityTone(detail.quality?.qualityScore).color }}>{detail.quality?.qualityScore ?? "-"}</span> },
+              { key: "q", label: "质量分", children: <span className={styles.qualityNum} data-tone={qualityTone(detail.quality?.qualityScore).cls}>{detail.quality?.qualityScore ?? "-"}</span> },
               { key: "v", label: "验证状态", children: detail.quality?.verification ? <Tag color={VERIFY_TAG[detail.quality.verification]?.color}>{VERIFY_TAG[detail.quality.verification]?.label || detail.quality.verification}</Tag> : <span className="tiny">未验证</span> },
               { key: "hc", label: "人工确认", children: detail.quality?.humanConfirmed ? "是" : "否" },
               { key: "rc", label: "强化次数", children: fmtNum(detail.quality?.reinforceCount) },
@@ -91,7 +95,7 @@ export default function LineageDetailDrawer({
           />
 
           <div>
-            <div style={{ fontWeight: 600, fontSize: "var(--fs-md)", marginBottom: "var(--sp-2)" }}>使用记录（被哪些任务认领注入）</div>
+            <div className={styles.sectionTitle}>使用记录（被哪些任务认领注入）</div>
             {detail.usage?.injections?.length ? (
               <Table
                 size="small"
@@ -115,15 +119,15 @@ export default function LineageDetailDrawer({
 
           {detail.derived?.length ? (
             <div>
-              <div style={{ fontWeight: 600, fontSize: "var(--fs-md)", marginBottom: "var(--sp-2)" }}>派生产物（用到了我）</div>
+              <div className={styles.sectionTitle}>派生产物（用到了我）</div>
               <Table
                 size="small"
                 rowKey={(r: any) => r.table + r.id}
                 pagination={false}
                 dataSource={detail.derived}
                 columns={[
-                  { title: "类型", dataIndex: "table", width: 90, render: (v: string) => <span style={{ color: TABLE_COLOR[v], fontSize: "var(--fs-base)" }}>{TABLE_LABEL[v]}</span> },
-                  { title: "标题", dataIndex: "title", render: (v: string) => <span style={{ fontSize: "var(--fs-base)" }}>{truncate(v, 40)}</span> },
+                  { title: "类型", dataIndex: "table", width: 90, render: (v: string) => <span className={styles.tableLabel} data-table={v}>{TABLE_LABEL[v]}</span> },
+                  { title: "标题", dataIndex: "title", render: (v: string) => <span className={styles.baseText}>{truncate(v, 40)}</span> },
                   { title: "质量", dataIndex: "qualityScore", width: 70, render: (v: number) => <span className="mono tiny">{v ? fmtScore(v) : "-"}</span> },
                   { title: "创建", dataIndex: "createdAt", width: 90, render: (v: number) => <span className="tiny">{relTime(v)}</span> },
                 ]}
@@ -132,7 +136,7 @@ export default function LineageDetailDrawer({
           ) : null}
 
           <div>
-            <div style={{ fontWeight: 600, fontSize: "var(--fs-md)", marginBottom: "var(--sp-2)" }}>时间线</div>
+            <div className={styles.sectionTitle}>时间线</div>
             {(detail.timeline ?? []).length === 0 ? (
               <div className="tiny">没有关联事件</div>
             ) : (
@@ -140,7 +144,7 @@ export default function LineageDetailDrawer({
                 items={(detail.timeline ?? []).slice(0, 14).map((t: any) => ({
                   color: t.kind === "create" ? "green" : t.kind === "use" ? "blue" : t.kind === "derive" ? "purple" : "gray",
                   content: (
-                    <div style={{ fontSize: "var(--fs-base)" }}>
+                    <div className={styles.baseText}>
                       <div><b>{t.title}</b> <span className="tiny">{t.desc}</span></div>
                       <div className="tiny">{fmtTime(t.at)}</div>
                     </div>
@@ -151,16 +155,16 @@ export default function LineageDetailDrawer({
           </div>
 
           <details>
-            <summary className="tiny" style={{ cursor: "pointer" }}>查看全部字段（{detail.fields?.length ?? 0} 项）</summary>
+            <summary className={"tiny " + styles.summary}>查看全部字段（{detail.fields?.length ?? 0} 项）</summary>
             <Descriptions
               size="small"
               column={1}
               bordered
-              style={{ marginTop: "var(--sp-2)" }}
+              className={styles.descTop}
               items={(detail.fields ?? []).map((f: any) => ({
                 key: f.key,
                 label: f.key,
-                children: <span style={{ fontSize: "var(--fs-sm)", wordBreak: "break-word" }}>{String(f.value)}</span>,
+                children: <span className={styles.fieldValue}>{String(f.value)}</span>,
               }))}
             />
           </details>

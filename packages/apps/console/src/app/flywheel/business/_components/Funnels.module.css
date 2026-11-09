@@ -1,0 +1,130 @@
+/* Funnels · P2 批8 呈现层（2026-11-05）
+   生产链/消费链「量级条」的全部样式：行栅格、轨道底色、条宽档位、步骤色。
+   条宽从内联百分比改为 1% 一档的 [data-w] 属性选择器（最窄 2%，与改前一致）；
+   步骤色从内联 background 改为 [data-tone] -> 设计令牌。不新增全局类、不改 globals.css。 */
+
+.bars { display: flex; flex-direction: column; gap: 7px; }
+
+.barRow { display: grid; grid-template-columns: 86px minmax(80px, 1fr) 150px; gap: 8px; align-items: center; }
+
+.barLabel { color: var(--text-muted); }
+
+.barTrack { height: 16px; background: var(--bg-surface2); border-radius: 4px; overflow: hidden; }
+
+.barFill { height: 100%; opacity: .72; }
+
+.barFill[data-tone="memory"] { background: var(--table-memory); }
+.barFill[data-tone="knowledge"] { background: var(--table-knowledge); }
+.barFill[data-tone="practice"] { background: var(--table-practice); }
+.barFill[data-tone="info"] { background: var(--info); }
+.barFill[data-tone="ok"] { background: var(--status-ok); }
+.barFill[data-tone="warn"] { background: var(--status-warn); }
+.barFill[data-tone="crit"] { background: var(--status-crit); }
+.barFill[data-tone="primary"] { background: var(--primary); }
+
+.barCount { text-align: right; font-variant-numeric: tabular-nums; }
+
+.barShare { color: var(--text-muted); }
+
+/* ── 条宽档位（1% 一档，.barFill[data-w="0"] ~ "100"） ── */
+.barFill[data-w="0"] { width: 0%; }
+.barFill[data-w="1"] { width: 1%; }
+.barFill[data-w="2"] { width: 2%; }
+.barFill[data-w="3"] { width: 3%; }
+.barFill[data-w="4"] { width: 4%; }
+.barFill[data-w="5"] { width: 5%; }
+.barFill[data-w="6"] { width: 6%; }
+.barFill[data-w="7"] { width: 7%; }
+.barFill[data-w="8"] { width: 8%; }
+.barFill[data-w="9"] { width: 9%; }
+.barFill[data-w="10"] { width: 10%; }
+.barFill[data-w="11"] { width: 11%; }
+.barFill[data-w="12"] { width: 12%; }
+.barFill[data-w="13"] { width: 13%; }
+.barFill[data-w="14"] { width: 14%; }
+.barFill[data-w="15"] { width: 15%; }
+.barFill[data-w="16"] { width: 16%; }
+.barFill[data-w="17"] { width: 17%; }
+.barFill[data-w="18"] { width: 18%; }
+.barFill[data-w="19"] { width: 19%; }
+.barFill[data-w="20"] { width: 20%; }
+.barFill[data-w="21"] { width: 21%; }
+.barFill[data-w="22"] { width: 22%; }
+.barFill[data-w="23"] { width: 23%; }
+.barFill[data-w="24"] { width: 24%; }
+.barFill[data-w="25"] { width: 25%; }
+.barFill[data-w="26"] { width: 26%; }
+.barFill[data-w="27"] { width: 27%; }
+.barFill[data-w="28"] { width: 28%; }
+.barFill[data-w="29"] { width: 29%; }
+.barFill[data-w="30"] { width: 30%; }
+.barFill[data-w="31"] { width: 31%; }
+.barFill[data-w="32"] { width: 32%; }
+.barFill[data-w="33"] { width: 33%; }
+.barFill[data-w="34"] { width: 34%; }
+.barFill[data-w="35"] { width: 35%; }
+.barFill[data-w="36"] { width: 36%; }
+.barFill[data-w="37"] { width: 37%; }
+.barFill[data-w="38"] { width: 38%; }
+.barFill[data-w="39"] { width: 39%; }
+.barFill[data-w="40"] { width: 40%; }
+.barFill[data-w="41"] { width: 41%; }
+.barFill[data-w="42"] { width: 42%; }
+.barFill[data-w="43"] { width: 43%; }
+.barFill[data-w="44"] { width: 44%; }
+.barFill[data-w="45"] { width: 45%; }
+.barFill[data-w="46"] { width: 46%; }
+.barFill[data-w="47"] { width: 47%; }
+.barFill[data-w="48"] { width: 48%; }
+.barFill[data-w="49"] { width: 49%; }
+.barFill[data-w="50"] { width: 50%; }
+.barFill[data-w="51"] { width: 51%; }
+.barFill[data-w="52"] { width: 52%; }
+.barFill[data-w="53"] { width: 53%; }
+.barFill[data-w="54"] { width: 54%; }
+.barFill[data-w="55"] { width: 55%; }
+.barFill[data-w="56"] { width: 56%; }
+.barFill[data-w="57"] { width: 57%; }
+.barFill[data-w="58"] { width: 58%; }
+.barFill[data-w="59"] { width: 59%; }
+.barFill[data-w="60"] { width: 60%; }
+.barFill[data-w="61"] { width: 61%; }
+.barFill[data-w="62"] { width: 62%; }
+.barFill[data-w="63"] { width: 63%; }
+.barFill[data-w="64"] { width: 64%; }
+.barFill[data-w="65"] { width: 65%; }
+.barFill[data-w="66"] { width: 66%; }
+.barFill[data-w="67"] { width: 67%; }
+.barFill[data-w="68"] { width: 68%; }
+.barFill[data-w="69"] { width: 69%; }
+.barFill[data-w="70"] { width: 70%; }
+.barFill[data-w="71"] { width: 71%; }
+.barFill[data-w="72"] { width: 72%; }
+.barFill[data-w="73"] { width: 73%; }
+.barFill[data-w="74"] { width: 74%; }
+.barFill[data-w="75"] { width: 75%; }
+.barFill[data-w="76"] { width: 76%; }
+.barFill[data-w="77"] { width: 77%; }
+.barFill[data-w="78"] { width: 78%; }
+.barFill[data-w="79"] { width: 79%; }
+.barFill[data-w="80"] { width: 80%; }
+.barFill[data-w="81"] { width: 81%; }
+.barFill[data-w="82"] { width: 82%; }
+.barFill[data-w="83"] { width: 83%; }
+.barFill[data-w="84"] { width: 84%; }
+.barFill[data-w="85"] { width: 85%; }
+.barFill[data-w="86"] { width: 86%; }
+.barFill[data-w="87"] { width: 87%; }
+.barFill[data-w="88"] { width: 88%; }
+.barFill[data-w="89"] { width: 89%; }
+.barFill[data-w="90"] { width: 90%; }
+.barFill[data-w="91"] { width: 91%; }
+.barFill[data-w="92"] { width: 92%; }
+.barFill[data-w="93"] { width: 93%; }
+.barFill[data-w="94"] { width: 94%; }
+.barFill[data-w="95"] { width: 95%; }
+.barFill[data-w="96"] { width: 96%; }
+.barFill[data-w="97"] { width: 97%; }
+.barFill[data-w="98"] { width: 98%; }
+.barFill[data-w="99"] { width: 99%; }
+.barFill[data-w="100"] { width: 100%; }
