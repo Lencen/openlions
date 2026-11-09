@@ -29,5 +29,32 @@
 
 .panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
 .tableFoot { font-size: var(--fs-sm); color: var(--text-muted); margin-top: var(--gap-label); }
+
+/* ---------------------------------------------------------------------------
+   0.4.39-04 CLS 修复（@1920 0.558 / @1440 0.029）
+   成因：43 行一次渲染，table 223px -> 3776px，页脚/下方面板被推走。
+   对策：
+     ① 首屏只渲染前 N 行（page.tsx：桌面 20 / 移动端 10）+「显示全部」按钮；
+     ② DataTable 的 loading 骨架固定 5 行（组件本轮禁改），所以用容器 min-height
+        顶到「表头 39px + N 行 × 89px」。
+   依据（2026-11-09 实测 1920/1440/390 三档完全一致）：
+     表头 39px；数据行每行 89px（签名 chip + key_id 两行）；kpi-grid 数据到达前后 125px -> 145px。
+   min-height 只在首屏加载态生效（data-loading="1"）：筛选后行数变少时不会留下大片空白。
+--------------------------------------------------------------------------- */
+.tableBox[data-loading="1"] { min-height: calc(39px + 20 * 89px); } /* 桌面 N=20：39 + 1780 = 1819px */
+@media (max-width: 640px) {
+  .tableBox[data-loading="1"] { min-height: calc(39px + 10 * 89px); } /* 移动端 N=10：39 + 890 = 929px */
+}
+
+/* kpi-grid：实测 1920 加载态 125px、数据到达 145px（最新版本卡 hint 多一行「通道 …」） */
+.kpiGrid { min-height: 145px; }
+
+/* 移动端（<=640px）页头副标题：数据到达后「数据时刻 2026-11-09 14:44:00」比加载态的「—」多占一行
+   （实测 390：加载态 23px -> 数据到达 45px），预留 45px，保证下方内容不被下推。
+   1920 / 1440 实测副标题高度恒为 23px，不做预留（预留会在宽屏留下空白）。 */
+@media (max-width: 640px) { .subtitle { min-height: 45px; } }
+
+/* 「显示全部 N 条」/「收起」工具条 */
+.showAllBar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--gap-label); }
 .keyId { margin-top: 2px; font-family: var(--font-mono); }
 .footNote { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.8; }

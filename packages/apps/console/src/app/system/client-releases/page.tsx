@@ -13,6 +13,7 @@
 //   · 无权限：error 文案 401/403 或含「无权限/未授权」-> 整页 StateBlock「无权限访问」
 import { useEffect, useState } from "react";
 import { useApi } from "@/lib/api";
+import { t } from "@/i18n";
 import { Input } from "@/components/primitives";
 import { KpiCard, DataTable, StateChip, StateBlock, FilterBar, PageHeader, PageTitle, Pill } from "@/components/ui";
 import styles from "./page.module.css";
@@ -67,6 +68,32 @@ const FORBIDDEN_RE = /401|403|无权限|未授权|unauthori[sz]ed|forbidden/i;
 
 type ViewKey = "all" | "published" | "unsigned" | "revoked";
 
+// 2026-11-09 · 0.4.39-04 CLS：首屏只渲染前 N 行（桌面 20 / 移动端 <=640px 10），超出给「显示全部」按钮。
+// 依据：本页实测 43 行 × 89px = 3776px 一次渲染，表下内容整体被推走 -> @1920 CLS 0.551/0.558（判据实测 0.558）。
+const N_DESKTOP = 20;
+const N_MOBILE = 10;
+
+/** 移动端判定必须放在 effect 里（matchMedia）后再切。
+ *  渲染期直接读 window 会与 SSR 输出不一致 -> hydration mismatch。
+ *  断点 640px 与 page.module.css 里 .tableBox 的 @media (max-width: 640px) 必须同值。 */
+function useMobileQuery() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setMobile(mq.matches);
+    apply();
+    if (mq.addEventListener) {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+    // 老 Safari 只有 addListener / removeListener（类型里没有，按可选调用兜底）
+    (mq as any).addListener?.(apply);
+    return () => (mq as any).removeListener?.(apply);
+  }, []);
+  return mobile;
+}
+
 /** 实例表的一行（PILOT-10 §10：主机 / 系统 / agent / 版本 / 心跳 / 状态）。
  *  当前 BFF 不下发实例 —— 表结构与列先就位，rows 恒为空由 empty 说明触发条件，不编造实例。 */
 interface InstRow { host: string; os: string; agent: string; version: string; heartbeat: string; state: string }
@@ -85,6 +112,14 @@ export default function ClientReleasesPage() {
 
   // 视图分段（模板 A 工具条）：筛选是读操作 —— 本页无写控件。
   const [view, setView] = useState<ViewKey>("all");
+
+  // 0.4.39-04 CLS：首屏渲染窗口（桌面 N_DESKTOP / 移动端 N_MOBILE）+「显示全部」开关。
+  // 数据、排序、筛选、列一律不变，只是先渲染前 N 行（点按钮才全渲染）。
+  const isMobile = useMobileQuery();
+  const pageSize = isMobile ? N_MOBILE : N_DESKTOP;
+  const [showAll, setShowAll] = useState(false);
+  // 搜索/筛选变了就回到「只渲染前 N 行」，避免上一次的「显示全部」把新条件也全渲染。
+  useEffect(() => { setShowAll(false); }, [qApplied, view]);
 
   const counts = {
     all: items.length,
@@ -106,6 +141,11 @@ export default function ClientReleasesPage() {
     if (tb !== ta) return tb - ta;
     return String(a.id ?? a.version ?? "").localeCompare(String(b.id ?? b.version ?? ""));
   });
+  const visibleRows = showAll ? rows : rows.slice(0, pageSize);
+  const hiddenCount = rows.length - visibleRows.length;
+  // 首屏加载（数据未到）：DataTable 内部固定渲染 5 行骨架，行数不能改（组件本轮不动），
+  // 所以用容器 min-height 顶到「表头 39px + N 行 × 89px」，与数据到达后同高（见 page.module.css）。
+  const initialLoading = loading && items.length === 0;
 
   // 「最新版本」优先取 BFF 的 latest；latest 缺失时退到「发布时间最新的一行」（派生展示，不改字段口径）
   const latest = data?.latest ?? rows[0] ?? null;
@@ -127,7 +167,7 @@ export default function ClientReleasesPage() {
       <div className="breadcrumb"><span className={styles.bcDim}>平台管理</span><span className="sep">/</span><span className="current">客户端版本</span></div>
       <PageHeader>
         <PageTitle>客户端版本</PageTitle>
-        <div className="page-subtitle">
+        <div className={"page-subtitle " + styles.subtitle}>
           发布即签名；portal 只展示最新版。数据时刻 {when(data?.asOf)}
         </div>
         <div className={styles.headerTags}>
@@ -147,7 +187,9 @@ export default function ClientReleasesPage() {
           action={<a className="btn btn-sm" href="/system/permissions">申请授权</a>}
         />
       ) : (<>
-        <div className="kpi-grid">
+        {/* 数据到达前后 kpi-grid 高度差 20px（1920 实测 125 -> 145：最新版本卡 hint 多一行通道文案），
+            用 min-height 锁住，避免卡片下面的工具条/面板整体下移。 */}
+        <div className={"kpi-grid " + styles.kpiGrid}>
           <KpiCard label="最新版本" value={latest?.version || "—"} hint={"portal 只展示最新版" + (latest?.channel ? " · 通道 " + latest.channel : "")} />
           <KpiCard label="发布记录" value={items.length} hint={"未签名 " + counts.unsigned + " · 已撤销 " + counts.revoked} />
           {/* 下面两张是数据卡点名的指标，但字典未给口径 / 服务未下发字段（数据卡「数据缺口」）——
@@ -168,7 +210,7 @@ export default function ClientReleasesPage() {
           <span className={styles.toolNote}>只读；发布记录含未签名与已撤销，「未签名」不等于「没有这个版本」。</span>
         </div>
         <div className={styles.filterBarWrap}>
-          <FilterBar items={filters} active={view} onSelect={(k) => setView(k as ViewKey)} right={loading && items.length === 0 ? <>加载中…</> : <>共 {rows.length} 条{hasFilter ? "（筛选后）" : ""}</>} />
+          <FilterBar items={filters} active={view} onSelect={(k) => setView(k as ViewKey)} right={initialLoading ? <>加载中…</> : <>共 {rows.length} 条{hasFilter ? "（筛选后）" : ""}</>} />
         </div>
 
         <div className="panel">
@@ -180,10 +222,12 @@ export default function ClientReleasesPage() {
             // 错误态说明保留原页的诚实口径：取不到 ≠ 没有版本（DataTable 的 error 槽是固定文案，细节放这里）
             <div className={styles.toolNote}>读数暂时取不到，这不代表没有版本；接口恢复后点表内「重试」即可，不要据此判断「没有发布过」。</div>
           ) : null}
+          {/* 首屏加载时容器用 min-height 占位（= N 行高度），数据到达后表格正好同高 -> 表下内容不被推走。 */}
+          <div className={styles.tableBox} data-loading={initialLoading ? "1" : undefined}>
           <DataTable
-            rows={rows}
+            rows={visibleRows}
             rowKey={(r, i) => r.id || r.version || i}
-            loading={loading && items.length === 0}
+            loading={initialLoading}
             error={error ? "读数暂时取不到（这不代表没有版本）" : null}
             onRetry={() => { mutate(); }}
             empty={
@@ -222,6 +266,22 @@ export default function ClientReleasesPage() {
               { key: "publishedAt", title: "发布", align: "right", width: "170px", render: (r) => <span className="mono tiny">{when(r.publishedAt)}</span> },
             ]}
           />
+          </div>
+          {/* 0.4.39-04：超出前 N 行才给「显示全部」（文案走 i18n，不写死英文）；点过之后可再收起。 */}
+          {hiddenCount > 0 ? (
+            <div className={styles.showAllBar}>
+              <button type="button" className="btn btn-sm" onClick={() => setShowAll(true)}>
+                {t("list.showAllRows", { n: rows.length })}
+              </button>
+              <span className={styles.toolNote}>{t("list.firstNHint", { n: pageSize })}</span>
+            </div>
+          ) : showAll && rows.length > pageSize ? (
+            <div className={styles.showAllBar}>
+              <button type="button" className="btn btn-sm" onClick={() => setShowAll(false)}>
+                {t("list.collapseRows", { n: pageSize })}
+              </button>
+            </div>
+          ) : null}
           <div className={styles.tableFoot}>
             未签名的包也会出现在这里——「未签名」与「没有这个版本」是两件事。表头排序（发布时间 / 下载数）将在表格支持排序后接入；下载数当前无数据。
           </div>

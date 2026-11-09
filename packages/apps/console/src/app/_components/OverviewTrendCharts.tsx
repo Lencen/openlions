@@ -2,7 +2,7 @@
 // 概览首页 · token/任务趋势图 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
 import { Tooltip } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import ChartPanel from "@/components/common/ChartPanel";
-import { useChartBase } from "@/components/EChart";
+import { useChartBase, withAlpha } from "@/components/EChart";
 import { t } from "@/i18n";
 
 export default function OverviewTrendCharts({ data, loadingCards }: { data: any; loadingCards: boolean }) {
@@ -32,8 +32,9 @@ export default function OverviewTrendCharts({ data, loadingCards }: { data: any;
               type: "line",
               smooth: true,
               symbol: "none",
-              lineStyle: { color: "#d97706", width: 2 },
-              areaStyle: { color: "rgba(217,119,6,0.14)" },
+              // 2026-11-09 轮 A2：系列色改为主题 token（取值不变，原先由 EChart 的 HEX_TO_KEY 隐式映射）
+              lineStyle: { color: base.colors.statusWarn, width: 2 },
+              areaStyle: { color: withAlpha(base.colors.statusWarn, "0.14") },
               data: tokens?.trend ?? [],
             },
           ],
@@ -57,8 +58,8 @@ export default function OverviewTrendCharts({ data, loadingCards }: { data: any;
           xAxis: { ...base.xAxis, data: pts },
           yAxis: { ...base.yAxis },
           series: [
-            { name: "完成", type: "bar", barMaxWidth: 14, itemStyle: { color: "#16a34a", borderRadius: [3, 3, 0, 0] }, data: tasks?.trend ?? [] },
-            { name: "失败", type: "line", smooth: true, symbol: "circle", symbolSize: 5, lineStyle: { color: "#dc2626", width: 2 }, itemStyle: { color: "#dc2626" }, data: tasks?.failTrend ?? [] },
+            { name: "完成", type: "bar", barMaxWidth: 14, itemStyle: { color: base.colors.statusOk, borderRadius: [3, 3, 0, 0] }, data: tasks?.trend ?? [] },
+            { name: "失败", type: "line", smooth: true, symbol: "circle", symbolSize: 5, lineStyle: { color: base.colors.statusCrit, width: 2 }, itemStyle: { color: base.colors.statusCrit }, data: tasks?.failTrend ?? [] },
           ],
         }}
       />

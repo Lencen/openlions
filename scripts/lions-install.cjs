@@ -451,7 +451,8 @@ function writeConfig(ctx, args, releaseDir) {
  */
 async function ensurePgTrgm(releaseDir, url) {
   let Client = null;
-  try { Client = pgClient(releaseDir).Client; } catch (e) { return { ok: true, skipped: "pg 模块不可用: " + String(e && e.message || e).slice(0, 80) }; }
+  // 2026-11-09（评审口径 4）：db 阶段 pg 一定可用；拿不到就**显式失败**，不要退回"跳过"变成静默。
+  try { Client = pgClient(releaseDir).Client; } catch (e) { return { ok: false, why: "pg 模块不可用（[9] db 阶段依赖应已就绪）: " + String(e && e.message || e).slice(0, 80) }; }
   const c = new Client({ connectionString: url });
   try {
     await c.connect();

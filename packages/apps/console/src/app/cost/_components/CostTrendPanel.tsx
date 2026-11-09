@@ -1,12 +1,13 @@
 "use client";
 // cost 页 · 趋势图 (从 page.tsx 抽出, 2026-09-14 页面瘦身)
 import ChartPanel from "@/components/common/ChartPanel";
-import { useChartBase } from "@/components/EChart";
+import { useChartBase, withAlpha } from "@/components/EChart";
 import { t } from "@/i18n";
 
 export default function CostTrendPanel({ data, loadingAll }: { data: any; loadingAll: boolean }) {
   // 2026-10-15（round 76-FL）: 文字/网格/提示框接**主题色**（此前写死亮色 -> 暗色下偏暗看不清 ✗）。
-  //   注意: 下面 series 里的**数据系列色**(#d97706 等) 是"哪条线是谁"的标识, **保留不动** ✓。
+  // 2026-11-09 轮 A2: 系列色也从 hex 改为 base.colors.* —— 取值与改动前**完全一致**
+  //   （此前靠 EChart 的 HEX_TO_KEY 在渲染时映射成同名 token），改完源码即 token，不再依赖隐式映射。
   const base = useChartBase();
   const pts = data?.trend?.points?.map((p: any) => p.label) ?? [];
   return (
@@ -28,25 +29,25 @@ export default function CostTrendPanel({ data, loadingAll }: { data: any; loadin
         series: [
           {
             name: "调用次数", type: "bar", yAxisIndex: 1, barMaxWidth: 12,
-            itemStyle: { color: "rgba(37,99,235,0.35)", borderRadius: [3, 3, 0, 0] },
+            itemStyle: { color: withAlpha(base.colors.primary, "0.35"), borderRadius: [3, 3, 0, 0] },
             data: data?.trend?.calls ?? [],
           },
           {
             name: t("cost.series.measured"), type: "line", smooth: true, symbol: "none",
-            lineStyle: { color: "#d97706", width: 2 },
-            areaStyle: { color: "rgba(217,119,6,0.14)" },
+            lineStyle: { color: base.colors.statusWarn, width: 2 },
+            areaStyle: { color: withAlpha(base.colors.statusWarn, "0.14") },
             data: data?.trend?.tokens ?? [],
           },
           {
             name: t("cost.series.agent"), type: "line", smooth: true, symbol: "none",
-            lineStyle: { color: "#7c3aed", width: 2, type: "dashed" },
+            lineStyle: { color: base.colors.tableKnowledge, width: 2, type: "dashed" },
             data: data?.trend?.agentTokens ?? [],
           },
           // 估算量单独一条线 (不进主序列, 不并入总量)
           ...((data?.trend?.estimatedTokens ?? []).some((v: number) => v > 0)
             ? [{
                 name: t("cost.series.estimated"), type: "line" as const, smooth: true, symbol: "none",
-                lineStyle: { color: "#94a3b8", width: 2, type: "dotted" as const },
+                lineStyle: { color: base.colors.textMuted, width: 2, type: "dotted" as const },
                 data: data?.trend?.estimatedTokens ?? [],
               }]
             : []),

@@ -10,7 +10,7 @@
 import Link from "next/link";
 import BarChart from "@/components/BarChart";
 import { useApi } from "@/lib/api";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Button, Input } from "@/components/primitives";
 import { serviceLabel, healthDimLabel, statusLabel } from "@/config/systemLabels";
 import { t } from "@/i18n";
@@ -33,6 +33,36 @@ interface PingRow { name: string; code: number; ms: number; alive: boolean }
 const FORBIDDEN_RE = /401|403|无权限|未授权|unauthori[sz]ed|forbidden/i;
 const isForbidden = (e?: Error) => FORBIDDEN_RE.test(String(e?.message ?? ""));
 const errText = (e?: Error) => String(e?.message ?? "") || "接口未返回错误详情";
+
+// ===== 0.4.39-04 CLS 修复：首屏只渲染前 N 行（桌面 20 / 移动端 <=640px 10）=====
+// 成因（2026-11-09 实测 /system/health@390）：DataTable 的 loading 骨架固定 5 行（223px），
+//   数据到达后换成真实行（服务 4 行 230px / 健康度 7 行 360px），表下区块被推走；
+//   页头「逐源数据时刻」行从「未知/加载中」变成具体时间后也会多折 1 行（45px -> 68px）。
+// 对策：只把前 N 行交给 DataTable，超出给「显示全部 N 条」按钮；加载态用容器 min-height 占位；
+//   页头副标题在移动端预留实测高度（见 page.module.css）。
+const N_DESKTOP = 20;
+const N_MOBILE = 10;
+
+/** 移动端判定必须放在 effect 里（matchMedia）后再切。
+ *  渲染期直接读 window 会与 SSR 输出不一致 -> hydration mismatch。
+ *  断点 640px 与 page.module.css 的 @media (max-width: 640px) 必须同值。 */
+function useMobileQuery() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setMobile(mq.matches);
+    apply();
+    if (mq.addEventListener) {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+    // 老 Safari 只有 addListener / removeListener（类型里没有，按可选调用兜底）
+    (mq as any).addListener?.(apply);
+    return () => (mq as any).removeListener?.(apply);
+  }, []);
+  return mobile;
+}
 
 export default function HealthPage() {
   const { data: sess, error: sessErr, mutate: sessMutate } = useApi<S>("/api/session-stats");
@@ -76,11 +106,24 @@ export default function HealthPage() {
   const covRate = fwd?.structuredFindings?.rate;
   const forbidden = isForbidden(sessErr) || isForbidden(fwErr) || isForbidden(pingErr);
 
+  // 0.4.39-04 CLS：首屏渲染窗口（桌面 N_DESKTOP / 移动端 N_MOBILE）+「显示全部」开关。
+  // 取数、字段口径、列一律不变，只是先渲染前 N 行（点按钮才全渲染）。
+  const isMobile = useMobileQuery();
+  const pageSize = isMobile ? N_MOBILE : N_DESKTOP;
+  const [showAllSvc, setShowAllSvc] = useState(false);
+  const [showAllSess, setShowAllSess] = useState(false);
+  const [showAllHealth, setShowAllHealth] = useState(false);
+  const visiblePings = showAllSvc ? pingRows : pingRows.slice(0, pageSize);
+  const visibleByStatus = showAllSess ? byStatus : byStatus.slice(0, pageSize);
+  const visibleHealthRows = showAllHealth ? healthRows : healthRows.slice(0, pageSize);
+  // 「无异常」提示是 ping 结果到达后才出现的；空槽时也占住它的高度，避免把服务表推下去。
+  const allPingsAlive = pingRows.length > 0 && pingRows.every((r) => r.alive);
+
   return (<div className="layout-with-sidebar"><main className="main">
     <div className="breadcrumb"><span className={styles.bcDim}>业务与系统</span><span className="sep">/</span><span className="current">健康检查</span></div>
     <PageHeader>
       <PageTitle>健康检查</PageTitle>
-      <div className="page-subtitle">服务存活 · 飞轮健康度 · 会话档案 · 数据库完整性<DataMoment items={[{ label: "会话", at: sess?.asOf }, { label: "飞轮", at: fw?.asOf }, { label: "服务", at: pingData?.asOf, loading: pingLoading }]} /></div>
+      <div className={"page-subtitle " + styles.subtitleStable}>服务存活 · 飞轮健康度 · 会话档案 · 数据库完整性<DataMoment items={[{ label: "会话", at: sess?.asOf }, { label: "飞轮", at: fw?.asOf }, { label: "服务", at: pingData?.asOf, loading: pingLoading }]} /></div>
       <div className={styles.headerTags}><Pill tone="mute">只读</Pill><Pill tone="info">看板 · 5min 聚合</Pill></div>
     </PageHeader>
 
@@ -113,57 +156,91 @@ export default function HealthPage() {
 
       <div className="panel">
         <div className="panel-header"><span className="panel-title">服务存活检查</span><span className={styles.panelNote}>在线 / 离线用状态片，不只靠颜色</span></div>
-        {/* PILOT-10 §3「服务全绿时也说明无异常」：全在线不是"没内容"，要显式说一句，否则会被读成数据没回来 */}
-        {pingRows.length > 0 && pingRows.every((r) => r.alive) ? (
-          <div className={styles.panelNote}>无异常：{pingRows.length} 个服务全部在线（ping 返回即当前值，逐源时刻见页头）。</div>
-        ) : null}
+        {/* PILOT-10 §3「服务全绿时也说明无异常」：全在线不是"没内容"，要显式说一句，否则会被读成数据没回来。
+            0.4.39-04 CLS：这句是 ping 结果到达后才出现的；空槽时用 min-height 占住实测高度（@390 39px / @1440 20px），
+            避免它出现时把下面的服务表与表下内容整体推下去。 */}
+        <div className={styles.panelNote + " " + styles.svcNoteSlot} data-empty={allPingsAlive ? undefined : "1"}>
+          {allPingsAlive ? <>无异常：{pingRows.length} 个服务全部在线（ping 返回即当前值，逐源时刻见页头）。</> : null}
+        </div>
         <TableCopyButton />
-        <DataTable
-          rows={pingRows}
-          rowKey={(r) => r.name}
-          loading={pingLoading && pingRows.length === 0}
-          error={pingErr ? errText(pingErr) : null}
-          onRetry={() => { pingMutate(); }}
-          empty={{
-            title: "没有可 ping 的服务",
-            desc: "触发条件：/api/service-ping 返回空数组（服务清单未配置或 BFF 未接入）。这不等于「服务全绿」。",
-          }}
-          columns={[
-            { key: "name", title: "服务", render: (r) => <span className="nowrap">{serviceLabel(r.name)}</span> },
-            { key: "code", title: t("field.httpCode"), align: "right", width: "96px", render: (r) => r.code || "—" },
-            { key: "ms", title: "延迟", align: "right", width: "96px", render: (r) => (r.ms != null ? r.ms + "ms" : "—") },
-            {
-              key: "alive", title: "状态", width: "96px",
-              render: (r) => <StateChip state={r.alive ? "ok" : "crit"} text={r.alive ? "在线" : "离线"} />,
-            },
-          ]}
-        />
+        <div className={styles.healthTableBox} data-loading={pingLoading && pingRows.length === 0 ? "1" : undefined}>
+          <DataTable
+            rows={visiblePings}
+            rowKey={(r) => r.name}
+            loading={pingLoading && pingRows.length === 0}
+            error={pingErr ? errText(pingErr) : null}
+            onRetry={() => { pingMutate(); }}
+            empty={{
+              title: "没有可 ping 的服务",
+              desc: "触发条件：/api/service-ping 返回空数组（服务清单未配置或 BFF 未接入）。这不等于「服务全绿」。",
+            }}
+            columns={[
+              { key: "name", title: "服务", render: (r) => <span className="nowrap">{serviceLabel(r.name)}</span> },
+              { key: "code", title: t("field.httpCode"), align: "right", width: "96px", render: (r) => r.code || "—" },
+              { key: "ms", title: "延迟", align: "right", width: "96px", render: (r) => (r.ms != null ? r.ms + "ms" : "—") },
+              {
+                key: "alive", title: "状态", width: "96px",
+                render: (r) => <StateChip state={r.alive ? "ok" : "crit"} text={r.alive ? "在线" : "离线"} />,
+              },
+            ]}
+          />
+        </div>
+        {pingRows.length > pageSize && !showAllSvc ? (
+          <div className={styles.showAllBar}>
+            <button type="button" className="btn" onClick={() => setShowAllSvc(true)}>
+              {t("list.showAllRows", { n: pingRows.length })}
+            </button>
+            <span className={styles.showAllHint}>{t("list.firstNHint", { n: pageSize })}</span>
+          </div>
+        ) : showAllSvc && pingRows.length > pageSize ? (
+          <div className={styles.showAllBar}>
+            <button type="button" className="btn" onClick={() => setShowAllSvc(false)}>
+              {t("list.collapseRows", { n: pageSize })}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid-2">
         <div className="panel">
           <div className="panel-header"><span className="panel-title">会话档案状态分布</span></div>
           <TableCopyButton />
-          <DataTable
-            rows={byStatus}
-            rowKey={(r) => r.key}
-            loading={!st && !sessErr}
-            error={sessErr ? errText(sessErr) : null}
-            onRetry={() => { sessMutate(); }}
-            empty={{ title: "本时段没有会话档案", desc: "触发条件：/api/session-stats 的 byStatus 为空对象（该时间窗内没有会话记录）。" }}
-            columns={[
-              {
-                key: "label", title: "状态",
-                render: (r) => (
-                  <StateChip
-                    state={r.key === "FAILED" ? "crit" : r.key === "PENDING" ? "warn" : "ok"}
-                    text={r.label}
-                  />
-                ),
-              },
-              { key: "value", title: "数量", align: "right", width: "120px", render: (r) => r.value.toLocaleString() },
-            ]}
-          />
+          <div className={styles.healthTableBox} data-loading={!st && !sessErr ? "1" : undefined}>
+            <DataTable
+              rows={visibleByStatus}
+              rowKey={(r) => r.key}
+              loading={!st && !sessErr}
+              error={sessErr ? errText(sessErr) : null}
+              onRetry={() => { sessMutate(); }}
+              empty={{ title: "本时段没有会话档案", desc: "触发条件：/api/session-stats 的 byStatus 为空对象（该时间窗内没有会话记录）。" }}
+              columns={[
+                {
+                  key: "label", title: "状态",
+                  render: (r) => (
+                    <StateChip
+                      state={r.key === "FAILED" ? "crit" : r.key === "PENDING" ? "warn" : "ok"}
+                      text={r.label}
+                    />
+                  ),
+                },
+                { key: "value", title: "数量", align: "right", width: "120px", render: (r) => r.value.toLocaleString() },
+              ]}
+            />
+          </div>
+          {byStatus.length > pageSize && !showAllSess ? (
+            <div className={styles.showAllBar}>
+              <button type="button" className="btn" onClick={() => setShowAllSess(true)}>
+                {t("list.showAllRows", { n: byStatus.length })}
+              </button>
+              <span className={styles.showAllHint}>{t("list.firstNHint", { n: pageSize })}</span>
+            </div>
+          ) : showAllSess && byStatus.length > pageSize ? (
+            <div className={styles.showAllBar}>
+              <button type="button" className="btn" onClick={() => setShowAllSess(false)}>
+                {t("list.collapseRows", { n: pageSize })}
+              </button>
+            </div>
+          ) : null}
         </div>
         {Object.keys(tasksByStatus).length > 0 && <div className="panel"><div className="panel-header"><span className="panel-title">飞轮任务状态</span></div>
           <BarChart bars={Object.entries(tasksByStatus).map(([k,v]:[string,any])=>({label:statusLabel(k),value:Number(v),color:k==="DONE"?"var(--status-ok)":k==="FAILED"?"var(--status-crit)":k==="IN_PROGRESS"?"var(--status-warn)":"var(--text-muted)"}))} /></div>}
@@ -190,18 +267,34 @@ export default function HealthPage() {
       <div className="panel">
         <div className="panel-header"><span className="panel-title">飞轮健康度评估</span></div>
         <TableCopyButton />
-        <DataTable
-          rows={healthRows}
-          rowKey={(r) => r.key}
-          loading={!fwd?.health && !fwErr}
-          error={fwErr ? errText(fwErr) : null}
-          onRetry={() => { fwMutate(); }}
-          empty={{ title: "健康度还没算出来", desc: "触发条件：/api/flywheel-stats 的 data.health 缺失（飞轮尚未产出评估）。" }}
-          columns={[
-            { key: "label", title: "维度", render: (r) => (r.key === "overall" ? <b>{r.label}（总分）</b> : r.label) },
-            { key: "score", title: "分数", align: "right", width: "120px", render: (r) => (r.key === "overall" ? <b>{r.score}</b> : r.score) },
-          ]}
-        />
+        <div className={styles.healthTableBoxTall} data-loading={!fwd?.health && !fwErr ? "1" : undefined}>
+          <DataTable
+            rows={visibleHealthRows}
+            rowKey={(r) => r.key}
+            loading={!fwd?.health && !fwErr}
+            error={fwErr ? errText(fwErr) : null}
+            onRetry={() => { fwMutate(); }}
+            empty={{ title: "健康度还没算出来", desc: "触发条件：/api/flywheel-stats 的 data.health 缺失（飞轮尚未产出评估）。" }}
+            columns={[
+              { key: "label", title: "维度", render: (r) => (r.key === "overall" ? <b>{r.label}（总分）</b> : r.label) },
+              { key: "score", title: "分数", align: "right", width: "120px", render: (r) => (r.key === "overall" ? <b>{r.score}</b> : r.score) },
+            ]}
+          />
+        </div>
+        {healthRows.length > pageSize && !showAllHealth ? (
+          <div className={styles.showAllBar}>
+            <button type="button" className="btn" onClick={() => setShowAllHealth(true)}>
+              {t("list.showAllRows", { n: healthRows.length })}
+            </button>
+            <span className={styles.showAllHint}>{t("list.firstNHint", { n: pageSize })}</span>
+          </div>
+        ) : showAllHealth && healthRows.length > pageSize ? (
+          <div className={styles.showAllBar}>
+            <button type="button" className="btn" onClick={() => setShowAllHealth(false)}>
+              {t("list.collapseRows", { n: pageSize })}
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* PILOT-10 §3「成本：单值 -> 成本构成 + 预算进度」。

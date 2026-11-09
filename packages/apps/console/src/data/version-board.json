@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T13:14:00+08:00",
+  "updatedAt": "2026-11-09T14:50:00+08:00",
   "owner": "commercialization-line",
   "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
   "types": {
@@ -326,7 +326,7 @@
     },
     {
       "version": "0.4.37",
-      "status": "已发车（RBAC enforce）",
+      "status": "已发车（RBAC enforce；open.2 已发布）",
       "eta": "2026-12-19",
       "items": [
         {
@@ -340,7 +340,7 @@
           "type": "TASK",
           "id": "0.4.37-02",
           "title": "openlions 0.4.37 导出/交接（pack 170bd74d1）",
-          "state": "doing",
+          "state": "done",
           "owner": "open-source-line"
         }
       ]
@@ -370,48 +370,76 @@
           "title": "openlions per-car 导出闭环（0.4.37 起）",
           "state": "todo",
           "owner": "open-source-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.38-04",
+          "title": "安装器 pg_trgm 预检移到 deps 后 / 首装 db push 失败",
+          "state": "done",
+          "owner": "devops-line"
         }
       ]
     },
     {
       "version": "0.4.39",
-      "status": "规划（前端架构/UIUX 改版）",
+      "status": "进行中（前端架构/UIUX 改版）",
       "eta": "2027-01-09",
       "items": [
         {
           "type": "REQ",
           "id": "0.4.39-01",
           "title": "设计 token 收敛 + 浅色主题可用（A）",
-          "state": "todo",
+          "state": "done",
           "owner": "frontend-line-2"
         },
         {
           "type": "REQ",
           "id": "0.4.39-02",
           "title": "平台壳层/命令面板/通知（B）",
-          "state": "todo",
+          "state": "done",
           "owner": "frontend-line-2"
         },
         {
           "type": "REQ",
           "id": "0.4.39-03",
           "title": "/messages 信息密度与五态（C）",
-          "state": "todo",
+          "state": "doing",
           "owner": "frontend-line-2"
         },
         {
           "type": "TASK",
           "id": "0.4.39-04",
           "title": "质量门：截图/axe/CLS（D）",
-          "state": "todo",
+          "state": "done",
           "owner": "uiux-line"
         },
         {
           "type": "REQ",
           "id": "0.4.39-05",
-          "title": "控制台 IA Bento 7 组 38 项（菜单重构）",
-          "state": "todo",
+          "title": "IA 40 项：36 可点 + 4 locked 待建（/agents/groups、/tools/mcp、/docs、/about）",
+          "state": "done",
           "owner": "uiux-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.39-06",
+          "title": "4 页 CLS：client-releases/logic/agents/health",
+          "state": "done",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.39-07",
+          "title": "实现 groups/MCP/docs/about 4 页（解除 locked）",
+          "state": "done",
+          "owner": "uiux-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.39-08",
+          "title": "平台写审计：批1 done（model-config），批2/3/4 待做",
+          "state": "doing",
+          "owner": "macs-backend-2"
         }
       ]
     }

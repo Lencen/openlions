@@ -90,6 +90,14 @@
   flex-wrap: wrap;
   margin-top: var(--sp-2);
 }
+/* 0.4.39-04 CLS：本行含「逐源数据时刻」，时刻从「未知/加载中」变成具体时间后
+   390 档会多折 1 行（实测 51px -> 71px），把功能入口带 / 指标带 / 表格整体推下去。
+   这里按实测终态预留高度（76px，含 5px 余量），数据到达前后同高。 */
+@media (max-width: 640px) {
+  .headMeta {
+    min-height: 76px;
+  }
+}
 .entryBand {
   display: flex;
   gap: var(--sp-2);
@@ -122,4 +130,34 @@
   font-size: var(--fs-sm);
   color: var(--text-muted);
   margin-top: var(--sp-2);
+}
+
+/* ================= 0.4.39-04 CLS 修复 =================
+   成因（2026-11-09 实测 /agents@390）：DataTable 的 loading 骨架固定 5 行（223px），
+   数据到达后一次渲染全部 11 行（996px），表下内容整体被推走。
+   对策：page.tsx 首屏只渲染前 N 行（桌面 20 / 移动端 10）+「显示全部」按钮；
+   DataTable 本轮禁改，所以加载态用容器 min-height 顶到「表头 39px + N 行」的高度。
+   行高依据（实测）：@390 前 10 行 76/95/76/76/92/92/92/76/111/76（均 86，合计 862）；
+   @1440 行高 60~76（均 69）。表头 39px。
+   min-height 只在首屏加载态生效（data-loading="1"）：筛选后行数变少时不会留下大片空白。 */
+.agentsTableBox[data-loading="1"] {
+  min-height: calc(39px + 20 * 69px); /* 桌面 N=20：39 + 1380 = 1419px */
+}
+@media (max-width: 640px) {
+  .agentsTableBox[data-loading="1"] {
+    min-height: calc(39px + 10 * 86px); /* 移动端 N=10：39 + 860 = 899px */
+  }
+}
+
+/* 「显示全部 / 收起」一行（与 /system/client-releases、/platform/logic 同款排布） */
+.showAllBar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+.showAllHint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
 }

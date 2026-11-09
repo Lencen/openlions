@@ -54,6 +54,36 @@ const SORTS = [
   { value: "seen", label: "最近活跃" },
 ];
 
+// ===== 0.4.39-04 CLS 修复：首屏只渲染前 N 行（桌面 20 / 移动端 <=640px 10）=====
+// 成因（2026-11-09 实测 /agents@390）：DataTable 的 loading 骨架固定 5 行（223px），
+//   数据到达后一次渲染全部行（11 行 = 996px），表下内容整体被推走。
+// 对策：只把前 N 行交给 DataTable，超出部分给「显示全部 N 条」按钮（点了才全渲染）；
+//   表格容器在首屏加载态用 min-height 顶到「表头 39px + N 行」高度（见 page.module.css）。
+// 依据：@390 前 10 行 76/95/76/76/92/92/92/76/111/76（均 86，合计 862）；@1440 实测行高 60~76（均 69）。
+const N_DESKTOP = 20;
+const N_MOBILE = 10;
+
+/** 移动端判定必须放在 effect 里（matchMedia）后再切。
+ *  渲染期直接读 window 会与 SSR 输出不一致 -> hydration mismatch。
+ *  断点 640px 与 page.module.css 里 .agentsTableBox / .headMeta 的 @media (max-width: 640px) 必须同值。 */
+function useMobileQuery() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setMobile(mq.matches);
+    apply();
+    if (mq.addEventListener) {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+    // 老 Safari 只有 addListener / removeListener（类型里没有，按可选调用兜底）
+    (mq as any).addListener?.(apply);
+    return () => (mq as any).removeListener?.(apply);
+  }, []);
+  return mobile;
+}
+
 export default function AgentsDashboard() {
   const router = useRouter();
   const subs = getSubmodules("agents");
@@ -72,6 +102,14 @@ export default function AgentsDashboard() {
   const [qApplied, setQApplied] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
   const [sort, setSort] = useState<string>("name");
+
+  // 0.4.39-04 CLS：首屏渲染窗口（桌面 N_DESKTOP / 移动端 N_MOBILE）+「显示全部」开关。
+  // 取数、字段口径、排序、列一律不变，只是先渲染前 N 行（点按钮才全渲染）。
+  const isMobile = useMobileQuery();
+  const pageSize = isMobile ? N_MOBILE : N_DESKTOP;
+  const [showAll, setShowAll] = useState(false);
+  // 搜索 / 状态筛选 / 排序变了就回到「只渲染前 N 行」，避免上一次的「显示全部」把新条件也全渲染。
+  useEffect(() => { setShowAll(false); }, [qApplied, filter, sort]);
 
   useEffect(() => {
     const id = setTimeout(() => setQApplied(q.trim().toLowerCase()), 250);
@@ -130,6 +168,11 @@ export default function AgentsDashboard() {
       return String(a.display_name || a.agent_id || "").localeCompare(String(b.display_name || b.agent_id || ""));
     });
   }, [agents, filter, qApplied, sort]);
+
+  // 首屏窗口：只把前 N 行交给 DataTable（数据/排序/筛选不变，点「显示全部」才全渲染）。
+  const visibleRows = showAll ? filtered : filtered.slice(0, pageSize);
+  const hiddenCount = showAll ? 0 : Math.max(0, filtered.length - pageSize);
+  const initialLoading = loading && agents.length === 0;
 
   const detailHref = (a: any) => "/agents/detail?agentId=" + encodeURIComponent(a.agent_id || "");
 
@@ -302,27 +345,45 @@ export default function AgentsDashboard() {
               <span>默认按名称；会话数 / 成功率 / 成本的排序口径待补齐</span>
             </div>
 
-            <RowClick className={styles.clickable} onPick={(i) => { const a = filtered[i]; if (a) router.push(detailHref(a)); }}>
-              <DataTable
-                loading={loading && agents.length === 0}
-                error={error ? errText : null}
-                onRetry={() => { mutate(); }}
-                rows={filtered}
-                rowKey={(a: any, i) => a.agent_id || i}
-                empty={{
-                  title: qApplied ? "没有匹配的智能体" : "暂无智能体",
-                  desc: qApplied
-                    ? "名称 / 编号 / 通道 / 宿主 / 状态里都没有匹配项 —— 清空搜索或切换状态筛选。"
-                    : "接口返回 0 条（/api/agent-list）。接入一个智能体后，这里会显示它的运行时、状态与权限。",
-                  action: qApplied ? (
-                    <button type="button" className="btn" onClick={() => setQ("")}>清除搜索</button>
-                  ) : (
-                    <Link className="btn" href="/agents/onboard">去接入向导 →</Link>
-                  ),
-                }}
-                columns={columns}
-              />
-            </RowClick>
+            {/* 首屏加载时容器用 min-height 占位（= 表头 + N 行），数据到达后表格同高 -> 表下内容不被推走。 */}
+            <div className={styles.agentsTableBox} data-loading={initialLoading ? "1" : undefined}>
+              <RowClick className={styles.clickable} onPick={(i) => { const a = visibleRows[i]; if (a) router.push(detailHref(a)); }}>
+                <DataTable
+                  loading={initialLoading}
+                  error={error ? errText : null}
+                  onRetry={() => { mutate(); }}
+                  rows={visibleRows}
+                  rowKey={(a: any, i) => a.agent_id || i}
+                  empty={{
+                    title: qApplied ? "没有匹配的智能体" : "暂无智能体",
+                    desc: qApplied
+                      ? "名称 / 编号 / 通道 / 宿主 / 状态里都没有匹配项 —— 清空搜索或切换状态筛选。"
+                      : "接口返回 0 条（/api/agent-list）。接入一个智能体后，这里会显示它的运行时、状态与权限。",
+                    action: qApplied ? (
+                      <button type="button" className="btn" onClick={() => setQ("")}>清除搜索</button>
+                    ) : (
+                      <Link className="btn" href="/agents/onboard">去接入向导 →</Link>
+                    ),
+                  }}
+                  columns={columns}
+                />
+              </RowClick>
+            </div>
+            {/* 0.4.39-04：超出前 N 行才给「显示全部」（文案走 i18n，不写死英文字面量）；点过之后可再收起。 */}
+            {hiddenCount > 0 ? (
+              <div className={styles.showAllBar}>
+                <button type="button" className="btn" onClick={() => setShowAll(true)}>
+                  {t("list.showAllRows", { n: filtered.length })}
+                </button>
+                <span className={styles.showAllHint}>{t("list.firstNHint", { n: pageSize })}</span>
+              </div>
+            ) : showAll && filtered.length > pageSize ? (
+              <div className={styles.showAllBar}>
+                <button type="button" className="btn" onClick={() => setShowAll(false)}>
+                  {t("list.collapseRows", { n: pageSize })}
+                </button>
+              </div>
+            ) : null}
             <div className={styles.count}>
               共 {agents.length} 条 · 当前视图 {filtered.length} 条（筛选后）· 行点击进智能体详情
             </div>

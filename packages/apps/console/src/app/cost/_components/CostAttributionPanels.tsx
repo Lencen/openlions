@@ -1,14 +1,24 @@
 "use client";
 // cost 页 · 归因聚合 (按入口柱状 + 按模型饼图), 从 page.tsx 抽出 (2026-09-14 页面瘦身)
 import ChartPanel from "@/components/common/ChartPanel";
-import { chartBase, useChartBase } from "@/components/EChart";
+import { useChartBase } from "@/components/EChart";
 import { t } from "@/i18n";
 import { fmtCompact, fmtNum, fmtTokens } from "@/lib/format";
 import styles from "../page.module.css";
 
-const MODEL_COLORS = ["#2563eb", "#7c3aed", "#0d9488", "#d97706", "#db2777", "#64748b"];
+// 2026-11-09 轮 A2：模型色不再写 hex，改为按主题 token 取名。
+//   取值与改动前一致（此前是 EChart HEX_TO_KEY 把同一批 hex 映射成这些 token），
+//   但源码现在直接表达"这是哪一类色"，换主题/换品牌色时无需再维护一张映射表。
+const modelColors = (base: any): string[] => [
+  base.colors.primary,        // 原 #2563eb
+  base.colors.tableKnowledge, // 原 #7c3aed
+  base.colors.tableMemory,    // 原 #0d9488
+  base.colors.statusWarn,     // 原 #d97706
+  base.colors.tableReflection,// 原 #db2777
+  base.colors.textDim,        // 原 #64748b
+];
 
-function entryChartOption(byEntry: any[], base: any = chartBase) {
+function entryChartOption(byEntry: any[], base: any) {
   return {
     ...base,
     grid: { left: 8, right: 60, top: 8, bottom: 8, containLabel: true },
@@ -18,7 +28,7 @@ function entryChartOption(byEntry: any[], base: any = chartBase) {
     series: [
       {
         name: t("cost.byEntry.measured"), type: "bar", barMaxWidth: 18,
-        itemStyle: { color: "#2563eb", borderRadius: [0, 3, 3, 0] },
+        itemStyle: { color: base.colors.primary, borderRadius: [0, 3, 3, 0] },
         label: { show: true, position: "right", fontSize: "var(--fs-xs)", color: base.textStyle.color, formatter: (p: any) => (p.value ? fmtCompact(p.value) : "") },
         data: byEntry.map((e: any) => e.tokens).reverse(),
       },
@@ -26,7 +36,7 @@ function entryChartOption(byEntry: any[], base: any = chartBase) {
       ...(byEntry.some((e: any) => e.estimatedTokens > 0)
         ? [{
             name: t("cost.byEntry.estimated"), type: "bar" as const, barMaxWidth: 12,
-            itemStyle: { color: "#cbd5e1", borderRadius: [0, 3, 3, 0] },
+            itemStyle: { color: base.colors.bgSurface2, borderRadius: [0, 3, 3, 0] },
             data: byEntry.map((e: any) => e.estimatedTokens).reverse(),
           }]
         : []),
@@ -34,7 +44,7 @@ function entryChartOption(byEntry: any[], base: any = chartBase) {
   };
 }
 
-function modelChartOption(byModel: any[], base: any = chartBase) {
+function modelChartOption(byModel: any[], base: any) {
   return {
     ...base,
     tooltip: {
@@ -56,7 +66,7 @@ function modelChartOption(byModel: any[], base: any = chartBase) {
         // 饼图只画实测 (估算单列展示, 不并入)
         data: byModel.map((m: any, i: number) => ({
           name: m.model, value: m.tokens,
-          itemStyle: { color: MODEL_COLORS[i % MODEL_COLORS.length] },
+          itemStyle: { color: modelColors(base)[i % 6] },
         })),
       },
     ],

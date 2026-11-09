@@ -42,7 +42,7 @@ const HEX_TO_KEY: Record<string, string> = {
   "#ffffff": "bgSurface",
 };
 /** 把主题色(通常是 #rrggbb)与一个 alpha 合成为 rgba —— canvas 需要**具体颜色**, 不能用 color-mix/var()。 */
-function withAlpha(base: string, alpha: string): string {
+export function withAlpha(base: string, alpha: string): string {
   const m = String(base).trim().match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
   if (!m) return base; // 已经是 rgba()/color() 等 -> 原样返回(至少不更坏)
   let h = m[1];
@@ -150,6 +150,10 @@ export function useChartBase() {
   const c = useThemeColors();
   return {
     ...chartBase,
+    /** 2026-11-09 轮 A2：把当前主题的真实色值**显式暴露**给面板。
+     *  为什么：面板里原来写 "#d97706"/"#0d9488" 这类 hex，靠 HEX_TO_KEY 在渲染时偷偷换成 token ——
+     *  源码看着是硬编码，实际跟随主题，两边都难读。改成 base.colors.x 后，源码即 token，且取值不变。 */
+    colors: c,
     textStyle: { ...chartBase.textStyle, color: c.textDim },
     tooltip: {
       ...chartBase.tooltip,

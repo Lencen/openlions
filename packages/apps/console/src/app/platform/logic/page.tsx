@@ -14,6 +14,7 @@ import { Alert } from "@/components/primitives";
 import { useGlobalNonce } from "@/components/GlobalFilter";
 import TableCopyButton from "@/components/TableCopyButton";
 import { DataTable, StateBlock, ErrorBlock, PageHeader, PageTitle, Pill } from "@/components/ui";
+import { t } from "@/i18n";
 import styles from "./page.module.css";
 
 // 平台逻辑总览 (2026-09-10): 页面直接读取 docs/platform-logic/*.md -> 文档与页面同一来源, 不会漂移。
@@ -27,6 +28,34 @@ interface ChangeRow { at: string; who: string; key: string; before: string; afte
 
 const fmt = (v?: string) => (v ? new Date(v).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false }) : "-");
 
+// 2026-11-09 · 0.4.39-04 CLS / 布局修复：
+// 实测 /api/platform-logic 当前下发 354 个域，左栏一次渲染 354 个按钮 = 37893px，
+// 整页 scrollHeight 1270 -> 38924px —— 这是布局 bug（不是单纯 CLS）。
+// 对策：① 左栏限高 + 内部滚动；② 右栏同高（文档正文内部滚动），栅格高度恒定 -> 数据到达前后不位移；
+//       ③ 域列表/文档清单首屏只渲染前 N 项（桌面 20 / 移动端 10），超出给「显示全部」按钮。
+const N_DESKTOP = 20;
+const N_MOBILE = 10;
+
+/** 移动端判定必须放在 effect 里（matchMedia）后再切：渲染期直接读 window 会与 SSR 不一致 -> hydration mismatch。
+ *  断点 640px 与 page.module.css 的 @media (max-width: 640px) 同值。 */
+function useMobileQuery() {
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setMobile(mq.matches);
+    apply();
+    if (mq.addEventListener) {
+      mq.addEventListener("change", apply);
+      return () => mq.removeEventListener("change", apply);
+    }
+    // 老 Safari 只有 addListener / removeListener（类型里没有，按可选调用兜底）
+    (mq as any).addListener?.(apply);
+    return () => (mq as any).removeListener?.(apply);
+  }, []);
+  return mobile;
+}
+
 /** 无权限的唯一判定口：401/403 或后端文案含「无权限 / 未授权」。只决定渲染哪个四态，不吞错误。 */
 const FORBIDDEN_RE = /401|403|无权限|未授权|unauthori[sz]ed|forbidden/i;
 const isForbidden = (msg: string) => FORBIDDEN_RE.test(msg);
@@ -36,6 +65,11 @@ export default function PlatformLogicPage() {
   const [err, setErr] = useState("");
   const [active, setActive] = useState("flywheel");
   const [showIndex, setShowIndex] = useState(false);
+  // 0.4.39-04 CLS：首屏渲染窗口（域列表 / 文档清单），数据/顺序/文案不变。
+  const isMobile = useMobileQuery();
+  const pageSize = isMobile ? N_MOBILE : N_DESKTOP;
+  const [showAllDomains, setShowAllDomains] = useState(false);
+  const [showAllInv, setShowAllInv] = useState(false);
 
   // 2026-10-13 round 76-DL: 接入全局刷新(本页只挂载拉一次)。
   const gf = useGlobalNonce();
@@ -54,6 +88,18 @@ export default function PlatformLogicPage() {
   const inv: InvRow[] = d?.inventory ?? [];
   const loading = !d && !err;
   const forbidden = isForbidden(String(err || ""));
+
+  const visibleDomains = showAllDomains ? domains : domains.slice(0, pageSize);
+  const hiddenDomains = domains.length - visibleDomains.length;
+  const visibleInv = showAllInv ? inv : inv.slice(0, pageSize);
+  const hiddenInv = inv.length - visibleInv.length;
+
+  // 当前高亮的域若不在前 N 个里（刷新后顺序变化 / 断点切换），自动展开，避免右侧有内容而左栏找不到选中项。
+  useEffect(() => {
+    if (!dom) return;
+    const idx = domains.findIndex((x) => x.key === dom.key);
+    if (idx >= pageSize && !showAllDomains) setShowAllDomains(true);
+  }, [dom, domains, pageSize, showAllDomains]);
 
   // 文档行渲染：> 引用行变暗；表格行用等宽（原来是内联样式，现已收进 page.module.css）
   const renderLines = (lines: string[]) =>
@@ -113,7 +159,7 @@ export default function PlatformLogicPage() {
                 <div className={styles.leftSkeleton}><StateBlock loading rows={6} /></div>
               ) : (
                 <nav className={styles.domainList}>
-                  {domains.map((x) => {
+                  {visibleDomains.map((x) => {
                     const on = x.key === dom?.key;
                     return (
                       <button
@@ -136,6 +182,14 @@ export default function PlatformLogicPage() {
                   )}
                 </nav>
               )}
+              {/* 0.4.39-04：354 个域首屏只渲染前 N 个，点按钮才全渲染（文案走 i18n）。 */}
+              {hiddenDomains > 0 ? (
+                <div className={styles.moreBar}>
+                  <button type="button" className="btn btn-sm" onClick={() => setShowAllDomains(true)}>
+                    {t("logic.domains.showAll", { n: domains.length })}
+                  </button>
+                </div>
+              ) : null}
             </aside>
 
             <div className={styles.cfgRight}>
@@ -183,7 +237,7 @@ export default function PlatformLogicPage() {
               <>
                 <TableCopyButton />
                 <DataTable
-                  rows={inv}
+                  rows={visibleInv}
                   rowKey={(f) => f.dir + f.name}
                   empty={{ title: "清单为空", desc: "触发条件：/api/platform-logic 的 inventory 为空（docs/ 未扫描到 .md）。" }}
                   columns={[
@@ -193,6 +247,14 @@ export default function PlatformLogicPage() {
                     { key: "updatedAt", title: "修改时间", render: (f) => <span className="mono nowrap">{fmt(f.updatedAt)}</span> },
                   ]}
                 />
+                {/* 0.4.39-04：文档清单 1224 篇，首屏只渲染前 N 篇（点了才全渲染）。 */}
+                {hiddenInv > 0 ? (
+                  <div className={styles.moreBar}>
+                    <button type="button" className="btn btn-sm" onClick={() => setShowAllInv(true)}>
+                      {t("logic.inventory.showAll", { n: inv.length })}
+                    </button>
+                  </div>
+                ) : null}
               </>
             )}
             <div className={styles.panelNote}>

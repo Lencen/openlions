@@ -7,7 +7,7 @@ import { fmtCompact } from "@/lib/format";
 
 export default function CostAgentChart({ byAgent, loadingAll }: { byAgent: any[]; loadingAll: boolean }) {
   // 2026-10-15（round 76-FS）: 文字色接主题（此前写死亮色 -> 暗色下偏暗 ✗）。
-  //   series 里的 #0d9488/#cbd5e1 是**系列色**(哪根柱是谁), 保留不动 ✓。
+  //   series 里的系列色 2026-11-09 轮 A2 改为 base.colors.*（取值不变：此前是 EChart 的 HEX_TO_KEY 映射）。
   const base = useChartBase();
   return (
     <ChartPanel
@@ -27,14 +27,14 @@ export default function CostAgentChart({ byAgent, loadingAll }: { byAgent: any[]
         series: [
           {
             name: t("cost.byEntry.measured"), type: "bar", barMaxWidth: 16,
-            itemStyle: { color: "#0d9488", borderRadius: [0, 3, 3, 0] },
+            itemStyle: { color: base.colors.tableMemory, borderRadius: [0, 3, 3, 0] },
             label: { show: true, position: "right", fontSize: "var(--fs-xs)", color: base.textStyle.color, formatter: (p: any) => (p.value ? fmtCompact(p.value) : "") },
             data: byAgent.slice(0, 10).map((a: any) => a.totalTokens).reverse(),
           },
           ...(byAgent.some((a: any) => a.estimatedTokens > 0)
             ? [{
                 name: t("cost.byEntry.estimated"), type: "bar" as const, barMaxWidth: 10,
-                itemStyle: { color: "#cbd5e1", borderRadius: [0, 3, 3, 0] },
+                itemStyle: { color: base.colors.bgSurface2, borderRadius: [0, 3, 3, 0] },
                 data: byAgent.slice(0, 10).map((a: any) => a.estimatedTokens).reverse(),
               }]
             : []),

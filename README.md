@@ -93,7 +93,7 @@ LIONS 把“会话”变成“资产”，再把“资产”变成“任务”�
 实测干净环境一次装完约 15 分钟（依赖安装 + 5 个应用构建占大头，取决于网络与机器）。
 
     # 1. 解开发布介质
-    mkdir -p /tmp/lions && tar -xzf lions-0.4.37.tar.gz -C /tmp/lions
+    mkdir -p /tmp/lions && tar -xzf lions-0.4.39.tar.gz -C /tmp/lions
 
     # 2. 一条命令安装（介质里有 pg/ 时自动拉起 PostgreSQL）
     node /tmp/lions/scripts/lions-install.cjs \

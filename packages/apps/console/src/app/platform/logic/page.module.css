@@ -10,11 +10,21 @@
 /* 约束条（三闸门）常驻 */
 .gateBar { margin-bottom: var(--gap-sect); }
 
-/* 模板 D：左列 300px + 右详情 1fr；≤1024 上下堆叠（TEMPLATES §4 断点） */
-.cfgGrid { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--gap-block); margin-bottom: var(--gap-sect); align-items: start; }
-@media (max-width: 1023px) { .cfgGrid { grid-template-columns: 1fr; } }
+/* 模板 D：左列 300px + 右详情 1fr；≤1024 上下堆叠（TEMPLATES §4 断点）
+   ---------------------------------------------------------------------------
+   0.4.39-04 CLS / 布局修复（@1920 CLS 0.386、@1440 0.285）：
+   实测 /api/platform-logic 下发 354 个域 -> 左栏一次渲染 354 个按钮 = 37893px
+   （整页 scrollHeight 1270 -> 38924），数据到达后整页被撑高，下方面板整体位移。
+   对策：栅格两栏统一限高（--cfg-h）+ 内部滚动；数据到达前后栅格高度恒定 -> 不位移。
+   --cfg-h 取 calc(100vh - 380px)：1920x1080 -> 700px（栅格顶 346 + 700 = 1046，留 34px）；
+   1440x900 -> 520px（栅格顶 369 + 520 = 889）。移动端上下堆叠时各占 52vh。 */
+.cfgGrid { --cfg-h: calc(100vh - 380px); display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--gap-block); margin-bottom: var(--gap-sect); align-items: start; }
+@media (max-width: 1023px) { .cfgGrid { grid-template-columns: 1fr; --cfg-h: 52vh; } }
 
-.cfgLeft { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); overflow: hidden; }
+/* 左栏：限高 + 内部滚动（354 个域的列表在这里滚，不再把页面撑到 3.8 万像素） */
+.cfgLeft { height: var(--cfg-h); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); overflow: hidden auto; }
+/* 右栏：与左栏同高，文档正文在面板内部滚动（栅格行高恒定 -> 下方面板不位移） */
+.cfgRight > :global(.panel) { height: 100%; overflow-y: auto; }
 .cfgLeftHead { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); color: var(--text-dim); background: var(--bg-surface2); border-bottom: 1px solid var(--border); }
 .domainList { display: flex; flex-direction: column; }
 .leftSkeleton { padding: var(--sp-3); }
@@ -25,7 +35,12 @@
 .domainName { font-size: var(--fs-base); font-weight: 600; }
 .domainFile { font-size: var(--fs-sm); color: var(--text-dim); }
 
-.cfgRight { min-width: 0; }
+/* 右栏：与左栏同高（栅格行高恒定 -> 下方面板不位移），文档正文在面板内部滚动 */
+.cfgRight { height: var(--cfg-h); min-width: 0; }
+.moreBar { padding: var(--sp-2-5) var(--sp-3); border-top: 1px solid var(--border); }
+/* 左栏「显示全部 354 个域」按钮：域列表默认只渲染前 N 个，按钮钉在滚动容器底部，
+   否则要滚过 20 个域才看得到（判据/评审会读成「没做」）。 */
+.cfgLeft > .moreBar { position: sticky; bottom: 0; background: var(--bg-surface); }
 .detailHead { display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; }
 
 /* 文档段落（原来是内联 font-size / line-height / white-space / monospace） */

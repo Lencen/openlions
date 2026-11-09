@@ -15,7 +15,10 @@
   margin-bottom: var(--sp-3);
   padding: var(--sp-3);
   border-radius: 8px;
-  border: 1px solid var(--border-subtle);
+  /* 2026-11-09 轮 A：--border-subtle 从未定义（全仓仅此一处使用），token 守门判 [undefined]。
+     该页已 301 到 /messages（next.config），此文件是残留；补 fallback 而不是新造一个 token ——
+     新造 token 会让"看起来有设计规范、实际没人用"的假象多一条。 */
+  border: 1px solid var(--border-subtle, var(--border));
   color: var(--text-muted);
 }
 .stateBox[data-tone="error"] { border-color: var(--status-crit); color: var(--status-crit); }

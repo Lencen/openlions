@@ -1581,7 +1581,8 @@ background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--pr
 /* 2026-10-25 R4: 顶栏控件最小 24×24（WCAG 2.2 AA 2.5.8 指针目标），实测原为 40×21 */
 .theme-toggle-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 28px; padding: 0 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--text-dim); font-size: var(--fs-xs); cursor: pointer; }
 .theme-toggle-btn.active { background: var(--primary-dim); color: var(--primary); font-weight: 600; }
-.theme-toggle-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+/* 2026-11-09 轮 B3：offset 由 1px 对齐到平台基线 2px（此前是全站唯一一处 1px，视觉上比别处贴边） */
+.theme-toggle-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 
 /* 2026-10-22 a11y：待办徽标 hot 态在深浅两色下需要不同处理——
    浅色：同色 70% 加深（#8A6300 → 约 6.6）；
@@ -2207,3 +2208,170 @@ html[data-density="compact"] .sidebar-nav .nav-item-label { min-height: 26px; }
 .filter .n { font-size: var(--fs-xs); color: var(--text-dim); font-variant-numeric: tabular-nums; }
 .filter.on .n { color: var(--accent-primary); }
 .spacer { flex: 1 1 auto; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-11-09 · 0.4.39-01 轮 A1：语义设计 token（console 本地，非生成块）
+
+   为什么放在 console 而不是 canonical（packages/ui/ui/src/tokens.css）：
+     session 端已有同名 --surface-1/--surface-2（别名到它自己的 --bg-elevated/--bg-soft，
+     暖色底 #232220 一套）。写进 canonical 会被判 [drift] 跨端不一致，而把 session 改成
+     console 的冷色底属于"顺手改别人端视觉"——不在本轮范围。
+     这一轮只在 console 落地语义名，等 session/portal 决定是否加入再上提 canonical。
+
+   命名与取值：
+     --surface-1/2/3   卡片 / 次级面板 / 三级底（三主题换值不换名）
+     --border-strong   强边框（表头、选中态、分隔加强）
+     --elev-1/2        阴影档（浮层/下拉用 2，卡片用 1；hc 用边线代替阴影）
+     --fs-display/title/body/caption/mono  字号语义档（指向既有 --fs-*，不新增刻度）
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+  --elev-2: 0 4px 8px -2px rgba(16, 24, 40, 0.10), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
+  --fs-display: var(--fs-3xl);
+  --fs-title: var(--fs-xl);
+  --fs-body: var(--fs-base);
+  --fs-caption: var(--fs-xs);
+  --fs-mono: var(--fs-sm);
+}
+
+/* 轮 A3：显式浅色主题。
+   此前 light 只是 ":root 的默认值"：任何人往 :root 加一条新变量却忘了 light，浅色用户就会
+   悄悄吃到深色兜底（历史事故：dark-first 时 --bg 停浅色、深色默认是假的，见本文件 1355 行注释）。
+   这里与 dark/hc 对称写成显式覆盖，级联顺序不再影响正确性。 */
+[data-theme="light"] {
+  --surface-1: #ffffff;
+  --surface-2: #f1f5f9;
+  --surface-3: #e2e8f0;
+  --border-strong: rgba(0, 0, 0, 0.22);
+  --elev-1: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.10);
+  --elev-2: 0 4px 8px -2px rgba(16, 24, 40, 0.10), 0 2px 6px -2px rgba(16, 24, 40, 0.06);
+}
+
+/* 深色：表面值与本文件 1367 行那组深色表面层逐字一致（别处已在用），避免两套深色值漂移 */
+[data-theme="dark"] {
+  --surface-1: #11161d;
+  --surface-2: #151b24;
+  --surface-3: #1b2431;
+  --elev-1: 0 1px 3px rgba(0, 0, 0, 0.40), 0 1px 2px rgba(0, 0, 0, 0.30);
+  --elev-2: 0 8px 16px -4px rgba(0, 0, 0, 0.50), 0 4px 8px -4px rgba(0, 0, 0, 0.40);
+}
+
+/* 高对比：阴影几乎不用，靠边框分层（--border-strong 在 1394 行已有 0.8 的 hc 覆盖） */
+[data-theme="hc"] {
+  --surface-1: #0a0a0a;
+  --surface-2: #141414;
+  --surface-3: #1e1e1e;
+  --elev-1: 0 1px 0 rgba(255, 255, 255, 0.25);
+  --elev-2: 0 2px 0 rgba(255, 255, 255, 0.35);
+}
+
+
+/* ════════════════════════════════════════════════════════════════════════════
+ * 0.4.39 A：语义 surface/elevation/type token（别名层，不改视觉）
+ * 目标：停止页面各自硬编码 surface/elevation/字号；light 主题显式 color-scheme。
+ * 回退：删除本节即可，不涉及结构。
+ * ════════════════════════════════════════════════════════════════════════════ */
+:root {
+  --surface-1: var(--bg-surface);
+  --surface-2: var(--bg-surface2);
+  --surface-3: var(--bg-surface3);
+  --border-strong: color-mix(in srgb, var(--border) 72%, var(--text) 12%);
+  --elev-1: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --elev-2: 0 4px 14px rgba(15, 23, 42, 0.09);
+  --fs-display: var(--fs-3xl);
+  --fs-title: var(--fs-xl);
+  --fs-body: var(--fs-base);
+  --fs-caption: var(--fs-xs);
+  --fs-mono: var(--fs-sm);
+}
+
+[data-theme="light"] { color-scheme: light; }
+[data-theme="dark"] { color-scheme: dark; }
+[data-theme="hc"] { color-scheme: dark; }
+
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-11-09 · 0.4.39-01 轮 B3：焦点可见（:focus-visible）补齐
+
+   改前实测：既有规则只覆盖 .btn / .ui-* / .theme-toggle-btn / .filter；下面这些高频键盘入口
+   在 Tab 时只有浏览器默认环（实测 3px currentColor、偏移 0），与平台 2px --primary 基线不一致：
+     .sidebar-item 侧栏导航（最高频）／.topnav-tab 顶栏页签
+     .gs-trigger 全局搜索触发器／.topnav-todo 待办
+     .notify-trigger／.notify-item（B2 新增的通知聚合）
+     .cmdk-item（B1 新增的命令面板行）／.rowClickable、tr[tabindex]（可点表格行）
+   口径：与既有规则同一条基线 —— 2px、--primary、offset 2px。
+   为什么不用通配兜底：会把按钮内嵌的 span/图标也点亮，出现"双框"。
+   为什么按类名而不是按容器列：首次验收按 .topnav-right a 写，漏掉了挂在别处的兄弟节点
+   （.gs-trigger 在 GlobalSearch 里、.topnav-todo 在 TopNav 另一分支）。
+
+   测量提醒：这些元素带 transition（0.18s），focus 后**立刻**读 getComputedStyle 会拿到过渡
+   中间值（实测 3px / rgb(99,110,121)），误判成"环没生效"。验收脚本里要等 ~500ms 再读。
+   ══════════════════════════════════════════════════════════════════════════ */
+.sidebar-item:focus-visible,
+.sidebar-footer a:focus-visible,
+.topnav-tab:focus-visible,
+.topnav-tabs a:focus-visible,
+.topnav-logo:focus-visible,
+.topnav-toggle:focus-visible,
+.gs-trigger:focus-visible,
+.topnav-todo:focus-visible,
+.notify-trigger:focus-visible,
+.notify-item:focus-visible,
+.cmdk-item:focus-visible,
+.rowClickable:focus-visible,
+tr[tabindex]:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* 命令面板输入框：面板打开即自动聚焦，若也画外环会与弹层边框叠成"双框"；
+   改为把底部分隔线换成主色 + 文本光标同色 —— 焦点可见但不破坏弹层。 */
+.cmdk-input:focus-visible { border-bottom-color: var(--primary); caret-color: var(--primary); outline: none; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   2026-11-09 · 0.4.39 轮 C2：消息正文排版（长消息 / 代码块 / 引用）
+   改前：.msg-body 只有 white-space: pre-wrap + word-break: break-word，
+        代码块按正文比例字体渲染、无底色无边界、超长不折行时整屏被撑开。
+   口径：等宽块、上限高度（超出内部滚动）、明确折行策略、全部走 token。
+   ══════════════════════════════════════════════════════════════════════════ */
+.msg-body { overflow-wrap: anywhere; }
+
+/* 行内代码：等宽 + 底色 + 细边框，避免与正文混读 */
+.msg-body code {
+  font-family: var(--c-font-mono);
+  font-size: var(--fs-mono);
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xs);
+  padding: 1px 4px;
+}
+
+/* 代码块：等宽、限高 320px（内部滚动，不把整页撑高）、横向可滚不折行 */
+.msg-body pre {
+  font-family: var(--c-font-mono);
+  font-size: var(--fs-mono);
+  line-height: 1.55;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--sp-2) var(--sp-3);
+  margin: var(--sp-2) 0;
+  max-height: 320px;
+  overflow: auto;
+  white-space: pre;
+  tab-size: 2;
+}
+.msg-body pre code { background: transparent; border: 0; padding: 0; font-size: inherit; }
+
+/* 引用：左侧强边框 + 次级文字色 */
+.msg-body blockquote {
+  margin: var(--sp-2) 0;
+  padding-left: var(--sp-3);
+  border-left: 3px solid var(--border-strong);
+  color: var(--text-dim);
+}
