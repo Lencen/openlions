@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { execFileSync } from "node:child_process";
 import { one } from "@/lib/server/lions-db";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 import { hostname } from "node:os";
 
 // 2026-10-15 round-78: 读实时数据 —— 上游 mind 授权矩阵 + 直读 mind 库(MIND_DB)。授权变更必须立刻可见,
@@ -200,6 +202,40 @@ export async function POST(req: NextRequest) {
     if (!action || !agent_id) {
       return NextResponse.json({ error: "missing action/agent_id" }, { status: 400 });
     }
+
+    // 0.4.40-02 批2：权限校验（PLATFORM_WRITE_AUTH）+ 二次确认（PLATFORM_WRITE_CONFIRM）
+    const guard = requirePlatformWrite(req, "perm.grant", body as Record<string, unknown>);
+    if (!guard.ok) return NextResponse.json(guard.body, { status: guard.status });
+
+    // 审计用 before：读当前授权行（读不到就是空，不阻断业务）
+    let beforeRow: Record<string, unknown> = {};
+    if (service_name) {
+      try {
+        const row = await one(
+          "SELECT status, permissions FROM AgentServicePermission WHERE agent_id = $1 AND service_name = $2 LIMIT 1",
+          agent_id, String(service_name)
+        ) as Record<string, unknown> | null;
+        if (row) beforeRow = { status: row.status, permissions: row.permissions };
+      } catch { /* 读不到不阻断 */ }
+    }
+    const auditAuth = async (act: string, changeType: string, after: Record<string, unknown>): Promise<string | undefined> => {
+      try {
+        const audit = await writeAudit({
+          entityType: "PlatformAuth",
+          entityId: [agent_id, service_name].filter(Boolean).join("/"),
+          action: "platform.auth." + act,
+          before: beforeRow,
+          after,
+          actor: { id: guard.actorId, type: "human" },
+          changeType,
+          confirmed: true,
+        });
+        return audit.id;
+      } catch (e) {
+        // 审计失败按 fail-closed 处理（与批1 model-config 同口径）
+        throw new Error("AUDIT_WRITE_FAILED: " + String((e as Error)?.message || e));
+      }
+    };
     if (action === "set_tier") {
       const t = Number(tier);
       if (!Number.isInteger(t) || t < 0 || t > 3) {
@@ -215,11 +251,13 @@ export async function POST(req: NextRequest) {
         );
       }
       const result = await callTrpc("agent.setCapabilityTier", { json: { agent_id, tier: t, reason } });
+      const auditId = await auditAuth("update_tier", "update", { tier: t, reason: reason || "" });
       const client = await pushClientConfig(agent_id, t);
       return NextResponse.json({
         ok: true,
         trpc: result,
         clientPush: client,
+        auditId,
       });
     }
     if (!service_name) {
@@ -230,12 +268,14 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "permissions 必须是字符串数组" }, { status: 400 });
       }
       const result = await callTrpc("agent.setServicePermissions", { json: { agent_id, service_name, permissions } });
-      return NextResponse.json(result);
+      const auditId = await auditAuth("update", "update", { permissions });
+      return NextResponse.json({ ...(result as Record<string, unknown>), auditId });
     }
     const proc = action === "grant" ? "agent.grantServiceToAgent" : action === "revoke" ? "agent.revokeServiceFromAgent" : null;
     if (!proc) return NextResponse.json({ error: "action must be grant|revoke|set_permissions|set_tier" }, { status: 400 });
     const result = await callTrpc(proc, { json: { agent_id, service_name } });
-    return NextResponse.json(result);
+    const auditId = await auditAuth(action === "grant" ? "grant" : "revoke", action === "grant" ? "grant" : "revoke", { granted: action === "grant" });
+    return NextResponse.json({ ...(result as Record<string, unknown>), auditId });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });
   }

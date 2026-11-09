@@ -85,6 +85,18 @@ CODE_ROOT="$(cd "$WRAPPER_DIR/.." && pwd)"
 : "${LIONS_REPO_ROOT:=$CODE_ROOT}"
 export LIONS_REPO_ROOT
 : "${LIONS_HOME:=$CODE_ROOT}"
+# 0.4.40-07：系统 node<20 时 next 的 `#!/usr/bin/env node` 会命中旧 node；优先安装自带 node。
+#   单元可显式设 LIONS_NODE_BIN；未设时尝试 <LIONS_HOME>/node20/bin/node（104 clean-room 路径）。
+if [ -z "${LIONS_NODE_BIN:-}" ] && [ -x "$LIONS_HOME/node20/bin/node" ]; then
+  LIONS_NODE_BIN="$LIONS_HOME/node20/bin/node"
+fi
+if [ -z "${LIONS_NODE_BIN:-}" ] && [ -x "$HOME/node20/bin/node" ]; then
+  LIONS_NODE_BIN="$HOME/node20/bin/node"
+fi
+if [ -n "${LIONS_NODE_BIN:-}" ] && [ -x "$LIONS_NODE_BIN" ]; then
+  export LIONS_NODE_BIN
+  export PATH="$(dirname "$LIONS_NODE_BIN"):$PATH"
+fi
 if [ -x "$APP_DIR/node_modules/.bin/next" ]; then
   NEXT_BIN="$APP_DIR/node_modules/.bin/next"
 else

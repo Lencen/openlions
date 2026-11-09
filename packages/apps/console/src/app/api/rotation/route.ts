@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { safeFetchJson } from "@/lib/server/proxy-fetch";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -29,15 +31,28 @@ export async function GET() {
 }
 
 // POST /api/rotation  { action, payload }
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({} as any));
   const action = String(body?.action || "");
   if (!ACTIONS.has(action)) return NextResponse.json({ ok: false, error: "未知操作" }, { status: 400 });
+  // 0.4.40-03 批3：运维写路由统一鉴权 + 审计
+  const guard = requirePlatformWrite(req, "ops.write", body as Record<string, unknown>);
+  if (!guard.ok) return NextResponse.json(guard.body, { status: guard.status });
   const r = await safeFetchJson(MIND + "." + action, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ json: body?.payload ?? {} }),
   });
   if (r.ok === false) return NextResponse.json({ ok: false, error: r.error }, { status: 502 });
+  await writeAudit({
+    entityType: "PlatformConfig",
+    entityId: "autoRotation",
+    action: "platform.rotation." + action,
+    before: {},
+    after: { action, payload: body?.payload ?? {} },
+    actor: { id: guard.actorId, type: "human" },
+    changeType: "update",
+    confirmed: true,
+  });
   return NextResponse.json({ ok: true, data: r.data });
 }

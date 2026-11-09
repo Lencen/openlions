@@ -6,7 +6,7 @@
 
 | edition | 内容 | 用途 |
 | --- | --- | --- |
-| **open** | **21 个开源包**（4 个闭源包整目录移除：MACS、mcp-server、doc-portal；portal 只保留公共页） | 开源发布 v0.4.39-open.1 |
+| **open** | **21 个开源包**（4 个闭源包整目录移除：MACS、mcp-server、doc-portal；portal 只保留公共页） | 开源发布 v0.4.40-open.1 |
 | **sales** | 全部包（含 MACS 执行体、portal 完整页、mcp-server、doc-portal） | 销售版 |
 
 开源版服务：mind / selfimproving / session / console / portal（公共页）。

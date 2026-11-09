@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T14:50:00+08:00",
+  "updatedAt": "2026-11-09T16:26:00+08:00",
   "owner": "commercialization-line",
   "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
   "types": {
@@ -382,7 +382,7 @@
     },
     {
       "version": "0.4.39",
-      "status": "进行中（前端架构/UIUX 改版）",
+      "status": "已发车（0.4.39；open.1 已发布）",
       "eta": "2027-01-09",
       "items": [
         {
@@ -402,8 +402,8 @@
         {
           "type": "REQ",
           "id": "0.4.39-03",
-          "title": "/messages 信息密度与五态（C）",
-          "state": "doing",
+          "title": "/messages 密度/五态（顺延 0.4.40）",
+          "state": "todo",
           "owner": "frontend-line-2"
         },
         {
@@ -437,9 +437,98 @@
         {
           "type": "REQ",
           "id": "0.4.39-08",
-          "title": "平台写审计：批1 done（model-config），批2/3/4 待做",
+          "title": "平台写审计：批1 done（model-config），批2-4 顺延 0.4.40",
           "state": "doing",
           "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.39-09",
+          "title": "0.4.39 open.1 导出（五判据+cherry_picks 合同）",
+          "state": "done",
+          "owner": "open-source-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.40",
+      "status": "待发车（所有条目完成；104 16/16 已过）",
+      "items": [
+        {
+          "type": "TASK",
+          "id": "0.4.40-01",
+          "title": "/messages 密度/五态（0.4.39-03 顺延）",
+          "state": "done",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.40-02",
+          "title": "写审计批2：/system/auth、/system/permissions 写接口+审计",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.40-03",
+          "title": "写审计批3：ops 类写路由批量接入",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.40-04",
+          "title": "写审计批4：前端写交互（二次确认/before-after/审计 id）",
+          "state": "done",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.40-05",
+          "title": "商业 v0.1：entitlement/license + selfonline 首租户",
+          "state": "doing",
+          "owner": "commercialization-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.40-06",
+          "title": "104 clean-room 路径打通（docker PG16 + node20，含缺陷记录）",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.40-07",
+          "title": "安装器 units 未用自带 node 路径（系统 node<20 必失败）",
+          "state": "done",
+          "owner": "devops-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.41",
+      "status": "规划（通信基础设施）",
+      "items": [
+        {
+          "type": "REQ",
+          "id": "0.4.41-01",
+          "title": "每条 MACS 线 listener/worker 拆分（listener 只收，worker 跑长任务）",
+          "state": "todo",
+          "owner": "devops-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.41-02",
+          "title": "pending/open_turn 背压监控与告警（pending>阈值/open_turn>时长）",
+          "state": "todo",
+          "owner": "devops-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.41-03",
+          "title": "line client 注入策略：回合边界/forced 后仍不可投递的可见告警",
+          "state": "todo",
+          "owner": "commercialization-line"
         }
       ]
     }

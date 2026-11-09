@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 
 // 2026-10-15 round-78: 读实时数据(上游 mind agent.pendingList 待审批列表)的 BFF, 且本文件导出 POST
 //   (hasNonStaticMethods -> 构建期必然 bailout 成动态)。显式声明以统一口径/防回归。
@@ -45,8 +47,21 @@ export async function POST(req: NextRequest) {
     const { action, agent_id, services } = body;
     if (!action || !agent_id) return NextResponse.json({ error: "missing action or agent_id" }, { status: 400 });
     if (action !== "approve" && action !== "reject") return NextResponse.json({ error: "action must be approve|reject" }, { status: 400 });
+    // 0.4.40-03 批3：agent 审批是平台授权写，必须鉴权 + 审计
+    const guard = requirePlatformWrite(req, "agent.manage", body as Record<string, unknown>);
+    if (!guard.ok) return NextResponse.json(guard.body || { error: "写操作未授权" }, { status: guard.status || 401 });
     const proc = action === "approve" ? "agent.approve" : "agent.reject";
     const result = await callTrpc(proc, { json: action === "approve" ? { agent_id, services: services || undefined } : { agent_id } });
+    await writeAudit({
+      entityType: "PlatformAuth",
+      entityId: String(agent_id),
+      action: "platform.agent." + action,
+      before: { status: "PENDING" },
+      after: { action, services: services || null, result: result ?? null },
+      actor: { id: guard.actorId || "console-admin", type: "human" },
+      changeType: "update",
+      confirmed: true,
+    });
     return NextResponse.json(result);
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });

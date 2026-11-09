@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { macsAdminFetch, auditMacsWrite } from "@/lib/server/macs-admin";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "拒绝必须填写理由（note）" }, { status: 400 });
   }
 
+  // 0.4.40-02 批2：写权限校验（PLATFORM_WRITE_AUTH）。
+  //   confirm=true 的二次确认规则本路由原本就有（见上），这里只加"谁能写"。
+  const guard = requirePlatformWrite(req, "auth.manage", body as Record<string, unknown>);
+  if (!guard.ok) return NextResponse.json(guard.body || { ok: false, error: "写操作未授权" }, { status: guard.status || 401 });
+
   const payload: Record<string, unknown> = { requestId, decision };
   if (note) payload.note = note;
   if (Number.isFinite(ttlDays as number) && ttlDays) payload.ttlDays = ttlDays;
@@ -38,6 +45,22 @@ export async function POST(req: NextRequest) {
     result: r.status < 400 ? "ok" : "failed",
     reason: `${decision}${note ? " · " + note : ""}${r.status < 400 ? "" : " · " + ((r.body && r.body.error) || r.status)}`,
   });
+  // 平台审计（uiux 契约）：只写成功路径；越权/告警不落审计由 guard 与下方判断保证
+  try {
+    await writeAudit({
+      entityType: "PlatformAuth",
+      entityId: requestId,
+      action: decision === "approve" ? "platform.auth.grant" : "platform.auth.revoke",
+      before: { decision: "pending" },
+      after: { decision, note: note || "", ttlDays: ttlDays || null },
+      actor: { id: guard.actorId || "console-admin", type: "human" },
+      changeType: decision === "approve" ? "grant" : "revoke",
+      confirmed: true,
+    });
+  } catch (e) {
+    // fail-closed：审计写不出来就不承认"审批成功"（与批1 同口径），返回 500 让调用方重试
+    return NextResponse.json({ ok: false, error: "审计写入失败，审批结果未确认（fail-closed）", detail: String((e as Error)?.message || e).slice(0, 200) }, { status: 500 });
+  }
   if (r.status >= 400) {
     return NextResponse.json({ ok: false, error: (r.body && r.body.error) || "审批失败", status: r.status }, { status: r.status || 502 });
   }

@@ -26,3 +26,6 @@
 
 /* 表格里的编号/时间等宽（globals 的 .mono 只给字体，这里补断行策略） */
 .monoCell { font-family: var(--font-mono); word-break: break-all; }
+
+/* 2026-11-09 0.4.40-01：stale 原始 reason 码（映射文案之外再露一层，排障不用悬停） */
+.staleRaw { margin-left: var(--sp-2); font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); }

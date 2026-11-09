@@ -11,3 +11,14 @@
 
 /* 脚注里的行内链接（原来是内联 color） */
 .link { color: var(--primary); }
+
+/* 2026-11-09 · 0.4.40-04：唯一写入口（批量取消授权）的按钮与成功提示 */
+.revokeBtn { min-height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-xs); border-radius: var(--radius-sm);
+  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; }
+.revokeBtn:hover:not(:disabled) { border-color: var(--status-crit); color: var(--status-crit); }
+.revokeBtn:disabled { opacity: 0.45; cursor: not-allowed; }
+.revokeBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.toast { position: fixed; right: var(--sp-5); bottom: var(--sp-5); z-index: 130; display: inline-flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-md); background: var(--surface-1); color: var(--text);
+  border: 1px solid color-mix(in srgb, var(--status-ok) 45%, var(--border)); box-shadow: var(--elev-2); font-size: var(--fs-sm); }
+.toastX { background: transparent; border: 0; color: var(--text-muted); cursor: pointer; font-size: var(--fs-md); line-height: 1; }

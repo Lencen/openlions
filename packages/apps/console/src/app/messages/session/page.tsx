@@ -132,7 +132,19 @@ const overviewColumns: DataColumn<any>[] = [
   { key: "hb", title: "心跳", render: (s) => <span className={styles.monoCell}>{fmt(s.last_heartbeat_at)}</span> },
   { key: "pending", title: "待处理", render: (s) => <>{s.pending_count}</> },
   { key: "oldest", title: "最老待处理", render: (s) => <span className={styles.monoCell}>{fmt(s.oldest_pending_at)}</span> },
-  { key: "stale", title: "stale 原因", render: (s) => <span title={s.stale_reason || ""}>{staleText(s.stale_reason)}</span> },
+  // 2026-11-09 0.4.40-01 C4：stale_reason 此前只做映射文本 + <title> 悬停，排障时必须把鼠标停上去才看得到原始码。
+  //   现在把「映射文案」与「原始 reason 码」同时显示（映射不同则并列，一行内可读），并保留 title 便于复制。
+  { key: "stale", title: "stale 原因", render: (s) => {
+    const zh = staleText(s.stale_reason);
+    const raw = (s.stale_reason || "").trim();
+    const showRaw = raw && raw !== zh;
+    return (
+      <span title={raw}>
+        {zh}
+        {showRaw ? <span className={styles.staleRaw}>{raw}</span> : null}
+      </span>
+    );
+  } },
 ];
 
 export default function SessionPage() {

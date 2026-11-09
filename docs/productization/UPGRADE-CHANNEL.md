@@ -8,8 +8,8 @@
 <channel>/
   latest.json                      # 渠道索引：{"version":"0.2.0", ...}
   stable.json / beta.json          # 按渠道的索引（可选）
-  lions-0.4.39.manifest.json        # lions-pack 产物
-  lions-0.4.39.tar.gz
+  lions-0.4.40.manifest.json        # lions-pack 产物
+  lions-0.4.40.tar.gz
 ```
 
 ## 生成
@@ -19,10 +19,10 @@ node scripts/lions-pack.cjs --version=0.2.0 --channel=stable --out=channel/ --la
 ```
 
 产物：
-- \`lions-0.4.39.tar.gz\`（只含 tracked 文件，**不含**数据/密钥/构建产物）；
+- \`lions-0.4.40.tar.gz\`（只含 tracked 文件，**不含**数据/密钥/构建产物）；
 - **默认 fail-closed**：工作区若有未跟踪的包内文件，\`lions-pack\` 拒绝打包（否则产物会静默不完整）。先提交再打包；
   本地自测可用 \`--include-untracked\`（纳入）或 \`--allow-dirty\`（明知会漏）。
-- \`lions-0.4.39.manifest.json\`（schema \`lions-release-package/1\`：版本/git sha/逐文件 sha256/迁移清单/变更摘要）；
+- \`lions-0.4.40.manifest.json\`（schema \`lions-release-package/1\`：版本/git sha/逐文件 sha256/迁移清单/变更摘要）；
 - \`latest.json\` 与 \`stable.json\`（渠道索引）。
 
 ## 消费
@@ -31,7 +31,7 @@ node scripts/lions-pack.cjs --version=0.2.0 --channel=stable --out=channel/ --la
 # 只看
 node scripts/lions-upgrade.cjs --home ~/lions --check --source=file:///path/to/channel
 # 升级（指定产物）
-node scripts/lions-upgrade.cjs --home ~/lions --from=/path/to/channel/lions-0.4.39.tar.gz
+node scripts/lions-upgrade.cjs --home ~/lions --from=/path/to/channel/lions-0.4.40.tar.gz
 ```
 
 ## 校验与签名

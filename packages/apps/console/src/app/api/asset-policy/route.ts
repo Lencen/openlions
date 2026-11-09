@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 
 // 2026-10-26：资产可见性策略的读取代理（console BFF）。
 //   上游：mind `GET /api/v1/asset-policy`（公开读，无需 admin key）。
@@ -67,6 +69,9 @@ export async function POST(req: Request) {
   if (body.confirmed !== true) {
     return NextResponse.json({ ok: false, error: "需要先确认切换的影响范围" }, { status: 400 });
   }
+  // 0.4.40-03 批3：资产可见性切换是平台配置写，必须鉴权 + 审计
+  const guard = requirePlatformWrite(req as any, "config.write", body as unknown as Record<string, unknown>);
+  if (!guard.ok) return NextResponse.json(guard.body || { ok: false, error: "写操作未授权" }, { status: guard.status || 401 });
   const key = process.env.MIND_ADMIN_API_KEY;
   if (!key) return NextResponse.json({ ok: false, error: "保存失败：缺少服务端凭据" }, { status: 500 });
 
@@ -88,6 +93,16 @@ export async function POST(req: Request) {
     if (!r.ok || j.ok === false) {
       return NextResponse.json({ ok: false, error: "保存失败，请重试或联系平台管理员" }, { status: 502 });
     }
+    await writeAudit({
+      entityType: "PlatformConfig",
+      entityId: "asset-policy",
+      action: "platform.config.asset_policy",
+      before: {},
+      after: { kind: body.kind, mode: body.mode, acknowledgedOwnerless: true },
+      actor: { id: guard.actorId || "console-admin", type: "human" },
+      changeType: "update",
+      confirmed: true,
+    });
     return NextResponse.json({ ok: true });
   } catch {
     return NextResponse.json({ ok: false, error: "保存失败，请重试或联系平台管理员" }, { status: 502 });

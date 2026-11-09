@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { verifyLicense, denyReason } from "./entitlements";
 
 // 2026-10-27：BFF 侧的功能授权判据（S2 门禁）。
 // 规则（LICENSE-GATE-MATRIX §3）：**不能只隐藏 UI 而 API 放行** —— 未授权时 BFF 也必须 402。
@@ -24,6 +25,16 @@ export interface GateResult {
 }
 
 export async function checkFeature(feature: string): Promise<GateResult> {
+  // 0.4.40-05：商业版离线授权。配置了 LIONS_LICENSE_JSON 时优先本地 Ed25519 验签，
+  //   不依赖 mind license 服务；未配置时保持原上游判定（0.4.39 行为）。
+  const raw = String(process.env.LIONS_LICENSE_JSON || "").trim();
+  if (raw) {
+    const v = verifyLicense(raw);
+    if (!v.ok) return { ok: false, feature, state: "invalid", reason: v.reason || "license 无效" };
+    const denied = denyReason(v.license, feature);
+    if (denied) return { ok: false, feature, state: "unlicensed", reason: denied };
+    return { ok: true, feature, state: "valid", reason: "已授权（本地 license）" };
+  }
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), timeoutMs());
   try {

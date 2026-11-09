@@ -52,6 +52,10 @@ function renderUnit(app, profile, opts) {
     "",
     "[Service]",
     "Environment=NODE_OPTIONS=--max-old-space-size=" + heap,
+    // 2026-11-09 0.4.40-07：把**跑安装器的那个 node** 放到 PATH 最前。
+    // 病根：生成的 unit 只写脚本路径，wrapper/next 走 /usr/bin/env node ->
+    //      系统 node < 20 时服务起不来（104 UOS 命中 v10，16 步在 [14] health 断）。
+    "Environment=PATH=" + path.dirname(process.execPath) + ":/usr/local/bin:/usr/bin:/bin",
     "Environment=LIONS_NEXT_CMD=" + nextCmd,
     "Environment=LIONS_HOME=" + home,
     "Type=simple",
@@ -172,6 +176,7 @@ function runSelftest() {
   assert("单元文件名也带前缀", planUnits(home, { systemdDir, unitPrefix: "lions-qa-" })[0].path.endsWith("lions-qa-mind.service"), planUnits(home, { systemdDir, unitPrefix: "lions-qa-" })[0].path);
   assert("ExecStart 指向 current 代码根", mind.content.indexOf(path.join(home, "current", "scripts", "lions-service-wrapper.sh")) >= 0, mind.content.split("\n").filter((l) => l.indexOf("ExecStart") === 0)[0]);
   assert("带 LIONS_HOME", mind.content.indexOf("Environment=LIONS_HOME=" + home) >= 0);
+  assert("PATH 首位是安装器 node 目录（0.4.40-07）", mind.content.indexOf("Environment=PATH=" + path.dirname(process.execPath) + ":") >= 0, mind.content.split("\n").filter((l) => l.indexOf("Environment=PATH=") === 0)[0]);
   assert("生产模式映射为 start", mind.content.indexOf("Environment=LIONS_NEXT_CMD=start") >= 0, mind.content.split("\n").filter((l) => l.indexOf("LIONS_NEXT_CMD") === 0)[0]);
   assert("PIDFile 在 run/ 下", mind.content.indexOf("PIDFile=" + path.join(home, "run", "lions-mind.pid")) >= 0);
   assert("端口来自 profile", mind.content.indexOf(" 3000 ") >= 0);

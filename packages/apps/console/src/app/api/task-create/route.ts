@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { safeFetchJson } from "@/lib/server/proxy-fetch";
+import { requirePlatformWrite } from "@/lib/server/platform-write-guard";
+import { writeAudit } from "@/lib/server/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +13,8 @@ const REQUIRED = ["title", "description", "background", "requirements", "materia
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({} as any));
+  const guard = requirePlatformWrite(req as any, "ops.write", body as Record<string, unknown>);
+  if (!guard.ok) return NextResponse.json(guard.body || { ok: false, error: "写操作未授权" }, { status: guard.status || 401 });
   const missing = REQUIRED.filter((k) => !String(body?.[k] ?? "").trim());
   if (missing.length) return NextResponse.json({ ok: false, error: "缺少必填项: " + missing.join(", ") }, { status: 400 });
   const json: Record<string, string> = {};
@@ -26,5 +30,15 @@ export async function POST(req: Request) {
   if (r.ok === false) return NextResponse.json({ ok: false, error: r.error }, { status: 502 });
   const task = (r.data as any)?.result?.data ?? null;
   if (!task?.id) return NextResponse.json({ ok: false, error: "创建失败（上游未返回任务）" }, { status: 502 });
+  await writeAudit({
+    entityType: "PlatformConfig",
+    entityId: String(task.id),
+    action: "platform.task.create",
+    before: {},
+    after: { title: json.title, priority: json.priority || null },
+    actor: { id: guard.actorId || "console-admin", type: "human" },
+    changeType: "create",
+    confirmed: true,
+  });
   return NextResponse.json({ ok: true, task });
 }
