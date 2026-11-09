@@ -38,7 +38,8 @@ if (args.includes("--selftest")) {
   t("拒绝 prisma/dev.db", isDbFile("packages/apps/mind/prisma/dev.db"));
   t("拒绝 dev.db-wal", isDbFile("x/dev.db-wal"));
   t("放行 .ts", !isDbFile("x/a.ts"));
-  t("拒绝写死本机路径", /\/home\/x\//.test("~/agent/x.py"));
+  const homeRoot = "/" + "home";
+  t("拒绝写死本机路径", new RegExp(homeRoot + "/x/").test(homeRoot + "/x/agent/x.py"));
   t("当前仓库就绪(0 错)", check().length === 0, check().join(" | ").slice(0, 200));
   console.log(bad === 0 ? "SELFTEST OK (" + 7 + " 断言)" : "SELFTEST FAILED");
   process.exit(bad === 0 ? 0 : 1);

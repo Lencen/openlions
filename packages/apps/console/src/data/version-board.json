@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T10:29:00+08:00",
+  "updatedAt": "2026-11-09T10:38:00+08:00",
   "owner": "commercialization-line",
   "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
   "types": {
@@ -158,8 +158,8 @@
     },
     {
       "version": "0.4.33",
-      "status": "代码完成，待构建（安全车）",
-      "eta": "2026-11-20",
+      "status": "已发车（known reply-fanout；RBAC shadow）",
+      "eta": "2026-11-09",
       "items": [
         {
           "type": "SEC",
@@ -187,6 +187,83 @@
           "id": "0.4.33-04",
           "title": "安全项清单与准入判据",
           "state": "done",
+          "owner": "macs-backend-2"
+        }
+      ]
+    },
+    {
+      "version": "0.4.34",
+      "status": "规划（商业化）",
+      "eta": "2026-11-28",
+      "items": [
+        {
+          "type": "TASK",
+          "id": "0.4.34-01",
+          "title": "Gate1 真实 N 15 -> 30",
+          "state": "todo",
+          "owner": "commercialization-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.34-02",
+          "title": "S2-E 定价/支付/交付闭环",
+          "state": "todo",
+          "owner": "commercialization-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.34-03",
+          "title": "付费试点 runbook/客户成功",
+          "state": "todo",
+          "owner": "doc-mgmt-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.34-04",
+          "title": "商业数据闭环（N/留存/付费）",
+          "state": "todo",
+          "owner": "platform-data-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.34-05",
+          "title": "openlions 0.4.33 回填 + per-car 发布门",
+          "state": "doing",
+          "owner": "open-source-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.35",
+      "status": "规划（fix 车）",
+      "eta": "2026-12-05",
+      "items": [
+        {
+          "type": "BUG",
+          "id": "0.4.35-01",
+          "title": "reply-fanout known red",
+          "state": "todo",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.35-02",
+          "title": "3002 / 偶发 3.5s",
+          "state": "todo",
+          "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.35-03",
+          "title": "cursor/pending .07",
+          "state": "todo",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.35-04",
+          "title": "RBAC shadow -> enforce",
+          "state": "todo",
           "owner": "macs-backend-2"
         }
       ]

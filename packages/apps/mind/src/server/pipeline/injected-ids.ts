@@ -45,3 +45,21 @@ export function buildInjectedTitle(input: {
     ids: input.ids,
   }).slice(0, 900);
 }
+/** 抽取产出正文中真正出现的完整注入 id（ASSET_CITED 口径）。 */
+export function extractCitedIds(text: unknown, injectedIds: unknown): string[] {
+  const src = String(text ?? "");
+  const ids = Array.isArray(injectedIds) ? injectedIds.map(String).filter(Boolean) : [];
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const id of ids) {
+    if (seen.has(id)) continue;
+    const idx = src.indexOf(id);
+    if (idx < 0) continue;
+    const before = idx > 0 ? src[idx - 1] : "";
+    const after = idx + id.length < src.length ? src[idx + id.length] : "";
+    if (/[A-Za-z0-9]/.test(before) || /[A-Za-z0-9]/.test(after)) continue;
+    seen.add(id); out.push(id);
+    if (out.length >= 50) break;
+  }
+  return out;
+}
