@@ -2,7 +2,7 @@
 
 All notable changes to the open-source edition.
 
-## 0.4.36-open.1 — 2026-11-09
+## 0.4.35-open.1 — 2026-11-09
 
 - First open-source snapshot: mind / session / selfimproving / console / portal public pages + modules.
 - Portal public pages: home, agents, guide, register, client, docs. Internal report/knowledge/daily-report/ingest are not exported.

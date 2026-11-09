@@ -288,22 +288,7 @@ async function preflight(args, ctx) {
       for (const app of Client ? need : []) {
         const u = pgUrlFor(ctx, app);
         const c = new Client({ connectionString: u });
-        try {
-          await c.connect(); await c.query("select 1");
-          // 2026-11-09（github-maintenance-line 在 100 机踩到）：--pg-bootstrap=off 走"已有 PG"时
-          //   历史上不建 pg_trgm，而 schema 的 GIN 索引要 gin_trgm_ops -> db push 直接失败。
-          //   这里先查，缺则尝试建；建不了就前置报错并给可执行命令，不要等到 [10] db 才炸。
-          let hasTrgm = false;
-          try { const r0 = await c.query("select 1 from pg_extension where extname='pg_trgm'"); hasTrgm = (r0.rowCount || 0) > 0; } catch (_e) {}
-          if (!hasTrgm) {
-            try { await c.query("CREATE EXTENSION IF NOT EXISTS pg_trgm"); hasTrgm = true; notes.push("PG " + app + " 已建扩展 pg_trgm"); }
-            catch (e2) {
-              problems.push("PG " + app + " 缺扩展 pg_trgm 且当前账号无权创建（Prisma GIN 索引需要 gin_trgm_ops）：" +
-                "请用有权限的账号执行 CREATE EXTENSION pg_trgm（见 docs/productization/PG-MEDIA.md §已有 PG）");
-            }
-          }
-          if (hasTrgm) notes.push("PG " + app + " 可连接");
-        }
+        try { await c.connect(); await c.query("select 1"); notes.push("PG " + app + " 可连接"); }
         catch (e) { problems.push("PG " + app + " 连接失败: " + String(e && e.message || e).slice(0, 160)); }
         finally { try { await c.end(); } catch (_e) {} }
       }
