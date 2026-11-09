@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T11:22:00+08:00",
+  "updatedAt": "2026-11-09T13:14:00+08:00",
   "owner": "commercialization-line",
   "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
   "types": {
@@ -193,7 +193,7 @@
     },
     {
       "version": "0.4.34",
-      "status": "进行中（商业化）",
+      "status": "已迁移到商业版 v0.1.0（不占平台版本）",
       "eta": "2026-11-28",
       "items": [
         {
@@ -228,21 +228,21 @@
           "type": "TASK",
           "id": "0.4.34-05",
           "title": "openlions 发布门（开源线交付 / GitHub 线执行）",
-          "state": "doing",
+          "state": "done",
           "owner": "github-maintenance-line"
         }
       ]
     },
     {
       "version": "0.4.35",
-      "status": "构建中（fix）",
+      "status": "已发车（known reply-fanout 1/1）",
       "eta": "2026-12-05",
       "items": [
         {
           "type": "BUG",
           "id": "0.4.35-01",
           "title": "reply-fanout known red",
-          "state": "done",
+          "state": "doing",
           "owner": "macs-backend-2"
         },
         {
@@ -272,19 +272,26 @@
           "title": "R1 extractCitedIds 进生产验证",
           "state": "doing",
           "owner": "devops-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.35-06",
+          "title": "openlions 0.4.35 补导出（pack 2a5f68aca）",
+          "state": "done",
+          "owner": "open-source-line"
         }
       ]
     },
     {
       "version": "0.4.36",
-      "status": "规划（安全收尾）",
+      "status": "已发车（known historical reply-fanout 1/1）",
       "eta": "2026-12-12",
       "items": [
         {
           "type": "SEC",
           "id": "0.4.36-01",
-          "title": "RBAC shadow -> enforce",
-          "state": "todo",
+          "title": "RBAC shadow 观察（enforce 顺延 0.4.37）",
+          "state": "done",
           "owner": "macs-backend-2"
         },
         {
@@ -293,6 +300,118 @@
           "title": "104 密钥/审计补齐",
           "state": "todo",
           "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.36-03",
+          "title": "reply-fanout 新回声（devops->commercialization 11:13:56/57）",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.36-04",
+          "title": "端口暴露：允许局域网访问（正式豁免）",
+          "state": "done",
+          "owner": "devops-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.36-05",
+          "title": "openlions 0.4.36 导出/交接（pack 89c846842）",
+          "state": "done",
+          "owner": "open-source-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.37",
+      "status": "已发车（RBAC enforce）",
+      "eta": "2026-12-19",
+      "items": [
+        {
+          "type": "SEC",
+          "id": "0.4.37-01",
+          "title": "RBAC shadow -> enforce",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.37-02",
+          "title": "openlions 0.4.37 导出/交接（pack 170bd74d1）",
+          "state": "doing",
+          "owner": "open-source-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.38",
+      "status": "规划（商业化/收尾候选）",
+      "eta": "2026-12-26",
+      "items": [
+        {
+          "type": "REQ",
+          "id": "0.4.38-01",
+          "title": "商业试点交付包（S2-E/Gate1 30/30）",
+          "state": "todo",
+          "owner": "commercialization-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.38-02",
+          "title": "104 clean-room PG/容器方案",
+          "state": "todo",
+          "owner": "devops-line"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.38-03",
+          "title": "openlions per-car 导出闭环（0.4.37 起）",
+          "state": "todo",
+          "owner": "open-source-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.39",
+      "status": "规划（前端架构/UIUX 改版）",
+      "eta": "2027-01-09",
+      "items": [
+        {
+          "type": "REQ",
+          "id": "0.4.39-01",
+          "title": "设计 token 收敛 + 浅色主题可用（A）",
+          "state": "todo",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.39-02",
+          "title": "平台壳层/命令面板/通知（B）",
+          "state": "todo",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.39-03",
+          "title": "/messages 信息密度与五态（C）",
+          "state": "todo",
+          "owner": "frontend-line-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.39-04",
+          "title": "质量门：截图/axe/CLS（D）",
+          "state": "todo",
+          "owner": "uiux-line"
+        },
+        {
+          "type": "REQ",
+          "id": "0.4.39-05",
+          "title": "控制台 IA Bento 7 组 38 项（菜单重构）",
+          "state": "todo",
+          "owner": "uiux-line"
         }
       ]
     }

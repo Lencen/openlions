@@ -140,10 +140,7 @@ const ITEM_DEFS: { group: string; id: string; href?: string; icon: string; badge
     // ia-ok: /system/assets 是"平台管理"下的**模块级入口**（记忆/知识/技能三类的可见性策略展示与切换），
     //   不是某个列表的过滤视图，也没有父列表可挂 Tab；与 permissions（谁能访问）职责不同，故独立成项。
     { id: 'assetVisibility', href: '/system/assets', icon: 'shield' },
-    // 2026-10-27 商业化 Gate 看板（商业化线 v1.1：S1 前只做这一块，授权页延后到 S2）
-    // ia-ok: /system/commercial 是"平台管理"下的**模块级入口**（目标达成 + 就绪检查 + S1 发布门禁的只读看板），
     //   不是某列表的过滤视图，也没有父列表可挂 Tab；与 guards（机制目录）职责不同，故独立成项。
-    { id: 'commercialGate', href: '/system/commercial', icon: 'target' },
     // 2026-10-29 客户端版本管理（老板要求：发布即签名、portal 只给最新）
     // ia-ok: /system/client-releases 是"平台管理"下的**模块级入口**（客户端发布记录、签名状态与通道），
     //   不是某个列表的过滤视图，也没有父列表可挂 Tab；与 commercial（商业化门禁）职责不同，故独立成项。

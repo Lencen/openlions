@@ -8,7 +8,7 @@
 - 一台 Linux 机器（建议 4 核 / 8GB 内存 / 10GB 可用磁盘）；
 - Node.js 20 或更高版本；
 - 一个模型服务 API Key（MiniMax / Anthropic 兼容 / 自部署）；
-- 安装介质：lions-0.4.35.tar.gz，以及可选的 pg/ 目录（自带 PostgreSQL）。
+- 安装介质：lions-0.4.37.tar.gz，以及可选的 pg/ 目录（自带 PostgreSQL）。
 
 介质目录长这样：
 
@@ -26,10 +26,15 @@
 
 没有 pg/ 时，安装器会要求你提供已有的 PostgreSQL 连接串。
 
+**用已有 PostgreSQL 时，每个库必须有 `pg_trgm` 扩展**（Prisma schema 的 GIN 索引需要 `gin_trgm_ops`）。
+安装器在预检阶段会检查并尝试自动创建；若你的账号没有建扩展权限，请先用有权限的账号执行：
+
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;   -- 对 mind / session / selfimproving 三个库各执行一次
+
 ## 2. 一条命令安装
 
     mkdir -p "$HOME/lions-media"
-    tar -xzf lions-0.4.35.tar.gz -C "$HOME/lions-media"
+    tar -xzf lions-0.4.37.tar.gz -C "$HOME/lions-media"
 
     node "$HOME/lions-media/scripts/lions-install.cjs" \
       --from="$HOME/lions-media" \

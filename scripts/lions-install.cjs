@@ -443,6 +443,27 @@ function writeConfig(ctx, args, releaseDir) {
 
 // 2026-10-28 开源安装实测: PG 模式需要 pg，但开源导出的根 node_modules 未必有（pg 在 console/selfimproving 的 deps 里）。
 //   从 release/app 目录解析，避免"源码根没装依赖 -> 安装器直接挂"。
+/**
+ * 2026-11-09（github-maintenance-line 100 机实测）：已有 PG（--pg-bootstrap=off）路径原本不建 pg_trgm，
+ *   schema 的 GIN 索引要 gin_trgm_ops -> db push 直接失败。
+ * 注意：不能放 preflight —— --from=dir 时 [7] deps 还没装，pg 模块必然解析不到，检查会静默空转。
+ *   所以放在 initDb（[9] db 阶段，deps 已就绪）里执行：先查、缺则建、建不了就带命令报错。
+ */
+async function ensurePgTrgm(releaseDir, url) {
+  let Client = null;
+  try { Client = pgClient(releaseDir).Client; } catch (e) { return { ok: true, skipped: "pg 模块不可用: " + String(e && e.message || e).slice(0, 80) }; }
+  const c = new Client({ connectionString: url });
+  try {
+    await c.connect();
+    const r0 = await c.query("select 1 from pg_extension where extname='pg_trgm'");
+    if ((r0.rowCount || 0) > 0) return { ok: true, existed: true };
+    try { await c.query("CREATE EXTENSION IF NOT EXISTS pg_trgm"); return { ok: true, created: true }; }
+    catch (e2) { return { ok: false, why: String(e2 && e2.message || e2).slice(0, 200) }; }
+  } catch (e) {
+    return { ok: false, why: "连接失败: " + String(e && e.message || e).slice(0, 160) };
+  } finally { try { await c.end(); } catch (_e) {} }
+}
+
 function pgClient(releaseDir) {
   const bases = [
     releaseDir, path.join(releaseDir || "", "packages/apps/console"), path.join(releaseDir || "", "packages/apps/selfimproving"),
@@ -491,6 +512,14 @@ async function initDb(app, ctx, args, releaseDir) {
   }
   const bin = prismaBin(releaseDir, app);
   if (!bin) throw new Error("找不到 prisma 可执行文件（先装依赖）");
+  if (isPg) {
+    const trgm = await ensurePgTrgm(releaseDir, url);
+    if (!trgm.ok) {
+      throw new Error("PG 库缺扩展 pg_trgm 且无法自动创建（Prisma GIN 索引需要 gin_trgm_ops）：" + trgm.why +
+        "\n请用有权限的账号在该库执行：CREATE EXTENSION pg_trgm;  （库: " + app + "；见 docs/productization/PG-MEDIA.md）");
+    }
+    if (trgm.created) console.log("        [pg_trgm] " + app + ": 已创建扩展（原本缺失）");
+  }
   if (!isPg && fs.existsSync(dbFile) && !args["force-db"]) throw new Error("目标库已存在，拒绝初始化: " + dbFile + "（--force-db 覆盖）");
   if (!fs.existsSync(schema)) throw new Error("找不到 schema: " + schema + "（该版本不支持 " + ctx.dbMode + "）");
   const mode = DB_MODES[app] || "push";
@@ -1051,4 +1080,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { parseEnvFile, renderEnv, buildAppEnv, defaultPorts, parsePortOverrides, readVersion, dbUrl, resolvePnpm, linkCurrent, buildApp, buildWorkspace, waitHealth, run, install, schemaGapCheck, pgTableCount, SCHEMA };
+module.exports = { parseEnvFile, renderEnv, buildAppEnv, defaultPorts, parsePortOverrides, readVersion, dbUrl, resolvePnpm, linkCurrent, buildApp, buildWorkspace, waitHealth, run, install, schemaGapCheck, pgTableCount, ensurePgTrgm, SCHEMA };

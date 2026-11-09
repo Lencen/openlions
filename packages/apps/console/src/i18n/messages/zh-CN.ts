@@ -528,8 +528,6 @@ export const zhCN: Record<string, string> = {
   'nav.item.automation.desc': '定时任务执行记录',
   'nav.item.rotation.label': '飞轮轮转',
   'nav.item.rotation.desc': '自动轮转的启停、定时与单次上限',
-  'nav.item.commercialGate.label': '商业化 Gate',
-  'nav.item.commercialGate.desc': '目标达成、就绪检查与 S1 发布门禁（只读）',
   'nav.item.assetVisibility.label': '资产可见性',
   'nav.item.assetVisibility.desc': '记忆、知识、技能三类的可见范围与切换',
   'nav.item.guards.label': '守门规则管理',

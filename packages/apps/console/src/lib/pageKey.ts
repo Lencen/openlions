@@ -74,7 +74,6 @@ export const PAGE_ROUTES: string[] = [
   "/system/automation",
   "/system/business",
   "/system/client-releases",
-  "/system/commercial",
   "/system/guards",
   "/system/health",
   "/system",
