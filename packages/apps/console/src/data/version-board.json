@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T10:38:00+08:00",
+  "updatedAt": "2026-11-09T12:02:00+08:00",
   "owner": "commercialization-line",
   "note": "只读看板：内容只由 commercialization-line 更新；其他线只改展示层，不要改本文件的条目内容。",
   "types": {
@@ -193,7 +193,7 @@
     },
     {
       "version": "0.4.34",
-      "status": "规划（商业化）",
+      "status": "进行中（商业化）",
       "eta": "2026-11-28",
       "items": [
         {
@@ -227,41 +227,97 @@
         {
           "type": "TASK",
           "id": "0.4.34-05",
-          "title": "openlions 0.4.33 回填 + per-car 发布门",
-          "state": "doing",
-          "owner": "open-source-line"
+          "title": "openlions 发布门（开源线交付 / GitHub 线执行）",
+          "state": "done",
+          "owner": "github-maintenance-line"
         }
       ]
     },
     {
       "version": "0.4.35",
-      "status": "规划（fix 车）",
+      "status": "已发车（known reply-fanout 1/1）",
       "eta": "2026-12-05",
       "items": [
         {
           "type": "BUG",
           "id": "0.4.35-01",
           "title": "reply-fanout known red",
-          "state": "todo",
+          "state": "doing",
           "owner": "macs-backend-2"
         },
         {
           "type": "BUG",
           "id": "0.4.35-02",
           "title": "3002 / 偶发 3.5s",
-          "state": "todo",
+          "state": "done",
           "owner": "devops-line"
         },
         {
           "type": "BUG",
           "id": "0.4.35-03",
           "title": "cursor/pending .07",
-          "state": "todo",
+          "state": "done",
           "owner": "macs-backend-2"
         },
         {
           "type": "SEC",
           "id": "0.4.35-04",
+          "title": "RBAC enforce 前置/观察（未开闸）",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "TASK",
+          "id": "0.4.35-05",
+          "title": "R1 extractCitedIds 进生产验证",
+          "state": "doing",
+          "owner": "devops-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.36",
+      "status": "构建准备",
+      "eta": "2026-12-12",
+      "items": [
+        {
+          "type": "SEC",
+          "id": "0.4.36-01",
+          "title": "RBAC shadow 观察（enforce 顺延 0.4.37）",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.36-02",
+          "title": "104 密钥/审计补齐",
+          "state": "todo",
+          "owner": "devops-line"
+        },
+        {
+          "type": "BUG",
+          "id": "0.4.36-03",
+          "title": "reply-fanout 新回声（devops->commercialization 11:13:56/57）",
+          "state": "done",
+          "owner": "macs-backend-2"
+        },
+        {
+          "type": "SEC",
+          "id": "0.4.36-04",
+          "title": "端口暴露：允许局域网访问（正式豁免）",
+          "state": "done",
+          "owner": "devops-line"
+        }
+      ]
+    },
+    {
+      "version": "0.4.37",
+      "status": "规划（安全收尾）",
+      "eta": "2026-12-19",
+      "items": [
+        {
+          "type": "SEC",
+          "id": "0.4.37-01",
           "title": "RBAC shadow -> enforce",
           "state": "todo",
           "owner": "macs-backend-2"
