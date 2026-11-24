@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { initAutoRotation, initDailySummaryScheduler, initDlqRetryScheduler } from "@/server/auto-rotation";
+import { initTodoNudgeScheduler } from "@/server/pipeline/todo-nudge";
 import { prisma } from "@/lib/prisma";
 
 // 2026-10-15 round-78: 本路由**启动进程内调度器**(有副作用), 不是读接口。
@@ -13,6 +14,7 @@ export async function GET() {
     await initAutoRotation();
     await initDailySummaryScheduler();
     await initDlqRetryScheduler(prisma);
+    initTodoNudgeScheduler();
     return NextResponse.json({ success: true, message: "Auto-rotation initialized (incl. DLQ retry)" });
   } catch (error) {
     const msg = error instanceof Error ? error.message : "Unknown error";

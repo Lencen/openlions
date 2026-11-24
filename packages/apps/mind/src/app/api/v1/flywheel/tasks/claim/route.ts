@@ -56,7 +56,7 @@ export async function POST(req: Request) {
   const types = body.types && body.types.length ? body.types : ["THEME_IMPROVE"];
   const excludeTypes = (body.excludeTypes || []).filter(Boolean).map((t: string) => t.replace(/[^A-Z_]/g, ""));
   // 2026-09-11 能力路由收尾: 删除"GOAL_GAP 顺带返回 VERIFY/DISCUSSION"的兼容垫片。
-  //   前置条件已满足(实测): 全部 5 个消费者 + agent-x 的 .env 均已显式声明
+  //   前置条件已满足(实测): 全部 5 个消费者 + agent-f 的 .env 均已显式声明
   //   CLAIM_TYPES=THEME_IMPROVE,PLATFORM_REVIEW,GOAL_GAP,VERIFY_AGENT_OUTPUT,DISCUSSION_QUESTION,
   //   并已重启生效 —— 即"能领什么"由消费端**显式声明**, 不再由服务端隐式扩族。
   //   影响: 若某个旧客户端仍只传 GOAL_GAP, 它将**不再**收到 VERIFY_AGENT_OUTPUT/DISCUSSION_QUESTION 任务。

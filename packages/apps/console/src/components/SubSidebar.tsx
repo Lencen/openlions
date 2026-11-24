@@ -16,7 +16,7 @@ export default function SubSidebar({ module, moduleName }: Props) {
   const subs = getSubmodules(module);
 
   return (
-    <aside className="sidebar" aria-label={`${moduleName} 子模块导航`}>
+    <aside className={"sidebar " + styles.subSidebar} aria-label={`${moduleName} 子模块导航`}>
       <div className="sidebar-group">
         <div className="sidebar-group-label">{moduleName}</div>
         {subs.map((s: Submodule) => {

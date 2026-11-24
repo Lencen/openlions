@@ -1,8 +1,8 @@
 /**
  * readonly-protocol-whitelist.ts — A 类只读接口协议白名单定义 (平台层兜底, 2026-09-23)
  *
- * [agent-x P0#3] 协议确定性白名单 (设计漏洞) — 落地依据:
- *   agent-x 反馈原句: "平台层兜底不该让 agent 自己写防御规则";
+ * [agent-f P0#3] 协议确定性白名单 (设计漏洞) — 落地依据:
+ *   agent-f 反馈原句: "平台层兜底不该让 agent 自己写防御规则";
  *   设计结论 (knowledge cmuc5ibd7): 防御规则散落在各 agent 内部会导致规则不一致、
  *   覆盖不全、且无法静态枚举; 集中到平台层才能保证 fail-closed 的可静态枚举性与统一审计。
  *
@@ -22,9 +22,9 @@
  * 与 route 实现逐一对齐 (2026-09-23 实测):
  *   - platform/health       GET, 无入参
  *   - platform/logs         GET, kind/limit/since (route 读取点见 platform/logs/route.ts)
- *   - platform/permission-tiers GET, 无入参 (ABC 分级清单, agent-x P0#11)
- *   - platform/capabilities  GET, 无入参 (动态活接口清单, agent-x P2#10 配套)
- *   - platform/documentation GET, 无入参 (静态平台档, agent-x P2#10)
+ *   - platform/permission-tiers GET, 无入参 (ABC 分级清单, agent-f P0#11)
+ *   - platform/capabilities  GET, 无入参 (动态活接口清单, agent-f P2#10 配套)
+ *   - platform/documentation GET, 无入参 (静态平台档, agent-f P2#10)
  *   - flywheel/memory/context  GET, query/theme/limit/kinds (route 读取点见 context/route.ts)
  *   - skill                 GET 列表: search/category/legacy/stale/page/pageSize; 详情 GET /skill/<id> 无 query 参
  *   - flywheel/stats        GET, 无入参
@@ -70,13 +70,13 @@ export interface WhitelistViolation {
   message: string;
 }
 
-/** 白名单定义: A 类只读接口静态清单 (agent-x "A 类只读接口" 落地 + 后续扩展) */
+/** 白名单定义: A 类只读接口静态清单 (agent-f "A 类只读接口" 落地 + 后续扩展) */
 export const READONLY_PROTOCOL_WHITELIST: ReadonlyWhitelistEntry[] = [
   {
     method: "GET",
     endpointPrefix: "/api/v1/platform/health",
     inputSchema: [],
-    description: "平台健康聚合探活 (agent-x P1 platform_health, A 类只读; 无入参)",
+    description: "平台健康聚合探活 (agent-f P1 platform_health, A 类只读; 无入参)",
   },
   {
     method: "GET",
@@ -86,7 +86,7 @@ export const READONLY_PROTOCOL_WHITELIST: ReadonlyWhitelistEntry[] = [
       { name: "limit", type: "integer", default: 50, description: "每源条数上限 (route 内 1..500)" },
       { name: "since", type: "string", maxLength: 32, description: "起始时间 (ISO 8601 或 epoch ms), 只返回其后条目" },
     ],
-    description: "平台日志只读接口 (agent-x P1 platform_logs, A 类只读; 数据源=平台结构化日志表 FlywheelEvent/FlywheelErrorLog/AuditLog)",
+    description: "平台日志只读接口 (agent-f P1 platform_logs, A 类只读; 数据源=平台结构化日志表 FlywheelEvent/FlywheelErrorLog/AuditLog)",
   },
   {
     method: "GET",
@@ -130,21 +130,21 @@ export const READONLY_PROTOCOL_WHITELIST: ReadonlyWhitelistEntry[] = [
     method: "GET",
     endpointPrefix: "/api/v1/platform/permission-tiers",
     inputSchema: [],
-    description: "ABC 权限分级清单 (agent-x P0#11; A 类只读, 无入参; B 类三件套台账 + C 类永不触碰)",
+    description: "ABC 权限分级清单 (agent-f P0#11; A 类只读, 无入参; B 类三件套台账 + C 类永不触碰)",
   },
   {
     method: "GET",
     endpointPrefix: "/api/v1/platform/capabilities",
     inputSchema: [],
     description:
-      "平台动态能力清单 (agent-x P2#10 配套; A 类只读, 无入参; 回答'我现在能调什么' = A 类活接口列表每请求从本白名单现算 + 调用方鉴权状态)",
+      "平台动态能力清单 (agent-f P2#10 配套; A 类只读, 无入参; 回答'我现在能调什么' = A 类活接口列表每请求从本白名单现算 + 调用方鉴权状态)",
   },
   {
     method: "GET",
     endpointPrefix: "/api/v1/platform/documentation",
     inputSchema: [],
     description:
-      "平台静态档 (agent-x P2#10; A 类只读, 无入参; 回答'平台是什么' = 能力边界/服务清单/限制条件/版本兼容矩阵; 与 capabilities 显式分离)",
+      "平台静态档 (agent-f P2#10; A 类只读, 无入参; 回答'平台是什么' = 能力边界/服务清单/限制条件/版本兼容矩阵; 与 capabilities 显式分离)",
   },
   {
     method: "GET",

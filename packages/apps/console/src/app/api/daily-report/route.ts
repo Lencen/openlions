@@ -25,6 +25,18 @@ export async function GET(req: NextRequest) {
     ? `${portal}/api/portal/daily-report?date=${date}`
     : `${portal}/api/portal/daily-report`;
   const r = await safeFetchJson(url);
-  const data = r.ok && r.data !== null && r.data !== undefined ? (typeof r.data === "string" ? r.data : JSON.stringify(r.data)) : null;
+  // 2026-11-15（B1-1 H-1）：portal 日报未下发 asOf → BFF 补查后时刻（与 lineage/overview 一致），
+  // 页面「数据时刻」用该值；不得把请求时刻伪装成库内时刻。
+  const fetchedAt = new Date().toISOString();
+  let data = r.ok && r.data !== null && r.data !== undefined ? (typeof r.data === "string" ? r.data : JSON.stringify(r.data)) : null;
+  if (data) {
+    try {
+      const o = JSON.parse(data);
+      if (o && typeof o === "object") {
+        if (!o.asOf) o.asOf = fetchedAt;
+        data = JSON.stringify(o);
+      }
+    } catch {}
+  }
   return new NextResponse(data, { status: safeStatus(r.status), headers: { "Content-Type": "application/json" } });
 }

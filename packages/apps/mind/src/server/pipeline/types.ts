@@ -133,7 +133,7 @@ export interface PipelineResult {
     memoryTypesNormalized?: number;
     knowledgeDowngraded?: number;
     knowledgeDropped?: number;
-    // === 2026-09-23 agent-x #8 Skills 成功率统计 (轻量版) ===
+    // === 2026-09-23 agent-f #8 Skills 成功率统计 (轻量版) ===
     // 与 knowledgeCreated/skillsCreated 拆开追踪, 避免聚合字段掩盖 skill 类型为 0。
     // 口径见 skill-success-rate.ts: 生成即成功 + 分母=候选总数, 两位小数 + 原始分子分母。
     skillsDowngraded?: number;       // 无 steps 降级进 knowledge(skill-downgraded) 的候选数

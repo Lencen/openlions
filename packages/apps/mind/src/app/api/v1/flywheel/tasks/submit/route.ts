@@ -539,14 +539,14 @@ export async function POST(req: Request) {
               }
               const chk = checkTodoCloseEvidence(ev);
               if (!chk.ok) { todoWritebackRejected.push({ todoId: lead, missing: chk.missing }); continue; }
-              // 2026-10-27（商业化线 3）: 守门来源的待办**不能经 submit 的 todo 回写被结单**。
+              // 2026-10-27（运营团队 3）: 守门来源的待办**不能经 submit 的 todo 回写被结单**。
               //   实测: agent-operator 经这条路径结掉了 todo_plautonomy_mvkhv3in
               //   （03:26:26 TODO_STATUS DOING->DONE by agent:agent-operator via submit）。
               //   PATCH /todos 侧已加门，但 submit 是**另一条写路径**，当时没堵 —— 这就是"还有路径没堵"。
               {
                 const srcOf = String(((rowsById.get(String(lead)) as any) || {}).source || "");
                 const closeVerdict = canCloseTodo(srcOf, { kind: "agent", actor: String(agentId) });
-                // 2026-10-27（商业化线要求）: 结单决策必须留痕，否则"谁/哪条路径结的"只能靠猜。
+                // 2026-10-27（运营团队要求）: 结单决策必须留痕，否则"谁/哪条路径结的"只能靠猜。
                 //   记录: 来源 / actor / 判定 / 是否被拒。日志与事件双写，便于事后溯源。
                 console.log("[submit.todoWriteback] todoId=" + lead + " source=" + (srcOf || "(空)") +
                   " actor=" + agentId + " kind=agent allowed=" + closeVerdict.allowed +

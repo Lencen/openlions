@@ -118,7 +118,7 @@ import {
 } from "./adr-routing";
 // 2026-09-18 机制修复(待办 todo_land_55gli7ggjrny): SLA 决策卡的持久身份去重类型。
 import type { ExistingCardIdentity } from "./human-card-dedup";
-// 2026-09-23 agent-x #5: 主 agent 核心 memory 快照类型(执行期上下文注入)。
+// 2026-09-23 agent-f #5: 主 agent 核心 memory 快照类型(执行期上下文注入)。
 import type { AgentMemorySnapshot } from "./agent-memory-snapshot";
 
 // ==================== 落库质量守卫 (2026-09-10) ====================
@@ -218,7 +218,7 @@ export interface ExecuteImprovingTaskInput {
   dryRun?: boolean;
   /** actor: 谁触发 (system / admin:xxx / lf16:cron) */
   actor?: string;
-  /** agent-x #5 (2026-09-23): cronjob 执行期上下文 —— 主 agent 核心 memory 冻结快照。
+  /** agent-f #5 (2026-09-23): cronjob 执行期上下文 —— 主 agent 核心 memory 冻结快照。
    *  由 improving-tasks-cron 每轮捕获一次并传入, 注入 TaskExecution.metadata.agentMemorySnapshot。 */
   agentMemorySnapshot?: AgentMemorySnapshot | null;
 }
@@ -2363,7 +2363,7 @@ export async function executeImprovingTask(
           }),
           output: storeTaskOutput(input.taskId, result.summary || ""),
           qualityPassed: result.status === "DONE",
-          // 2026-09-23 agent-x #5 执行期注入段: cronjob 调度器捕获的主 agent 核心 memory 冻结快照
+          // 2026-09-23 agent-f #5 执行期注入段: cronjob 调度器捕获的主 agent 核心 memory 冻结快照
           //   写入 TaskExecution.metadata.agentMemorySnapshot(JSON 字符串, 带 schemaVersion=1)。
           //   未携带快照(非 cron 触发/捕获失败)时 metadata 不写, 保持与旧记录一致(NULL)。
           metadata: input.agentMemorySnapshot

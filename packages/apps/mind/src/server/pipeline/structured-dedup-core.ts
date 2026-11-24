@@ -22,6 +22,19 @@ import {
 export type StructuredTable = "memory" | "knowledge" | "practice";
 
 /**
+ * 2026-10-25 撤回流程补漏: 去重候选只取**活行**(未撤回 + 未被取代)。
+ *   - Memory 无 stale 列 -> 只按 supersededBy 判活;
+ *   - Knowledge/Practice 有 stale 列 -> 必须同时排除 stale=1(被撤回)的行。
+ *   缺口径的后果: 被撤回的结论仍会被当成"同 theme+contentHash 的更早行", 于是新写的活行被
+ *   supersede 掉 -> 撤回后主题彻底失去该结论(且活行被"代替"成死行)。
+ */
+function liveRowFilterFor(table: StructuredTable): Record<string, any> {
+  return table === "memory"
+    ? { supersededBy: null }
+    : { supersededBy: null, stale: false };
+}
+
+/**
  * 产物来源类型的单一常量。
  * 注意: 这里刻意不写字面量 `sourceType: "FLYWHEEL_STRUCTURED"` 作为 data 属性 —— 见 structured-dedup.ts
  * 的历史说明: scripts/test-product-quality.ts 的静态写入契约会把该形态当"写入点"并要求附近有 qualityScore。
@@ -64,6 +77,7 @@ export async function markLaterDuplicateSupersededWith(
       sourceType: STRUCTURED_SOURCE,
       contentHash,
       id: { not: row.id },
+      ...liveRowFilterFor(table),
     },
     select: { id: true, createdAt: true },
   });

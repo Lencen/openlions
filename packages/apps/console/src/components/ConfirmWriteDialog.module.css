@@ -6,17 +6,20 @@
 }
 .dialog {
   width: min(720px, 100%); max-height: 86vh; overflow: auto;
-  background: var(--surface-1); color: var(--text);
+  background: var(--bg-surface); color: var(--text);
   border: 1px solid var(--border); border-radius: var(--radius-lg);
-  box-shadow: var(--elev-2); padding: var(--sp-4);
+  box-shadow: var(--shadow-card); padding: var(--sp-4);
 }
 .head { margin-bottom: var(--sp-3); }
-.title { font-size: var(--fs-title); font-weight: 600; }
+.title { font-size: var(--fs-lg); font-weight: 600; }
 .summary { margin-top: var(--sp-1); font-size: var(--fs-base); color: var(--text-dim); line-height: var(--lh-base); }
 .tableWrap { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: auto; max-height: 320px; }
 .table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-.table th { position: sticky; top: 0; background: var(--surface-2); color: var(--text-dim); text-align: left; font-weight: 600; padding: var(--sp-2); border-bottom: 1px solid var(--border); }
-.table td { padding: var(--sp-2); border-bottom: 1px solid var(--border); vertical-align: top; }
+/* E-2（设计 有条件批 2026-11-16）：行高 44 = padding 10×2 + line-height 24；
+   th 补 font-size: var(--fs-xs)=12px（原继承 .table 的 --fs-sm=13px，不符 G2 表头 12/600）；
+   td 保持 13px 不动；水平 --sp-2=8px 保持。 */
+.table th { position: sticky; top: 0; background: var(--bg-surface2); color: var(--text-dim); text-align: left; font-weight: 600; font-size: var(--fs-xs); padding: 10px var(--sp-2); line-height: 24px; border-bottom: 1px solid var(--border); }
+.table td { padding: 10px var(--sp-2); line-height: 24px; border-bottom: 1px solid var(--border); vertical-align: top; }
 .table tr:last-child td { border-bottom: 0; }
 .field { font-weight: 600; }
 .old { color: var(--text-muted); }
@@ -27,12 +30,12 @@
 .tagDel { color: var(--status-crit); border-color: color-mix(in srgb, var(--status-crit) 40%, var(--border)); }
 .tagSame { color: var(--text-muted); }
 .rest { padding: var(--sp-2); color: var(--text-muted); font-size: var(--fs-xs); }
-.risk { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--status-warn); background: var(--surface-2); color: var(--text-dim); font-size: var(--fs-sm); border-radius: var(--radius-xs); }
-.error { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--status-crit); background: var(--surface-2); color: var(--status-crit); font-size: var(--fs-sm); border-radius: var(--radius-xs); }
+.risk { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--status-warn); background: var(--bg-surface2); color: var(--text-dim); font-size: var(--fs-sm); border-radius: var(--radius-xs); }
+.error { margin-top: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-left: 3px solid var(--status-crit); background: var(--bg-surface2); color: var(--status-crit); font-size: var(--fs-sm); border-radius: var(--radius-xs); }
 .check { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); font-size: var(--fs-base); color: var(--text-dim); }
 .actions { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-4); }
 .cancel, .confirm { min-height: 32px; padding: 0 var(--sp-4); border-radius: var(--radius-md); font-size: var(--fs-base); cursor: pointer; }
-.cancel { background: var(--surface-2); color: var(--text); border: 1px solid var(--border); }
+.cancel { background: var(--bg-surface2); color: var(--text); border: 1px solid var(--border); }
 .confirm { background: var(--status-crit); color: #fff; border: 1px solid color-mix(in srgb, var(--status-crit) 70%, #000); }
 .confirm:disabled { opacity: 0.5; cursor: not-allowed; }
 .confirm:focus-visible, .cancel:focus-visible, .check input:focus-visible {

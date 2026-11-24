@@ -1,61 +1,22 @@
-/* /sessions/detail · P2 呈现层（2026-11-05 批 4/5）
-   内联样式 → 类。本页没有表格（改前 2026-10-26 已把定义表换成 DetailFields，本次只清内联样式）。
-   角色色（user/assistant/system/tool）从内联 style 改成 data-tone 属性选择器；
-   assistant 那档沿用 lib/ink 的配方（color-mix(… 55%, var(--text))）逐字写进 CSS，观感与改前一致。
-   取数（/api/session-detail/<uid>）与路由语义一字未改。 */
-
-/* 面包屑首段（分组层）压暗；末段由 globals.css 的 .breadcrumb .current 承担 */
-.crumbDim { color: var(--text-dim); }
-
-/* 空/错误态面板（原内联 padding: var(--sp-6)） */
-.panelPad6 { padding: var(--sp-6); }
-.emptyTitle { font-weight: 600; margin-bottom: var(--sp-2); }
-.emptyDesc { color: var(--text-dim); font-size: var(--fs-md); }
-.primaryLink { color: var(--primary); }
-
-/* 正文两栏：左（会话信息 + 消息列表）/ 右（InspectorPanel 320px） */
-.detailGrid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: var(--sp-4);
-  align-items: start;
-}
-
-/* 消息列表 */
-.msgEmpty { padding: var(--sp-4); color: var(--text-dim); }
-.msgList {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding: var(--sp-3);
-}
-.msgCard {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--sp-2-5) var(--sp-3);
-  background: var(--bg-surface);
-}
-.msgHead {
-  display: flex;
-  gap: var(--sp-2);
-  align-items: center;
-  margin-bottom: var(--sp-1-5);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.msgRole { font-weight: 600; }
-.msgRole[data-tone="user"] { color: var(--info); }
-/* 与 lib/ink 的 inkOf("var(--brand)") 同配方：填充色向当前主题文字色混合，保对比度 */
-.msgRole[data-tone="assistant"] { color: color-mix(in srgb, var(--brand) 55%, var(--text)); }
-.msgRole[data-tone="system"] { color: var(--text-3); }
-.msgRole[data-tone="tool"] { color: var(--warn); }
-.msgUid {
-  margin-left: auto;
-  font-size: var(--fs-xs);
-  font-family: var(--font-mono);
-}
-.msgBody {
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-size: var(--fs-md);
-}
+/* B1-6 /sessions/detail · Bento P2 */
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.chips span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
+.crumbOn { color: var(--c-status-ok); }
+.meta { margin: 6px 0 12px; font-size: 12px; color: var(--text-muted); }
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.item { display: flex; gap: 10px; align-items: flex-start; }
+.dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 6px; background: var(--text-muted); flex: 0 0 auto; }
+.dot[data-role="user"] { background: var(--info); }
+.dot[data-role="assistant"] { background: var(--c-status-ok); }
+.dot[data-role="system"] { background: var(--c-status-warn); }
+.itemBody { min-width: 0; flex: 1; }
+.itemHead { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text-muted); }
+.text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+.kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 12px; }
+.kv li { display: flex; justify-content: space-between; gap: 12px; }
+.kv li span { color: var(--text-muted); flex: 0 0 auto; }
+.kv li b { text-align: right; overflow-wrap: anywhere; }
+.stateMini { border: 1px dashed var(--border); border-radius: 10px; padding: 16px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.foot { margin: 12px 0 0; font-size: 12px; color: var(--text-muted); }
+.link { min-height: 24px; display: inline-flex; align-items: center; }

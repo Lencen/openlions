@@ -226,7 +226,24 @@ function splitTopLevel(s: string): string[] | null {
 
 /** 定位 INSERT 的列清单与 VALUES 元组区间（引号/括号感知），找不到返回 null */
 function findInsertShape(sql: string): { colList: string; valStart: number; valEnd: number } | null {
-  const m = /INSERT\s+INTO\s+("?[A-Za-z_][A-Za-z0-9_]*"?)\s*\(/i.exec(sql);
+  // 2026-11-16 todo_04ef734eccd44ddd892f: 兼容 `INSERT OR IGNORE INTO`。
+  //   根因(实测): adaptSql 的改写顺序是
+  //     rewriteInsertOrIgnore(rewriteBoolValues(rewriteDateValues(...)))
+  //   —— rewriteDateValues 在**内层**，此时 SQL 里的还是 `INSERT OR IGNORE INTO`；
+  //   而本函数的正则只认 `INSERT\s+INTO`，于是 findInsertShape 返回 null →
+  //   mapInsertValues 整句跳过 → 日期列**没有被 to_timestamp() 包裹** →
+  //   裸 epoch 毫秒(bigint) 进 PG 的 timestamp 列 → **42804**
+  //   "column \"createdAt\" is of type timestamp without time zone but expression is of type bigint"。
+  //   实测复算(MIND_DB_DRIVER=pg, adaptSql 两条对照, 同一张表同一列):
+  //     INSERT OR IGNORE INTO ... ("createdAt") VALUES ($1,$2,$3,$4)
+  //       -> VALUES ($1, $2, $3, $4)                       <-- $4 没被 epoch 化 => 42804
+  //     INSERT        INTO ... ("createdAt") VALUES ($1,$2,$3,$4)
+  //       -> VALUES ($1, $2, $3, to_timestamp($4::double precision / 1000.0))   <-- 正确
+  //   改法: 正则放宽到 `INSERT\s+(?:OR\s+IGNORE\s+)?INTO`。既有 `INSERT INTO` 路径**逐字不变**
+  //   (可选组不参与时行为完全一致), 只补上之前漏掉的 OR IGNORE 形态。
+  //   注: session-extract 的三张关联表本次已改用 PG 原生 ON CONFLICT DO NOTHING(运行期不依赖这层翻译),
+  //   但本正则放宽**保留** —— 仓内其它脚本仍可能在 OR IGNORE 形态上踩同一个 42804。
+  const m = /INSERT\s+(?:OR\s+IGNORE\s+)?INTO\s+("?[A-Za-z_][A-Za-z0-9_]*"?)\s*\(/i.exec(sql);
   if (!m) return null;
   // 列清单：从 '(' 开始做括号配平
   let i = m.index + m[0].length - 1;

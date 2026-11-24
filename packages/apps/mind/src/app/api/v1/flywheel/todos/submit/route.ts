@@ -3,7 +3,7 @@ import { canCloseTodo } from "@/server/pipeline/guard-todo-close-gate";
 import { runtimeRepo } from "@/server/lib/runtime-repo";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { checkTodoCloseEvidence, isEvidenceRequiredTodo, TODO_EVIDENCE_MIN_LEN } from "@/server/pipeline/todo-evidence-gate";
+import { checkTodoCloseEvidence, isEvidenceRequiredForClose, TODO_EVIDENCE_MIN_LEN } from "@/server/pipeline/todo-evidence-gate";
 import { verifyCommitSha } from "@/server/lib/commit-sha";
 
 export const dynamic = "force-dynamic";
@@ -71,20 +71,25 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    if (target === "DONE" && String(process.env.TODO_EVIDENCE_GATE ?? "1") !== "0" && isEvidenceRequiredTodo(row.meta)) {
+    // 2026-11-09 P0 缺口 b：agent 结单且 meta 为空也走预检（原来 isEvidenceRequiredTodo(null)=false 直接放行）。
+    if (target === "DONE" && String(process.env.TODO_EVIDENCE_GATE ?? "1") !== "0" && isEvidenceRequiredForClose(row.meta, "agent")) {
       const chk = checkTodoCloseEvidence(evidence);
       if (!chk.ok) {
         await prisma.flywheelEvent.create({ data: {
           stage: "TODO_CLOSE_EVIDENCE_REJECTED", sourceType: "todo", sourceId: todoId,
-          sourceTitle: ("by=agent:" + agentId + " submit 无证据结单被拒: " + chk.missing.join("; ")).slice(0, 240), targetStage: "OK",
-        } }).catch(() => null);
+          sourceTitle: ("by=agent:" + agentId + " submit 无证据结单被拒: " + chk.missing.join("; ")).slice(0, 240),
+          // 2026-11-09 P0：通道错误回执用 targetStage="EXTERNAL_FAULT:"+class 区分（复用本 stage，不新造）。
+          targetStage: chk.externalFault ? "EXTERNAL_FAULT:" + chk.externalFault.class : "OK",
+        // 2026-11-09：写失败仍不改变拒绝结果，但**不再静默**（原先 catch(() => null) 会丢审计线索）。
+        } }).catch((e: any) => { console.warn("[todo-close-gate] 拒绝事件写入失败(不改变拒绝结果): " + (e?.message || e)); return null; });
         return NextResponse.json({
           ok: false, error: "TODO_CLOSE_EVIDENCE_REJECTED", missing: chk.missing,
+          ...(chk.externalFault ? { externalFault: chk.externalFault } : {}),
           detail: "取证类待办(meta.needsTools=true)结单需要可复算证据(>=" + TODO_EVIDENCE_MIN_LEN + " 字 + 至少一个 file:/cmd:/sql:/commit/仓库路径 锚点)。待办保持 " + prev + ", 未置 DONE(避免'完成但无证据'的假象); 补证据后重新 submit。人类结单不受此限。",
         }, { status: 400 });
       }
     }
-    // 2026-10-27（商业化线第 3 次追问）: **第三条写路径**。
+    // 2026-10-27（运营团队第 3 次追问）: **第三条写路径**。
     //   结单门先后堵了 PATCH /todos 与 tasks/submit 的 todoWriteback，但真正把
     //   todo_plautonomy_mvkhv3in 在 12:23:08 结掉的是**本路由**（/api/v1/flywheel/todos/submit）：
     //   事件 sourceTitle 里的 "via submit" 就是这里写的，doneBy 被设成 agentId。

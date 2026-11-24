@@ -69,11 +69,20 @@ export default function TasksPage({
     return `/tasks?${sp.toString()}`;
   }
 
+  // 0.6.5 U-39b M1（设计稿 a678f61fd §2.4）：/tasks = 4 KPI + 保留现有表格
+  //   设计原则「已有可用的表格不要重写，只在上面加 KPI 条」-> 表格一行未改
+  const kpiCrontab = byTrigger.get("crontab") || 0;
+  const kpiNodeCron = byTrigger.get("service-cron") || 0;
+  // 「下次执行」：任务数据无 nextRun 字段 -> na + 原因（不猜、不写假值）
+  // 0.6.5 四态：服务端组件无 loading 过程，phase = ok / empty（+ ?state= 复现 empty/error）
+  const forced = String((searchParams as any).state || "");
+  const phase = forced === "empty" ? "empty" : forced === "error" ? "error" : all.length ? "ok" : "empty";
+
   return (
     <>
       <Topbar active="tasks" stats={`${tasks.length} / ${all.length} tasks`} />
-      <main className="page page-wide">
-        <div className="list-header">
+      <main className="page page-wide" data-phase={phase}>
+        <div className="list-header" data-slot="page-head">
           <div className="left">
             <h1>定时任务</h1>
             <div className="subtitle">{all.length} 个任务, 按业务来源 / 触发方式 / Agent 平台 多维筛选</div>
@@ -92,7 +101,43 @@ export default function TasksPage({
           </div>
         </div>
 
-        <div className="filter-section">
+        {/* 0.6.5 U-39b M1：4 KPI 条（bento-cell 4 个；表格在下方不动） */}
+        {phase === "ok" ? (
+          <div className="kpi-strip" data-slot="kpi-tasks">
+            <div className="kpi-card bento-cell" data-kpi="total" data-cell="task-total">
+              <div className="kpi-k">任务总数</div>
+              <div className="kpi-v">{all.length}</div>
+              <div className="kpi-d">全部已注册任务</div>
+            </div>
+            <div className="kpi-card bento-cell" data-kpi="crontab" data-cell="task-crontab">
+              <div className="kpi-k">系统 crontab</div>
+              <div className="kpi-v">{kpiCrontab}</div>
+              <div className="kpi-d">由 crontab 触发</div>
+            </div>
+            <div className="kpi-card bento-cell" data-kpi="nodecron" data-cell="task-nodecron">
+              <div className="kpi-k">服务内 node-cron</div>
+              <div className="kpi-v">{kpiNodeCron}</div>
+              <div className="kpi-d">由服务内定时器触发</div>
+            </div>
+            <div className="kpi-card bento-cell" data-kpi="next" data-cell="task-next-run">
+              <div className="kpi-k">下次执行</div>
+              <div className="kpi-v na">n/a</div>
+              <div className="kpi-d">原因：任务数据无下次执行时刻字段（不猜）</div>
+            </div>
+          </div>
+        ) : phase === "empty" ? (
+          <div className="state-block">
+            <b>暂无定时任务</b>
+            <p>任务源正常读取但当前没有任何任务（empty，非不可得、非加载中）。{forced ? " · 复现模式：" + forced : ""}</p>
+          </div>
+        ) : (
+          <div className="state-block">
+            <b>任务读取失败</b>
+            <p>任务源不可读（error，非空集）。{forced ? " · 复现模式：" + forced : ""}</p>
+          </div>
+        )}
+
+        <div className="filter-section" data-slot="business-filter">
           <div className="filter-label">业务来源</div>
           <div className="chips">
             <Link href={link({ business: null })} className={`chip ${!searchParams.business ? "active" : ""}`}>All <span className="n">{all.length}</span></Link>
@@ -129,7 +174,8 @@ export default function TasksPage({
           </div>
         </div>
 
-        <div className="table-wrap">
+        {phase === "ok" ? (
+        <div className="table-wrap" data-table-rows={tasks.length} data-slot="task-table">
           <table className="session-table">
             <thead>
               <tr>
@@ -144,7 +190,7 @@ export default function TasksPage({
             </thead>
             <tbody>
               {tasks.length === 0 ? (
-                <tr><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--ink-muted)" }}>没有匹配的任务</td></tr>
+                <tr data-empty-row="true"><td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--ink-muted)" }}>没有匹配的任务</td></tr>
               ) : (
                 tasks.map((t) => (
                   <tr key={t.id}>
@@ -173,6 +219,7 @@ export default function TasksPage({
             </tbody>
           </table>
         </div>
+        ) : null}
       </main>
     </>
   );

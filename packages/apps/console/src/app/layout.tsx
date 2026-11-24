@@ -1,4 +1,5 @@
 import "./globals.css";
+import "./dark.css";
 import { ConfigProvider } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import TopNav from "@/components/TopNav";
 import CommandPalette from "@/components/CommandPalette";
@@ -46,10 +47,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         {/* 2026-10-13 round 76-CR: 脚本(chunk)加载失败的全局兜底。
             必须是**内联脚本**: chunk 挂了时连 layout 的 JS 都拿不到, React 组件永远不会挂载(实测验证)。 */}
         <script dangerouslySetInnerHTML={{ __html: CHUNK_GUARD_SCRIPT }} />
-        {/* 主题切换(右上角浮动; 不侵入 TopNav, 待 Phase2 壳层替换时并入导航) */}
-        <div className={styles.themeFab}>
-          <ThemeToggle />
-        </div>
         {/* 2026-10-13 round 76-CG: 这里原来挂着一大块 antd 风格的 theme={{token,components}}(33 行, 含 ~15 个旧调色板 hex)。
             但 ConfigProvider 是**自研直通壳**(@/components/primitives), 它的注释写明"locale/theme 显式接受并**忽略**"
             —— 即这 33 行**从来不生效**。留着它只会让人以为主色是 #2563eb(实际是令牌 --primary, 已是品牌青)。
@@ -57,7 +54,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <ConfigProvider>
           <GlobalFilterProvider>
             <TopNav />
-            <GlobalFilterBar />
             <GlobalSidebar />
             {children}
             {/* 2026-10-22：全站唯一 ⌘K 入口（此前 GlobalSearch 与 MessagesLayout 各监听一次，互相抢焦点） */}

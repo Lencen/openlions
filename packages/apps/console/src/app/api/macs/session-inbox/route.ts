@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   try { pending = JSON.parse(fs.readFileSync(pendingFile, "utf8")); } catch { pending = null; }
   if (!pending) {
     // 没镜像过：如实说明"watcher 未跑过"，不假装 0 条
-    return NextResponse.json({ ok: false, session_id: SID, reason: "watcher 尚未产出镜像（" + pendingFile + "）", count: null, items: [] });
+    return NextResponse.json({ ok: false, session_id: SID, reason: "watcher 尚未产出镜像（" + pendingFile + "）", count: null, items: null });
   }
   return NextResponse.json({
     ok: true,

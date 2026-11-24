@@ -1,40 +1,82 @@
-/* /messages/failed 页内样式（P2 批4/5 呈现层改造：内联 style 清零）
-   两张表换成白名单 DataTable 后，原来挂在 td 上的 .td-mono / .td-clip（globals 里并不存在，
-   实际没生效）改为本页显式的 .mono / .clip；其余内联间距/配色逐项落类。 */
+/* /messages/failed · B3-1 Bento 页面样式（2026-11-15）
+   12 列真实 grid（gutter 16 => 1440 下 s12=1184 / s8=784 / s4=384 / s3=284）、panel padding 24、
+   字号只在 globals 8 档内取；全部限定在本页 module 作用域，不改 globals.css。 */
 
-/* 面板内边距（原来是内联 padding: var(--sp-3)） */
-.panelPad { padding: var(--sp-3); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
-/* 列头行去掉边框与内边距（原来是内联 border: none / padding: 0） */
-.colHeadPlain { border: none; padding: 0; }
-/* 右上角返回入口（原来是内联 marginLeft: auto） */
-.ghostEnd { margin-left: auto; }
-
-/* 横向滚动容器（原来是内联 overflowX） */
-.tableScroll { overflow-x: auto; }
-
-/* 摘要 / 最后错误：限宽 + 省略号（对应原来 td-clip 的意图） */
-.clip {
-  display: inline-block;
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: bottom;
-}
-
-/* 二次确认的两个按钮（原来是内联 inline-flex + gap: 6） */
-.inlineBtns { display: inline-flex; gap: 6px; }
-/* 危险动作「确认重试/确认重放」的字色（原来是内联 color） */
-.ghostDanger { color: var(--status-crit); }
-
-/* 未送达队列区块（原来是内联 marginTop: var(--sp-4)） */
-.queueBlock { margin-top: var(--sp-4); }
-.colTitleGap { margin-bottom: var(--sp-2); }
-
-/* 面包屑上级段（沿用 .breadcrumb 结构，只补弱化色） */
 .crumbDim { color: var(--text-dim); }
+.crumbOn { color: var(--status-ok); }
 
-/* 底部脚注（原来是内联 borderTop + marginTop；告警态多一个颜色） */
-.footNote { border-top: 1px dashed var(--border); margin-top: var(--sp-3); }
-.footWarn { color: var(--status-warn); }
+/* 页头 chips 4（探针按 [aria-label="页面层级"] 下的 span 计数） */
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+.chips > span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
+
+/* 页头数据时刻（缺失即 n/a+原因） */
+.momentRow { font-size: 12px; color: var(--text-dim); }
+
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.toolbarNote { font-size: 12px; color: var(--text-muted); }
+
+/* 12 列 grid：gutter 固定 16（s12=1184 / s8=784 / s4=384 / s3=284） */
+.b2grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.b2grid > * { grid-column: 1 / -1; min-width: 0; }
+.b2grid > .slotS3 { grid-column: span 3; }
+.b2grid > .slotS4 { grid-column: span 4; }
+.b2grid > .slotS8 { grid-column: span 8; }
+.b2grid > .slotS12 { grid-column: 1 / -1; }
+
+/* 面板：等价 .panel 视觉；去掉 .panel 的 margin-bottom（在 grid 内会错位），padding 24 */
+.panelCard { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); box-shadow: var(--shadow-card); min-width: 0; }
+.panelHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: var(--sp-3); flex-wrap: wrap; }
+.panelTitle { font-size: var(--fs-md); font-weight: 600; }
+.panelSub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
+
+/* KPI 卡（4×s3）：数值 2xl=24px；n/a 不写 0 */
+.kpiCard { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4) var(--sp-5); box-shadow: var(--shadow-card); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.kpiLabel { font-size: var(--fs-sm); color: var(--text-muted); }
+.kpiValue { font-size: var(--fs-2xl); font-weight: 600; line-height: 1.1; font-family: var(--font-mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.kpiNa { font-size: var(--fs-xl); font-weight: 600; color: var(--text-muted); line-height: 1.2; }
+.kpiHint { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.45; }
+
+/* 表格：表头/斑马纹/行高沿用 globals .tbl；这里只补横向滚动与最小宽度 */
+.tableScroll { overflow-x: auto; }
+.tblMin { min-width: 560px; }
+.tblWide { min-width: 880px; }
+.clip { display: inline-block; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.roCell { color: var(--text-muted); }
+.nowrapCell { white-space: nowrap; }
+/* s12（1440 下 1184，面板内 1134）要放下 7 列：会话/摘要限宽，避免横向滚动 */
+.clipConv { display: inline-block; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.clipMsg { display: inline-block; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+
+/* 状态药丸（globals 里并没有 .msg-pill，这里按语义 token 自带一档） */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); line-height: 18px; border: 1px solid var(--border); color: var(--text-muted); background: var(--bg-surface2); white-space: nowrap; }
+.pill[data-tone="crit"] { color: var(--status-crit); border-color: color-mix(in srgb, var(--status-crit) 45%, var(--border)); background: color-mix(in srgb, var(--status-crit) 10%, transparent); }
+.pill[data-tone="warn"] { color: var(--status-warn); border-color: color-mix(in srgb, var(--status-warn) 45%, var(--border)); background: color-mix(in srgb, var(--status-warn) 10%, transparent); }
+.pill[data-tone="mute"] { color: var(--text-muted); }
+
+/* 口径说明列表（s4） */
+.noteList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.55; }
+.noteList b { color: var(--text); }
+.noteList li { padding-left: 10px; border-left: 2px solid var(--border); }
+
+/* 状态卡正文（loading / empty / error / unavailable 共用） */
+.stateBody { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.stateTitle { font-size: var(--fs-lg); font-weight: 600; color: var(--text); }
+.stateTitle[data-tone="warn"] { color: var(--status-warn); }
+.stateTitle[data-tone="crit"] { color: var(--status-crit); }
+.stateText { font-size: var(--fs-base); color: var(--text-muted); line-height: 1.6; margin: 0; }
+.stateFoot { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.5; margin-top: var(--sp-3); }
+
+/* 相关视图出链：正文链接目标 >= 24（探针 C5） */
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.related :global(a) { display: inline-flex; align-items: center; min-height: 24px; }
+.b2main :global(a), .b2main :global(button) { min-height: 24px; }
+
+/* 加载骨架 */
+.skelBar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-surface2), var(--bg-surface3), var(--bg-surface2)); }
+.skelBar[data-w="40"] { width: 40%; }
+.skelBar[data-w="45"] { width: 45%; }
+.skelBar[data-w="60"] { width: 60%; }
+.skelBar[data-w="70"] { width: 70%; }
+.skelBar[data-w="88"] { width: 88%; }

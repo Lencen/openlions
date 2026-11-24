@@ -1,4 +1,4 @@
-/* 2026-11-05 P2 批6（frontend-line-2）—— components/ui/primitives.tsx 的内联样式下沉。
+/* 2026-11-05 P2 批6（[team]）—— components/ui/primitives.tsx 的内联样式下沉。
    口径：动态色一律走 data-* + 属性选择器；宽高/间距用令牌；不新增全局类（app/globals.css 一行未改）。
    兼容性说明：
      1) .m-value / .state-block / .metric-card 等是 globals 里的既有类，这里只**追加**类，不覆盖它们的既有声明，
@@ -30,7 +30,7 @@
 .pcBar[data-tone="accent-quiet"] { background: var(--accent-quiet); }
 .pcBar[data-tone="border"] { background: var(--border); }
 .pcBar[data-tone="border-hi"] { background: var(--border-hi); }
-.pcBar[data-tone="border-strong"] { background: var(--border-strong); }
+.pcBar[data-tone="border-strong"] { background: var(--border-hi); }
 .pcBar[data-tone="info"] { background: var(--info); }
 .pcBar[data-tone="module-audit"] { background: var(--module-audit); }
 .pcBar[data-tone="module-builtin"] { background: var(--module-builtin); }

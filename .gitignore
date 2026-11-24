@@ -17,6 +17,8 @@ node_modules
 logs/
 # 2026-11-05：console 有一个页面目录叫 flywheel/logs，被上面的 logs/ 规则误伤（git add -A 报 ignored）
 !packages/apps/console/src/app/flywheel/logs/
+# 2026-11-18：session 也有页面目录 app/logs（同步日志页），同样被 logs/ 误伤
+!packages/apps/session/app/logs/
 .eslintcache
 **/.next/cache/
 
@@ -73,10 +75,16 @@ packages/apps/mcp-agent-chat-server/mcp_agent_chat_server/data/circuit_latest.js
 packages/apps/mcp-agent-chat-server/mcp_agent_chat_server/data/circuit_history.json
 
 # agent 提交消息草稿 / 工作树验证产物 scratch (2026-09-18):
-#   实测各 agent 工作树长期堆积 .commit-msg-*.txt(agent-x) / .git-commit-msg-*.txt(agent-x) / .verify/,
+#   实测各 agent 工作树长期堆积 .commit-msg-*.txt(agent-e) / .git-commit-msg-*.txt(agent-d) / .verify/,
 #   它们不是"未提交改动", 既不该阻碍 rebase, 也不该被 integrate 判成 dirty 而重复派单。
 .commit-msg-*.txt
 .git-commit-msg-*.txt
+# 2026-11-16（dr，运营团队 19:05 清理项）：第三种提交草稿命名 —— .git-message-*.txt。
+#   实测 2026-11-16 r6 包内有 5 个该类文件（.git-message-agent-d-*/progress-*/todo-*），
+#   是 git commit -F .git-message-xxx.txt 时把草稿留在仓库根、并被一并提交入库的。
+#   前述两条模式（.commit-msg-* / .git-commit-msg-*）覆盖不到这个命名 -> 根上补一条，防再次误提交。
+.git-message-*.txt
+.git-message-*
 .verify/
 
 # 2026-09-18 补齐(实测仍被判成"未提交改动"的四类, 导致同一警报反复出现 —— 改模式比每次扫一遍更根治):
@@ -162,6 +170,10 @@ run/macs-session/
 
 # 2026-10-26 飞轮快照物化（timer 每 10 分钟重写；归档件在 verification/ 另行提交）
 run/flywheel-snapshot-*.json
+# 2026-11-16 PG 账本完整性守护的**稳定安装副本**（scripts/install-pg-integrity-guard-timer.sh 装到
+#   这里的稳定路径，让 systemd unit 的 ExecStart 与任何 worktree / 仓库合并 / /tmp gc 解耦；
+#   源码在 scripts/guard-pg-integrity.sh，这里是运行期产物，不入库）
+run/pg-guard/
 # 2026-11-02: check-reply-targets 的基线状态文件（运行态；首次由 dpkg.log 生成，之后以此为准）
 run/reply-targets-baseline.json
 run/reply-idempotency-baseline.json
@@ -173,3 +185,94 @@ run/session-source-audit-*.json
 # 2026-11-06：LIONS_DIST_DIR 用绝对路径时 next 会写到 packages/apps/console/media（仓库内）
 # 已改为软链到外置盘；此目录不入库
 packages/apps/console/media
+
+# ROOT-FIX 回填审计（运行时产物，不入库；2026-11-13）
+run/rootfix-backfill-*/
+
+# 2026-11-16 远程机 agent 模型配置只读采集快照（每次覆盖写，不入库）
+run/model-config-remote.json
+# 2026-11-17: client batch-ack 台账误建在 packages/ 的空残留（设计 定位，0 字节）
+packages/run/
+
+# 2026-11-20: 告警落盘台账（scripts/lib/alert-sink.cjs 写的运行期数据，append-only）
+# 不入库的原因与 run/*.json 同类：它是**机器写的事实**（谁在何时因何 rc 告警、谁 ack 了），
+# 一旦进 git 就会被人手「整理」= 破坏审计价值；需要长期留存时另定归档策略（见 run/alerts-wiring-20261120.md）。
+run/alerts/
+
+# 2026-11-20: check-pending-file-vs-db 的相对模式基线（--relative，接入条件 A）
+# 机器写的事实：上一轮的差集快照，用来判「本轮比上轮变坏了没有」。人手整理过就失去意义，故不入库。
+# 注意：本文件**必须持久**（不能放 /tmp：disk-guard 常态每 5 分钟清 >2h 的 /tmp，基线被清会让相对模式误判 rc=2）。
+run/pending-file-vs-db-baseline.json
+
+# ── 2026-11-24 发布冻结前清树（task-5 / ex-dirty-tree，运营团队）──────────────────────
+# 事实（2026-11-24 10:00 现取）：2718 条脏项里 run/ 占 2314 条，绝大多数是巡检轮次的原始输出
+# （brain-health / web-latency / context-pressure …）与运行态账本。lions-pack 的 EXCLUDE_PREFIXES
+# 早已整体排除 run/，这些文件对发布包无价值，却让「树干净」这条出包前置永远判不出来。
+# ★ 已跟踪文件在 ignored 父目录下**也不能**用普通 `git add` —— 2026-11-24 实测：
+#   精确条件：**父目录本身命中 ignore 规则时**才不能用 -A；文件直属 run/ 而 run/ 未被命中时 -A 仍可直通
+#   （反例：commit-msg-land-*.txt、受控 fixture run/a.md —— 实测 -A rc=0）。判据据此分「有可判对象 / 直通」两档。
+#     git add -A -- run/evidence/2026-11-24/xxx.md（已跟踪）-> rc=1「下列路径根据 .gitignore 被忽略」
+#   即使该文件早已在索引里、本该只更新已跟踪条目，pathspec 命中 ignore 就整体拒绝。
+#   正确做法（2026-11-24 12:44 [team] 复跑认定，依据 = 上两行实测 + lead 12:42 裁定）：
+#     · 已跟踪**文件** -> `git add -f -A`（-f 必需；`-u` 也可，但 -f 是本条的语义正解）
+#     · 目录参数 -> `git add -u` + 逐个 add 未跟踪未忽略文件；**绝不对目录用 -f**（会强塞该目录下被忽略的新文件，拆掉第 3 档）
+#     · 未跟踪且被忽略 -> 不入库，rc=3 fail-closed（正确动作是换落点或改 ignore 口径，不是加 -f）
+#   两个提交通道都已按此分流：scripts/safe-commit.sh（主通道）、scripts/commit-mine.sh（2026-11-24 12:44 补，原先裸 `git add` 会被本条挡住）。
+#   旧注释曾写「已跟踪的 run/* 台账不受 .gitignore 影响」——**那句是错的**，已按实测更正。
+#   那批台账的处置清单见 verification/2026-11-24-3env/DIRTY-TREE-TRIAGE.md。
+run/**
+# 例外：环境开关状态必须可提交/可审计（scripts/env-up.sh / env-down.sh 写）
+!run/env-state.json
+# 仓库根 tmp/：/tmp 语义的临时目录，不属于产品内容
+tmp/**
+# 日志后缀（与既有 **/*.log、logs/ 同口径，显式成条便于审计）
+logs/*.log
+
+# ── 2026-11-24 scripts/ 下的一次性草稿件（SCRATCH）────────────────────────────────
+# 只忽略、**不删**（别人的东西不删，盘上原样保留）。用精确 glob，不要写成 scripts/tmp-* 那种宽规则，
+# 否则会连 tmp- 无关的真脚本一起吞掉。
+# 命中名单（9 个）：.tmp-audit-sel.cjs / .tmp-test-orphan2.cjs（.tmp- 临时改造副本）、
+#   tmp-pack-0429|0430|0431|0431b|0432|0440-open.sh、tmp-deploy-0431.sh（带日期后缀的临时出包/部署手搓脚本）。
+scripts/.tmp-*
+scripts/tmp-pack-*.sh
+scripts/tmp-deploy-*.sh
+# 2026-11-24 Lead 批准：突变测试（mutation test）的一次性夹具。
+# 为什么值得一条规则：实测 scripts/.mut-fresh-0.cjs 存在约 **20 秒**（12:09:35 出现 -> 12:09:56 消失），
+#   而 lions-pack.cjs 对「包内未跟踪文件」是 **fail-closed throw**（listUntracked 不看时间、只看那一刻）。
+#   于是这 20 秒窗口里出包会随机失败，且报错长得像「环境不稳」—— 被误归因会浪费一整天。
+#   只忽略、不删（夹具由测试自己创建与清理）；精确前缀，不用 scripts/.mut* 这种宽规则。
+scripts/.mut-*
+
+# ── 2026-11-24 实时账本退出入库（Lead 裁定：持续写入的运行时数据，入库必然脏树）──────────
+# 这 3 个文件被跟踪、又被守护进程持续 append/覆盖，冻结期内照样写 -> 「等它写完」没有终点。
+# run/** 已覆盖它们；这里显式成条是为了把「为什么退出入库」写进规则本身（将来若有人收窄 run/**，
+# 这三条仍挡得住）。处置 = git rm --cached（只取消跟踪，盘上文件与写入方均不动）。
+run/mind-consumers-probe.jsonl
+run/spool-replay-age-ledger.tsv
+run/unlanded-exhausted.json
+
+# ── 2026-11-24 再清 2 个活账本 + pack 自指产物（Lead 裁定，冻结期唯一例外）──────────────
+# 同上一批：被跟踪 + 被守护进程持续写 -> 每写一次树脏一次，冻结期内也不会停。
+# 处置 = git rm --cached（只取消跟踪，盘上文件与写入方均不动）；run/** 已覆盖，这里显式成条留证据。
+run/client-cycle-liveness-ledger.tsv
+run/quota-probe-budget.json
+# lions-pack 出包时写到【源树根】的自指产物（pack 已知缺陷：产物落源树）。它是产物不是源，
+# 真实版本号由发布流程产生。前导斜杠锚定根目录，不影响子目录里的同名文件。
+/CLIENT_VERSION
+
+# ── 2026-11-24 快照型账本退出跟踪（Lead 裁定：机器按点重写的快照不是文档）──────────────────
+# release-source-drift: crontab 23,53 * * * * 每 30 分钟重写；quota-sampler.state: 小时快照 timer 重写。
+# 留着跟踪 = 每小时必脏 1~2 条。审计痕迹应写 run/evidence/<日期>/，状态文件不入库。
+run/release-source-drift.json
+run/quota-sampler.state.json
+
+# ── 2026-11-24 第 9 个活账本（Lead 抓到的「假 0」案例）──────────────────────────────
+# lions-judge-doc-refs.service 每次运行都重写：scripts/judge-doc-refs.sh 第 39 行 BASE=run/doc-refs-baseline.json
+
+# ── 2026-11-24 3env 首登状态快照出库（Lead 裁定：每次动作都重写 = 快照，出库）───────────
+# dev-S0.json 是锁执行器每跑一次就重写的 S0/前态快照，再生能力 = 重跑执行器；
+# 同目录 approval.json 是**授权记录**（谁批准/依据/时刻），每次决策才改一次 -> 保留跟踪、不入本规则。
+run/3env-firstlogin/dev-S0.json
+# 是**变量赋值**引用，写发生在后面的 `> $BASE` -> 命令行字面看不到写符号，静态反查漏判。
+# 教训：能不能保持干净只能靠观测（scripts/check-tracked-write-observed.sh 的 T0/T1 差集），不能靠静态扫描。
+run/doc-refs-baseline.json

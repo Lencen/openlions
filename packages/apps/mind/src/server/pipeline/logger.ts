@@ -1,7 +1,7 @@
 /**
  * 飞轮统一日志 - LIONS Flywheel Structured Logger
  *
- * 三层日志架构 (2026-08-21 agent-x 设计):
+ * 三层日志架构 (2026-08-21 agent-e 设计):
  * - L1 文本: stdout → /tmp/lions-flywheel.log, 人读
  * - L2 JSON:  stdout → /tmp/lions-flywheel.jsonl, 机读 (dashboard / grep -j)
  * - L3 DB:   FlywheelEvent / FlywheelJob / FlywheelReflection / FlywheelErrorLog (新增)
@@ -138,7 +138,7 @@ function emit(entry: LogEntry) {
   const l1Line = l1Parts.join(' ') + '\n';
 
   // L2: JSON - 机读 (不限制大小, 完整数据留作分析)
-  // 2026-08-21 agent-x: P3 修复 -- 错误消息可能含真实换行符 (API 响应多行文本)
+  // 2026-08-21 agent-e: P3 修复 -- 错误消息可能含真实换行符 (API 响应多行文本)
   //   JSON.stringify 会转义 \n, 但为防御性, 先 sanitize 所有字符串
   function sanitizeNewlines(obj: any): any {
     if (typeof obj === 'string') return obj.replace(/[\r\n]+/g, ' ');

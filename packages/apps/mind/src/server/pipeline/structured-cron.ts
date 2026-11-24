@@ -11,6 +11,8 @@
 import { structureFragments } from "./structure-fragments";
 import { findUnstructuredThemes } from "./structured-memory-store";
 import { prisma } from "@/lib/prisma";
+// 2026-10-25 撤回流程补漏: 存在性判定统一走"活行口径"(未被取代)
+import { liveRowWhere } from "./stale-aware-dedup";
 
 /**
  * 主题归并: 处理完一个 theme 后, 更新 MemoryTopic 统计 + bestMemoryId
@@ -113,8 +115,9 @@ export async function runStructuredCron(opts: {
       //   实测: 27 个待结构化 theme 共有 2,371 条产物(项目结构 512 / 链路诊断 500 / 项目架构 448 …),
       //   但全部创建于 7 天以前 -> 全部 SKIPPED -> 结构化产线再无输出, FW-QUALITY 因此长期无数据。
       //   修: 已结构化过的 theme 仍用 7 天(增量整理); **从未结构化过的用首次 lookback**(默认 90 天, 可配)。
+      // 2026-10-25 撤回流程补漏: "该主题曾被结构化"的存在性判定只认活行(未被取代)。
       const everStructured = await prisma.memory.findFirst({
-        where: { theme, sourceType: "FLYWHEEL_STRUCTURED" },
+        where: liveRowWhere("memory", { theme, sourceType: "FLYWHEEL_STRUCTURED" }),
         select: { id: true },
       });
       const lookbackDays = everStructured ? 7 : Number(process.env.STRUCTURE_FIRST_LOOKBACK_DAYS ?? 90);

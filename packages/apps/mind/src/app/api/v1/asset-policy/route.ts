@@ -27,7 +27,7 @@ export async function GET() {
       mode,
       selectable: mode === "agent_choice",
       fixedTo: mode === "agent_choice" ? null : mode,
-      // 2026-10-26（前端线提问）：agent_choice 时"不选 = 什么"必须由后端给出，前端不能猜。
+      // 2026-10-26（前端团队提问）：agent_choice 时"不选 = 什么"必须由后端给出，前端不能猜。
       //   口径与 resolveWriteVisibility 的 fallback 一致：未显式选择 -> public。
       defaultMode: "public" as const,
     });

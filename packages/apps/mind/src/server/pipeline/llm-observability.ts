@@ -27,7 +27,15 @@ export interface LlmCallObs {
   tokenUsed?: number;       // 2026-09-01: 真实 usage token (input+output, 从 API 响应)
   promptLength?: number;    // prompt 字符数
   model?: string;           // 2026-09-10: 模型名(归因"钱花在哪个模型"), 不传则按入口路由推定
+  /** 2026-11-19 [team]: 实际打到的 base_url host（LLM_PROTOCOL 切协议后必须能证明"走了哪个 host"） */
+  baseUrlHost?: string;
   agentId?: string;         // 2026-09-10: 归因主体; 平台侧调用默认 "platform:<entry>"
+  /**
+   * 2026-11-20 运营团队: 截断处置两分类（output_budget / input_overflow）。
+   * 只追加到 sourceTitle 的 key=value 串尾部，**不改 targetStage**（FAIL:<errorType> 的既有计数口径保持不动
+   * = 纯字段新增，不是可见性改动）。下游解析：sourceTitle 里 grep 'trunc=([a-z_]+)'。
+   */
+  truncationKind?: "output_budget" | "input_overflow";
 }
 
 /**
@@ -94,7 +102,10 @@ export async function recordLlmCall(obs: LlmCallObs): Promise<void> {
               ? `tok≈${obs.tokenEstimate}`
               : obs.promptLength
                 ? `chars≈${obs.promptLength}`
-                : "") + ` model=${obs.model || modelForEntry(obs.entry)} entry=${obs.entry}`,
+                : "") +
+          // 2026-11-19 [team]: host 追加在 model 之后、entry 之前 —— 既有解析
+          //   （scripts/check-agent-d-channel.cjs 的 regexp 'model=([^ ]+)'）不会受影响。
+          ` model=${obs.model || modelForEntry(obs.entry)}${obs.baseUrlHost ? ` host=${obs.baseUrlHost}` : ""} entry=${obs.entry}${obs.truncationKind ? ` trunc=${obs.truncationKind}` : ""}`,
         targetStage: obs.ok ? "OK" : `FAIL:${obs.errorType || "UNKNOWN"}`,
       },
     });

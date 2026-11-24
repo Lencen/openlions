@@ -1,275 +1,112 @@
 "use client";
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 page.module.css 的类 / data-* 承载）。
-//   选中会话行 = data-active，消息角色 = data-role，加载更多按钮 = data-busy。
-//   取数（session-service-list / session-detail）、分页游标、全部文案与交互语义一字未改。
-import { interactiveProps } from "@/components/a11y";
+// 0.5.1 B5-12 /agents/session-browser · Bento P2 详情（2026-11-15）
+// 数据：GET /api/session-detail/<sessionUid>（**必须 sessionUid，含冒号需 encode**；用 Session.id 会 404）。
+// 口径：?id= 为会话标识；缺 id → 「缺少会话标识」；未找到 → 「未找到会话」；本页只读。
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import KPICard from "@/components/KPICard";
-import { useGlobalNonce } from "@/components/GlobalFilter";
-import { useState, useEffect, useCallback } from "react";
-import { t } from "@/i18n";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import styles from "./page.module.css";
+import BentoGrid from "@/components/bento/BentoGrid";
+import BentoCard from "@/components/bento/BentoCard";
+import type { Metric } from "@/components/bento/types";
+import { BentoKpi, BentoState } from "@/components/bento";
+import { Chips, Note, States, Tone, usePhaseOverride, useResource } from "../../system/_components/bento-kit";
+import kit from "../../system/_components/bento-kit.module.css";
+import { fmtNum, fmtTime } from "@/lib/format";
 
-interface SessionItem {
-  id: string;
-  agentId: string;
-  title: string;
-  messageCount: number;
-  startedAt: string;
-  lastMessageAt: string;
+interface DetailMessage { messageUid: string; role: string; content: string; createdAt?: string | null; timestamp?: string | null; model?: string | null }
+interface DetailPayload {
+  session?: { sessionUid: string; agentId?: string | null; source?: string | null; title?: string | null; status?: string | null; messageCount?: number; totalMessages?: number; startedAt?: string | null; lastMessageAt?: string | null; updatedAt?: string | null; model?: string | null; platform?: string | null };
+  totalMessages?: number; messagesTruncated?: boolean; messages?: DetailMessage[]; error?: string;
 }
-
-interface SessionListResp {
-  items: SessionItem[];
-  nextCursor: string | null;
-  total: number;
-  limit: number;
-  sortBy: string;
-  error?: string;
-}
-
-interface SessionDetail {
-  session: {
-    sessionUid: string;
-    agentId: string;
-    title: string;
-    messageCount: number;
-    startedAt: string;
-    lastMessageAt: string;
-  };
-  messages: Array<{
-    id: string;
-    role: string;
-    content: string;
-    timestamp?: string;
-  }>;
-}
-
-const PAGE_SIZE = 100; // session 服务 max 500; 前端 100/页更流畅, 也给后端 cursor 翻页
+const roleLabel = (r: string) => r === "user" ? "用户" : r === "assistant" ? "智能体" : r === "system" ? "系统" : r || "工具";
 
 export default function SessionBrowserPage() {
-  // 2026-10-13 round 76-DK: 接入全局刷新(见 fetchPage 里的 _gf)。
-  const gfNonce = useGlobalNonce();
-  const [filterAgent, setFilterAgent] = useState<string>("");
-  const [selectedUid, setSelectedUid] = useState<string | null>(null);
-
-  // P0 [todo_zowi9ayu1m2kkuyw] 2026-09-15: 多页状态
-  //   - items 累积所有已加载页
-  //   - cursor 翻页 (服务端 nextCursor base64(updatedAt))
-  //   - total 来自后端 (中间层 COUNT 真值)
-  //   - 切换 agent 时 reset
-  const [items, setItems] = useState<SessionItem[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [total, setTotal] = useState<number | null>(null);
-  // 2026-10-13 round 76-CY: 初值改为 **true** —— 本页**挂载即加载**(在 useEffect 里)。
-  //   初值 false 时, 从首帧到 effect 跑起来之间会渲染出 items=[]、total=null,
-  //   于是显示"0 个会话"与"暂无会话" —— 那是**假空态/假计数**(与"真的没有会话"无法区分)。
-  const [loadingPage, setLoadingPage] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-
-  const fetchPage = useCallback(
-    async (cursor: string | null, reset: boolean) => {
-      if (reset) setLoadingPage(true);
-      else setLoadingMore(true);
-      setListError(null);
-      try {
-        const qs = new URLSearchParams({ limit: String(PAGE_SIZE) });
-        // 2026-10-13 round 76-DK: 加上全局 nonce —— 本页只挂载拉一次(无轮询), 让顶栏刷新也能重取。
-        qs.set("_gf", String(gfNonce));
-        if (filterAgent) qs.set("agentId", filterAgent);
-        if (cursor) qs.set("cursor", cursor);
-        qs.set("sortBy", "last_message_at");
-        const res = await fetch(
-          `/api/session-service-list?${qs.toString()}`
-        );
-        const data: SessionListResp = await res.json();
-        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
-        setTotal(data.total);
-        setNextCursor(data.nextCursor);
-        setItems((prev) => (reset ? data.items : [...prev, ...data.items]));
-      } catch (e: any) {
-        setListError(e?.message || String(e));
-        if (reset) {
-          setItems([]);
-          setNextCursor(null);
-          setTotal(null);
-        }
-      } finally {
-        if (reset) setLoadingPage(false);
-        else setLoadingMore(false);
-      }
-    },
-    [filterAgent, gfNonce]
-  );
-
-  // agent 切换 / 首次加载: 重头拉
+  const [uid, setUid] = useState<string | null>(null);
   useEffect(() => {
-    fetchPage(null, true);
-  }, [filterAgent, fetchPage]);
-
-  const loadMore = () => {
-    if (nextCursor && !loadingMore && !loadingPage) {
-      fetchPage(nextCursor, false);
-    }
-  };
-
-  // 选中 session 后加载详情
-  const [detail, setDetail] = useState<SessionDetail | null>(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!selectedUid) {
-      setDetail(null);
-      return;
-    }
-    setDetailLoading(true);
-    setDetailError(null);
-    fetch(`/api/session-detail/${encodeURIComponent(selectedUid)}`)
-      // 2026-10-13 round 76-AI: 原来不检查 r.ok —— 详情接口 500 时错误体被 setDetail, 渲染 detail.messages.length 抛异常(整页崩)。
-      .then((r) => { if (!r.ok) throw new Error("请求失败（状态码 " + r.status + "）"); return r.json(); })
-      .then((data) => {
-        setDetail(data);
-        setDetailLoading(false);
-      })
-      .catch((e) => { setDetailError(e?.message || String(e)); setDetailLoading(false); });
-  }, [selectedUid]);
-
-  const agentOptions = Array.from(new Set(items.map((i) => i.agentId))).sort();
+    try { setUid((new URLSearchParams(window.location.search).get("id") || "").trim()); } catch { setUid(""); }
+  }, []);
+  const forced = usePhaseOverride();
 
   return (
-    <div className="layout-with-sidebar">
-
-      <main className="main">
-        <div className="breadcrumb">
-          <span className={styles.crumbDim}>{t('sessionBrowser.crumb')}</span>
-          <span className="sep">/</span>
-          <span className="current">{t('sessionBrowser.title')}</span>
+    <main className="page">
+      <h1 className={kit.srOnly}>会话浏览器</h1>
+      <PageHeader>
+        <PageTitle>会话浏览器</PageTitle>
+        <div className="page-subtitle">
+          会话标识回显：<span className={kit.mono}>{uid ? uid : "n/a（未提供 ?id=）"}</span> · 只读
         </div>
-        <PageHeader>
-          <PageTitle>{t('sessionBrowser.title')}</PageTitle>
-          <div className="page-subtitle">
-            {t('sessionBrowser.meta', {
-              n: loadingPage
-                ? "加载中..."
-                : total !== null
-                  ? `${items.length} / ${total}`
-                  : items.length,
-            })}
-          </div>
-        </PageHeader>
-        {/* 2026-10-19 B4: 修前首屏大号数字 **0 个** ✗ —— "已加载/总数"藏在副标题小字里。补 ≤3 张 ✓ */}
+        <Chips group="智能体" page="会话浏览" />
+      </PageHeader>
+      {uid === null ? <BentoState phase="loading" /> : uid ? <DetailView uid={uid} forced={forced} /> : (
+        <BentoState phase="empty" title="缺少会话标识" detail={<>本页需要会话标识：<span className={kit.mono}>/agents/session-browser?id=&lt;sessionUid&gt;</span>。可从 <Link href="/agents/sessions" className={kit.link}>会话归档</Link> 进入。</>} />
+      )}
+    </main>
+  );
+}
 
-        <div className={"kpi-grid " + styles.kpiTight}>
+function DetailView({ uid, forced }: { uid: string; forced: ReturnType<typeof usePhaseOverride> }) {
+  const res = useResource<DetailPayload>("/api/session-detail/" + encodeURIComponent(uid));
+  const base = forced && forced !== "ok" ? forced : res.phase;
+  const d = res.data;
+  const s = d?.session;
+  const notFound = base === "ok" && (!s || d?.error);
+  const phase = res.status === 404 ? "unavailable" : notFound ? "unavailable" : base;
+  const messages = d?.messages ?? [];
+  const asOf = s?.lastMessageAt || s?.updatedAt || null;
 
-          <KPICard label="已加载会话（个）" value={items.length} delta={total !== null ? "共 " + total : "总数未知"} />
+  const k = (v: number | null | undefined, hint: string): Metric =>
+    v == null ? { kind: "na", reason: "接口未下发" } : { kind: "value", value: fmtNum(v), hint };
 
-          <KPICard label="涉及智能体（个）" value={agentOptions.length} delta="按已加载会话" />
+  return (
+    <>
+      <States phase={phase} endpoint={"GET /api/session-detail/" + uid} error={res.error} status={res.status} onRetry={res.reload}
+        emptyTitle="未找到会话" emptyDetail="会话服务返回空会话（空集/未找到）。"
+        unavailableTitle={res.status === 404 ? "未找到该会话" : "会话服务暂不可用"} unavailableDetail={res.status === 404 ? "未找到该会话：会话服务返回 404，请确认 sessionUid（含冒号需 encode）或返回会话归档重选。" : (d?.error || "会话服务无对应会话（可能是历史归档登记）；会话标识须用 sessionUid（含冒号需 encode）。")} />
 
-          <KPICard label="选中会话消息（条）" value={detail?.messages?.length ?? 0} delta={selectedUid ? "已选会话" : "未选会话"} />
-
-        </div>
-
-
-        <div className={styles.split}>
-          {/* 左侧：会话列表 */}
-          <div className={"panel " + styles.panelScroll}>
-            <div className="panel-header">
-              <span className="panel-title">{t('sessionBrowser.list')}</span>
-              <select
-                aria-label="按智能体筛选"
-                value={filterAgent}
-                onChange={(e) => setFilterAgent(e.target.value)}
-                className={styles.select}
-              >
-                <option value="">{t('sessionBrowser.allAgents')}</option>
-                {agentOptions.map((a) => (
-                  <option key={a} value={a}>{a}</option>
-                ))}
-              </select>
-            </div>
-            {listError && (
-              <div className={styles.stateCrit}>
-                加载失败: {listError}
-              </div>
-            )}
-            {items.length === 0 && !loadingPage && !listError && (
-              <div className={styles.stateMuted}>{t('sessionBrowser.empty')}</div>
-            )}
-            {items.map((s) => (
-              <div
-                key={s.id}
-                {...interactiveProps(selectedUid === s.id)}
-                onClick={() => setSelectedUid(s.id)}
-                className={styles.sessionItem}
-                data-active={selectedUid === s.id ? "true" : undefined}
-              >
-                <div className={styles.itemTitle}>{s.title || s.id.slice(0, 50)}</div>
-                <div className={styles.itemMeta}>
-                  {s.agentId} · {s.messageCount} msgs · {new Date(s.startedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}
-                </div>
-              </div>
-            ))}
-            {/* P0 加载更多按钮 */}
-            {nextCursor && (
-              <div className={styles.moreWrap}>
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className={styles.moreBtn}
-                  data-busy={loadingMore ? "true" : undefined}
-                >
-                  {loadingMore ? "加载中..." : `加载更多 (已加载 ${items.length} / 总 ${total ?? "?"})`}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* 右侧：消息详情 */}
-          <div className={"panel " + styles.panelScroll}>
-            <div className="panel-header">
-              <span className="panel-title">
-                {detail?.session?.title || (selectedUid ? (detailError ? "加载失败" : "加载中...") : t('sessionBrowser.pick'))}
-              </span>
-              {detail && (
-                <span className={styles.metaSm}>
-                  {detail.messages.length} 条消息
-                </span>
-              )}
-            </div>
-            <div className={styles.pad35}>
-              {detailLoading && <div className={styles.muted}>加载中...</div>}
-              {detailError && <div className={styles.crit}>详情加载失败: {detailError}</div>}
-              {detail && (
-                <>
-                  {detail.messages.map((m, i) => (
-                    <div
-                      key={i}
-                      className={styles.msg}
-                      data-role={m.role}
-                    >
-                      <div className={styles.msgMeta}>
-                        {m.role} {m.timestamp && `· ${new Date(m.timestamp).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })}`}
-                      </div>
-                      <div className={styles.msgBody}>
-                        {m.content.length > 2000 ? m.content.slice(0, 2000) + "..." : m.content}
-                      </div>
+      {phase === "ok" && s && (
+        <BentoGrid>
+          <BentoCard span={8} title="消息流" sub={(d?.messagesTruncated ? "已截断展示" : "按时间顺序") + " · 共 " + fmtNum(s.messageCount ?? d?.totalMessages ?? messages.length) + " 条"}>
+            {messages.length ? (
+              <ul className={kit.msgList}>
+                {messages.map((m, i) => (
+                  <li key={m.messageUid || i} className={kit.msgItem} data-role={m.role}>
+                    <div className={kit.msgHead}>
+                      <Tone tone={m.role === "assistant" ? "ok" : m.role === "user" ? "info" : "mute"}>{roleLabel(m.role)}</Tone>
+                      <span className={kit.mono}>{m.createdAt || m.timestamp || "n/a"}</span>
+                      {m.model ? <span className={kit.mono}>{m.model}</span> : null}
                     </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-        {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-        <div className={"tiny " + styles.related}>
-          <span>相关视图：</span>
-          <Link href="/sessions">会话中心 →</Link>
-          <Link href="/agents/sessions">会话概览 →</Link>
-        </div>
-      </main>
-    </div>
+                    <div className={kit.msgBody}>{m.content?.length > 3000 ? m.content.slice(0, 3000) + "…（已截断）" : (m.content || "(空消息)")}</div>
+                  </li>
+                ))}
+              </ul>
+            ) : <BentoState phase="empty" title="该会话暂无消息" detail="会话服务返回 0 条消息（空集，不是不可得）。" />}
+          </BentoCard>
+
+          <BentoCard span={4} title="会话摘要">
+            <BentoKpi label="消息数" metric={k(s.messageCount ?? d?.totalMessages, "session.messageCount / totalMessages")} />
+            <ul className={kit.kv}>
+              <li><span>会话 UID</span><b className={kit.mono}>{s.sessionUid}</b></li>
+              <li><span>智能体</span><b>{s.agentId || "n/a"}</b></li>
+              <li><span>状态</span><b>{s.status || "n/a"}</b></li>
+              <li><span>来源</span><b>{s.source || "n/a"}</b></li>
+              <li><span>平台</span><b>{s.platform || "n/a"}</b></li>
+              <li><span>开始</span><b>{s.startedAt ? fmtTime(s.startedAt) : "n/a"}</b></li>
+              <li><span>最近消息</span><b>{s.lastMessageAt ? fmtTime(s.lastMessageAt) : "n/a"}</b></li>
+              <li><span>更新</span><b>{s.updatedAt ? fmtTime(s.updatedAt) : "n/a"}</b></li>
+            </ul>
+          </BentoCard>
+
+          <BentoCard span={12} title="相关视图">
+            <ul className={kit.kv}>
+              <li><span>会话归档</span><b><Link href="/agents/sessions" className={kit.link}>/agents/sessions</Link>（智能体会话列表）</b></li>
+              <li><span>会话中心</span><b><Link href="/sessions" className={kit.link}>/sessions</Link> · 详情 <Link href={"/sessions/detail?id=" + encodeURIComponent(uid)} className={kit.link}>/sessions/detail</Link></b></li>
+              <li><span>关联任务</span><b>n/a —— 会话详情接口未返回任务关联字段</b></li>
+              <li><span>数据时刻</span><b>{asOf ? fmtTime(asOf) : "n/a（接口未下发）"} · 本页只读</b></li>
+            </ul>
+            <Note>注意：会话标识必须用会话唯一标识（形如 <span className={kit.mono}>智能体:来源:run_xxx</span>，含冒号需转义）；用会话内部编号会找不到。</Note>
+          </BentoCard>
+        </BentoGrid>
+      )}
+    </>
   );
 }

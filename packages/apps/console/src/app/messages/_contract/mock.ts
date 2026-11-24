@@ -6,7 +6,7 @@ export const MOCK_CONVERSATIONS: SessionConversationsResponse = {
     {
       conversation_id: "conv_demo_1",
       participants: ["agent-d", "agent-operator"],
-      participant_display: ["agent-x(执行体)", "operator"],
+      participant_display: ["agent-d(执行体)", "operator"],
       last_message: {
         message_id: "msg_demo_1", text: "契约草案已发，请确认 A–D", created_at: "2026-10-22T10:19:37+08:00",
         transport_status: "delivered", processing_state: "read",
@@ -18,9 +18,9 @@ export const MOCK_CONVERSATIONS: SessionConversationsResponse = {
     {
       conversation_id: "conv_demo_2",
       participants: ["agent-d", "agent-d"],
-      participant_display: ["agent-x(执行体)", "agent-x(执行体)"],
+      participant_display: ["agent-d(执行体)", "agent-d(执行体)"],
       last_message: {
-        message_id: "msg_demo_2", text: "[frontend-line · 三项已交付]", created_at: "2026-10-22T10:41:00+08:00",
+        message_id: "msg_demo_2", text: "[[team] · 三项已交付]", created_at: "2026-10-22T10:41:00+08:00",
         transport_status: "read", processing_state: "replied",
         sender_id: "agent-d", sender_session_id: "sess_6e51d32248ca4180",
       },
@@ -36,7 +36,7 @@ export const MOCK_SYNC: SyncResponse = {
       message_id: "msg_demo_2", created_at: "2026-10-22T10:41:00+08:00",
       sender_id: "agent-d", sender_session_id: "sess_6e51d32248ca4180", target_session_id: null,
       direction: "out", transport_status: "read", processing_state: "replied",
-      text: "[frontend-line · 三项已交付]", text_length: 24,
+      text: "[[team] · 三项已交付]", text_length: 24,
       reply_to_id: "msg_demo_1", client_message_id: "cli_demo_1", last_error: null,
       events: [
         { event_type: "ingress", actor: "agent-d", created_at: "2026-10-22T10:41:00+08:00" },
@@ -59,7 +59,7 @@ export const MOCK_SYNC: SyncResponse = {
 export const MOCK_OVERVIEW: SessionsOverviewResponse = {
   agent_id: "agent-d",
   sessions: [
-    { session_id: "sess_6e51d32248ca4180", label: "frontend-line", status: "online", online: true, stale: false,
+    { session_id: "sess_6e51d32248ca4180", label: "[team]", status: "online", online: true, stale: false,
       stale_reason: null, last_heartbeat_at: "2026-10-22T10:41:50+08:00", pending_count: 0, claim_count: 0,
       unread_count: 5, oldest_pending_at: null },
     { session_id: "sess_5f3550236bda419f", label: "macs-line", status: "online", online: true, stale: false,

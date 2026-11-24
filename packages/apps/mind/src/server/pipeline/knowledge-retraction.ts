@@ -724,7 +724,7 @@ export function buildScanTargets(
       targets.push({ sessionUid: r.sessionUid, sessionId: row.id });
       continue;
     }
-    // 兜底: 会话行已被清理/未同步, 但 Message 仍在(实测 agent-x 会话就是这样) ——
+    // 兜底: 会话行已被清理/未同步, 但 Message 仍在(实测 agent-i 会话就是这样) ——
     //   sessionId 的编码规则是 sessionUid 的 ':' -> '_'。没有消息就跳过, 避免空转。
     const derived = r.sessionUid.replace(/:/g, "_");
     if (stmtMsg.get(derived)) targets.push({ sessionUid: r.sessionUid, sessionId: derived });

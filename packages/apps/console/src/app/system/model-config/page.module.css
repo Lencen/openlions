@@ -1,0 +1,205 @@
+/* 平台模型配置页（0.6 SLOT-MAP）私有样式 —— 只服务本页，非共享文件
+   字号只用 12/13/14/16/20/24/30 档；可点目标（按钮/下拉/链接）>=24px（C5 硬门）；
+   颜色全走 token，dark 下由 token 换色（测试红绿 badge 对比 >=4.5:1）。 */
+
+/* 页头数据时刻（基线 §1 页头 asOf；接口无 asOf 时回落请求时刻并标注） */
+.asOfRow {
+  margin-top: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.asOfNote { color: var(--text-dim); }
+
+/* 区块说明 s4 的要点列表 */
+.noteList {
+  margin: 0;
+  padding-left: 1.1em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.noteList b { color: var(--text); font-weight: 600; }
+
+.pointList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
+
+/* 单配置点：主信息 + 元信息 + 切换控件 + 操作 + 测试结果 */
+.pointRow {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  padding: var(--sp-3) var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.pointMain { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.pointName { font-size: var(--fs-md); font-weight: 600; color: var(--text); }
+
+/* 元信息：可换行的 kv 行；标签弱化、值用 b 强调 */
+.pointMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
+.pointMeta b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* 切换控件：供应商 / 模型下拉（选项来自目录接口），>=24px */
+.switchRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--border);
+}
+.field { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); color: var(--text-muted); }
+.fieldNote { font-size: var(--fs-sm); color: var(--text-dim); }
+.fieldWarn {
+  font-size: var(--fs-sm);
+  color: var(--c-status-warn);
+  border-left: 3px solid var(--c-status-warn);
+  padding-left: var(--sp-2);
+}
+.select {
+  min-height: 24px;
+  min-width: 150px;
+  max-width: 260px;
+  padding: 0 var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+.select:disabled { color: var(--text-dim); opacity: 0.7; }
+
+/* 操作区：按钮 >=24（C5 硬门） */
+.pointActions { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
+.pointActions .btn { min-height: 24px; }
+
+/* 测试调用结果：HTTP 码 + 首 20 字回显（不回显 prompt）；红=失败、绿=通过 */
+.pointResult {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-sm);
+  color: var(--text-dim);
+  border-top: 1px dashed var(--border);
+  padding-top: var(--sp-2);
+}
+
+/* 表格（区块 C / 审计回显）：横向滚动 + 首列 sticky（基线 §3 三档与窄屏要求） */
+.tableWrap { overflow-x: auto; width: 100%; }
+.table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.table th,
+.table td {
+  text-align: left;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+.table th { color: var(--text); font-weight: 600; font-size: var(--fs-sm); background: var(--bg-surface2); }
+.table td b { color: var(--text); font-weight: 600; }
+.stickyCol {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg-surface2);
+  border-right: 1px solid var(--border);
+}
+
+/* 成功/失败提示条 */
+.toast {
+  position: fixed;
+  right: var(--sp-4);
+  bottom: var(--sp-4);
+  z-index: 60;
+  max-width: 520px;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: var(--fs-sm);
+  color: var(--text);
+  box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+}
+.toast[data-tone="ok"] { border-left: 3px solid var(--c-status-ok); }
+.toast[data-tone="crit"] { border-left: 3px solid var(--c-status-crit); }
+
+/* 二次确认弹窗：复述键名 + 目标文件，不显示任何值 */
+.mask {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgb(0 0 0 / 45%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-4);
+}
+.modal {
+  width: min(560px, 100%);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.modalTitle { margin: 0; font-size: var(--fs-lg); font-weight: 600; color: var(--text); }
+.modalLine { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.5; }
+.modalLine b { color: var(--text); font-weight: 600; }
+.modalWarn {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--c-status-warn);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--c-status-warn);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+}
+.keyList {
+  margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  list-style: none;
+  background: var(--bg-surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: var(--fs-sm); }
+.ack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 24px;
+  font-size: var(--fs-sm);
+  color: var(--text);
+  cursor: pointer;
+}
+.ack input { width: 16px; height: 16px; }
+.modalActions { display: flex; justify-content: flex-end; gap: var(--sp-2); }
+.modalActions .btn { min-height: 24px; }
+
+/* 三档：<=1199 收窄、<=900 单列（Bento.module.css 已处理栅格，这里只管页内元素） */
+@media (max-width: 1199px) {
+  .select { min-width: 132px; }
+}

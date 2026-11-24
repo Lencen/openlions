@@ -25,7 +25,7 @@
 .lastSeen { font-size: var(--fs-base); color: var(--text-dim); }
 
 /* 右侧「权限调整入口」（原来是内联 margin-left/color/字号/去下划线） */
-.permLink { margin-left: auto; color: var(--primary); font-size: var(--fs-base); text-decoration: none; }
+.permLink { margin-left: auto; color: var(--primary); font-size: var(--fs-base); text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; }
 
 /* 对象页签条（原来是内联 flex + 下边框） */
 .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--border); margin-bottom: var(--sp-4); }

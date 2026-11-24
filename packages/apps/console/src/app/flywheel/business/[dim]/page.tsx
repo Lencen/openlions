@@ -1,5 +1,5 @@
 "use client";
-// 2026-11-05 商业线裁决：301 -> /market，目录保留 60 天
+// 2026-11-05 运营团队裁决：301 -> /market，目录保留 60 天
 import { useParams } from "next/navigation";
 import ErrorAlert from "@/components/ErrorAlert";
 import { useBusinessSnapshot } from "../_components/useBusiness";

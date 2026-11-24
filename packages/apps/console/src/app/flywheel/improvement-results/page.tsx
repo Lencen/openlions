@@ -1,6 +1,6 @@
 "use client";
 // 2026-09-24 [可见性缺口] todo_bdce470195d94307abff:
-//   按来源(如 agent-x-feedback)一屏看「某次反馈的需求改进到什么程度」——
+//   按来源(如 agent-f-feedback)一屏看「某次反馈的需求改进到什么程度」——
 //   待办状态 / 任务状态 / 验收结论 / 证据锚点。此前只能跨 4 张表人工拼。
 //   ★ DONE 不等于验收通过: 两列并列展示, 不再混淆。
 // 2026-11-05 P2 呈现层（批 4/5）：内联 style 清零 + 手写 .tbl 表 → 白名单 DataTable。
@@ -25,10 +25,11 @@ export default function ImprovementResultsPage() {
   // 2026-10-13 round 76-CE: 改用 useApi(path, { pollMs: 0 }) —— 自带序号守卫与非 2xx 错误通道,
   //   于是删掉 76-CC 手写的 seq 守卫。source 变化 -> path 变化 -> 自动重取。
   const f = useGlobalFilter();
-  const [source, setSource] = useState("agent-x-feedback");
-  const [q, setQ] = useState("agent-x-feedback");
+  const [source, setSource] = useState("agent-f-feedback");
+  const [q, setQ] = useState("agent-f-feedback");
+  const [viewMode, setViewMode] = useState<"default" | "sourceAll" | "all">("default");
   const { data: raw, error: fetchErr, mutate } = useApi<any>(
-    "/api/improvement-results?source=" + encodeURIComponent(q) + "&limit=200&range=" + f.range + "&_n=" + f.nonce, { pollMs: 0 });
+    "/api/improvement-results?source=" + encodeURIComponent(viewMode === "all" ? "" : q) + "&limit=200&range=" + (viewMode === "default" ? f.range : "all") + "&_n=" + f.nonce, { pollMs: 0 });
   // 上游也可能以 200 + {ok:false, error} 的形式报告失败(BFF 转发上游状态), 故仍按 ok 字段判定。
   const data = raw && raw.ok === false ? null : raw;
   const err = fetchErr ? String((fetchErr as Error)?.message || fetchErr) : (raw && raw.ok === false ? String(raw.error || "加载失败") : null);
@@ -80,22 +81,24 @@ export default function ImprovementResultsPage() {
   ];
 
   return (
-    <main className="page">
+    <main className={"page " + styles.b2main}>
       <PageHeader>
         <PageTitle>改进结果（按来源）</PageTitle>
         <div className="page-subtitle">某个来源的需求改进到什么程度：待办状态 · 任务状态 · 验收结论 · 证据锚点。DONE ≠ 验收通过。</div>
       </PageHeader>
+      <div className={styles.chips} aria-label="页面层级"><span>#</span><span>飞轮</span><span>列表</span><span className={styles.crumbOn}>只读</span></div>
+      <div className={styles.b2grid}>
       {/* 2026-10-19 B4(方案 L2-1): 修前这三个数字挤在筛选条里的一行 tiny 小字里 ✗,
           管理员第一眼看不到"到底过了几条"。提升为 ≤3 张 KPI 卡(带单位"项"与口径"近 7 天")。
           数据时刻: 本页**单源**(只有 /api/improvement-results), 按 DataMoment 自身纪律不在页内重复标注,
           由既有全局机制(顶栏「本页数据取自 …」)提供 ✓ —— 不借时刻、也不重复 ✗。 */}
       {data ? (
-        <div className={"kpi-grid " + styles.irMb3}>
+        <div className={"kpi-grid " + styles.irMb3 + " " + styles.slotS12}>
           {/* R4：一个视觉锚点——"通过率"（原页面三张卡同等重要，第一眼看不出好在哪） */}
           <KPICard
             label="验收通过率"
             size="hero"
-            value={data.count ? Math.round(((data.summary?.PASS ?? 0) / data.count) * 100) + "%" : "暂无"}
+            value={data.count ? Math.round(((data.summary?.PASS ?? 0) / data.count) * 100) + "%" : "n/a（窗口内无记录）"}
             delta={"共 " + (data.count ?? 0) + " 项 · 待判定 " + (data.summary?.PENDING ?? 0)}
           />
           <KPICard
@@ -117,12 +120,16 @@ export default function ImprovementResultsPage() {
           />
         </div>
       ) : null}
+      {data ? <p className="tiny">KPI 口径：summary 仅统计本次返回的前 {data.count ?? 0} 条（limit 200，受窗口/来源影响）；{data.count >= 200 ? "当前 count=200 为 limit 截断，非总量；" : ""}禁止用 limit 调参凑数。</p> : null}
+      <p className="tiny">数据时刻：{data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "n/a（接口未下发 asOf）"} · 来源：/api/improvement-results（只读）</p>
       <StuckTasksStrip />
-      <div className={"panel " + styles.irMb3}>
+      <div className={"panel " + styles.irMb3 + " " + styles.slotS4}>
         <span className={"tiny " + styles.irFilterLabel}>来源</span>
         <input className={"input " + styles.irSourceInput} value={source} onChange={(e) => setSource(e.target.value)}
-          placeholder="如 agent-x-feedback" onKeyDown={(e) => { if (e.key === "Enter") setQ(source.trim()); }} />
-        <button className={"btn " + styles.irBtnGap} onClick={() => setQ(source.trim())}>查询</button>
+          placeholder="如 agent-f-feedback" onKeyDown={(e) => { if (e.key === "Enter") setQ(source.trim()); }} />
+        <button className={"btn " + styles.irBtnGap} onClick={() => { setViewMode("default"); setQ(source.trim()); }}>查询默认</button>
+        <button className={"btn " + styles.irBtnGap} onClick={() => { setViewMode("sourceAll"); setQ(source.trim()); }}>同源全量</button>
+        <button className={"btn " + styles.irBtnGap} onClick={() => setViewMode("all")}>全部来源（all）</button>
         {data ? (
           <span className={"tiny " + styles.irSumGap}>
             共 {data.count} 项 · <span className={styles.irOk}>PASS {data.summary?.PASS ?? 0}</span> /{" "}
@@ -130,10 +137,11 @@ export default function ImprovementResultsPage() {
           </span>
         ) : null}
       </div>
-      {err ? <ErrorAlert title="改进结果加载失败" message={err} onRetry={() => { mutate(); }} /> : !data ? <LoadingBlock lines={2} label="改进结果加载中" /> : (data.items || [] || []).length === 0 ? <div className={styles.irEmptyPad}><Empty description={"来源「" + q + "」没有改进记录 —— 换个来源试试，或去 升级任务 里看全部"} /></div> : (
-        <div className="panel"><TableCopyButton />
+      {err ? <ErrorAlert title="改进结果加载失败" message="改进结果数据接口请求失败（网络错误或响应状态码异常），请重试；状态码见控制台。" onRetry={() => { mutate(); }} /> : !data ? <LoadingBlock lines={2} label="改进结果加载中" /> : (data.items || [] || []).length === 0 ? <div className={styles.irEmptyPad}><Empty description={"来源「" + q + "」没有改进记录 —— 换个来源试试，或去 升级任务 里看全部"} /></div> : (<>
+        <div className={"panel " + styles.slotS8}><div className="panel-header"><span className="panel-title">B2-4 口径说明</span></div><p className="tiny">默认 source=agent-f-feedback；「同源全量」=同来源+range=all；「全部来源」=source 空+range=all。KPI 取 summary 时仅统计前 N 条（limit 200），count=200 为截断非总量；禁止用 limit 调参。</p></div>
+        <div className={"panel " + styles.slotS12}><TableCopyButton />
           <DataTable columns={columns} rows={data.items || []} rowKey={(it) => it.todoId} empty={{ title: "暂无改进记录" }} />
-        </div>
+        </div></>
       )}
       {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
       <div className={"tiny " + styles.irFootLinks}>
@@ -141,6 +149,6 @@ export default function ImprovementResultsPage() {
         <Link href="/todo">来源待办 →</Link>
         <Link href="/flywheel/tasks">升级任务 →</Link>
       </div>
-    </main>
+    </div></main>
   );
 }

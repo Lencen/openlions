@@ -278,18 +278,22 @@ export function Menu({
         );
       }
       const isOpen = open.includes(it.key);
+      // 0.6.1 U-39（设计 2026-11-17 18:19 确认稿 §3 三条硬约束）：
+      //   ① 组标题**静态不可折叠**（不渲染 .ui-menu-caret；恒展开）
+      //   ② **不做二级菜单**（组内项容器用 .ui-menu-items，不再是 .ui-menu-children）
+      //   ③ 扁平两层（depth 恒为 0，不再出现 .ui-menu-group-nested）
+      //   注：调用方（GlobalSidebar）已把 13 个二级 children 置 undefined；
+      //       这里保留"有 children"分支仅用于**组 -> 组内项**这一层。
       return (
         <div key={it.key} className={"ui-menu-group" + (depth > 0 ? " ui-menu-group-nested" : "")}>
+          {/* 组标题**静态不可折叠**（见上：不渲染 caret、恒展开），故不能声明 aria-expanded：
+              该属性不被普通 div 允许（axe aria-allowed-attr critical），且语义上也错了——
+              它不是「可展开/收起」的控件。原先 7 个分组各带一个 -> 全部 40 页各 7 条 critical。 */}
           <div
-            className={"ui-menu-sub-title" + (depth > 0 ? " ui-menu-sub-title-nav" : "") + (isOpen ? " ui-menu-sub-open" : "") + (it.disabled ? " ui-menu-item-dis" : "")}
-            onClick={() => !it.disabled && toggle(it.key)}
-            role="button" tabIndex={0} aria-expanded={isOpen}>
-            <span className={"ui-menu-caret" + (isOpen ? " open" : "")} aria-hidden="true">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 6 6 6-6 6" /></svg>
-            </span>
+            className={"ui-menu-sub-title" + (depth > 0 ? " ui-menu-sub-title-nav" : "") + " ui-menu-static-title" + (it.disabled ? " ui-menu-item-dis" : "")}>
             {it.label}
           </div>
-          {isOpen ? <div className="ui-menu-children">{renderItems(it.children!, depth + 1)}</div> : null}
+          <div className="ui-menu-items">{renderItems(it.children!, depth + 1)}</div>
         </div>
       );
     });

@@ -1,4 +1,4 @@
-// agent-x P0#3 + P0#11 权限分级守卫 (2026-09-23):
+// agent-f P0#3 + P0#11 权限分级守卫 (2026-09-23):
 //   A 类只读接口白名单定义见 src/config/readonly-protocol-whitelist.ts (三件套);
 //   ABC 分级/闸门/清单见 src/config/abc-permission-tiers.ts。
 //   守卫行为: C 类 → 403 硬拒绝; A 类命中 → method/入参 schema 严格校验 (405/400);
@@ -64,7 +64,7 @@ function consume(agentId: string): boolean {
 
 // 只对 /api/trpc 限流; 权限分级守卫见上 (matcher = /api/:path*, 全量 fail-closed)
 export function middleware(req: NextRequest) {
-  // ① 权限分级守卫 (agent-x P0#3 A 类 + P0#11 ABC, 2026-09-23)
+  // ① 权限分级守卫 (agent-f P0#3 A 类 + P0#11 ABC, 2026-09-23)
   //    C 类 → 403; A 类命中按 method/入参 schema 严格校验 (405/400); B 类/未分类放行。
   const violation = abcGuardCheck(
     req.method,
@@ -112,7 +112,7 @@ export const config = {
   matcher: [
     // trpc 网关限流
     "/api/trpc/:path*",
-    // 权限分级守卫 (agent-x P0#3/#11): 全量 /api 进守卫 (fail-closed by default),
+    // 权限分级守卫 (agent-f P0#3/#11): 全量 /api 进守卫 (fail-closed by default),
     // 由 abcGuardCheck 内部分类; 不再逐条枚举只读前缀 —— 逐条枚举会与白名单漂移
     // (2026-09-23 实测: knowledge/norms 已声明 A 类却漏配 matcher, 未知参数未被拦)。
     "/api/:path*",

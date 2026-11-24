@@ -89,6 +89,15 @@ const LEGACY: Record<string, IconName> = {
 
 const KNOWN = new Set(Object.keys(P));
 
+/**
+ * 图标映射的真实条数（唯一来源 = 上面的 P）。
+ * 由来（2026-11-23 [team] 转达商业化裁定）：/design 页原先写死 ICON_COUNT = 42，
+ *   而 P 实际 50 条、IconName 成员 50 个 —— 42 一个都源不上，是被「写」进页面的，不是被「数」出来的。
+ *   写死的常量会被复制，推导出来的不会：页面只能「计算」这个数，于是「无源数字」不可能再出现。
+ *   同一对象取 keys，故 P 增删图标时页面数自动跟随，不需要任何地方同步。
+ */
+export const ICON_COUNT = Object.keys(P).length;
+
 export function resolveIcon(name?: string | null): IconName | null {
   if (!name) return null;
   if (KNOWN.has(name)) return name as IconName;

@@ -1,63 +1,30 @@
-/* /system/health 页内样式（P1 试点页呈现层改造 ord-20261104-032）
-   只放本页真正需要、globals.css 里没有的几条；
-   能复用 .panel / .panel-header / .panel-title / .tiny / .nowrap / .mono / .grid-2 的一律复用。
-   规则：本页 style={{ 计数必须为 0（内联 color / font-size 是令牌失效的根源）。 */
+/* /system/health · 运维看板（2026-11-19 U-57）
+   设计系统承担网格/卡片/KPI（BentoGrid + BentoCard + KpiTile + DataTable），
+   本文件只放该页特有的三处：表格包裹（tblWrap）、图表位（chartFrame）、告警列表（list）与键值表（kv/dd）。
+   内联 style 一律不用（判据：main 内 style= 计数必须为 0）。 */
 
-/* 面包屑里「业务与系统」那一级（原来是内联 color） */
-.bcDim { color: var(--text-dim); }
+/* 表格包裹：所有 <table> 必须带 tblWrap 祖先（禁裸表）；宽表横向滚动。 */
+.tblWrap { width: 100%; overflow-x: auto; }
 
-/* 页头权限 / 口径 chip 行 */
-.headerTags { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); }
+/* 最近审计表：表头沿用设计列（时间/操作者/动作/结果），表体只放一条 colspan 的 n/a 说明行。 */
+.auditTbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.auditTbl th { text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 8px 10px 8px 0; white-space: nowrap; }
+.auditTbl td { border-bottom: 1px solid var(--border); padding: 10px 10px 10px 0; }
+.naCell { color: var(--text-muted); font-size: 12px; line-height: 1.7; }
 
-/* 下钻入口行（看板 §2：每个显示值要有落点） */
-.drillRow { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+/* 成本构成：设计要 bars，但无金额口径（G-4）——只保留图表位 + n/a 原因，不画 bars。 */
+.chartFrame { border: 1px dashed var(--border); border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.chartSlot { font-size: 12px; color: var(--text-muted); }
+.chartNa { margin: 0; font-size: 12px; line-height: 1.7; color: var(--text-muted); }
 
-/* 图表外层留白（原来是内联 padding） */
-.chartPad { padding: var(--sp-3); }
+/* 告警：设计要 list；当前只有「未接入」一条缺口说明（不是一条告警）。 */
+.alertList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.alertItem { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.6; }
+.dotWarn { width: 8px; height: 8px; flex: 0 0 auto; margin-top: 6px; border-radius: 50%; background: var(--status-warn); }
+.alertMeta { display: block; font-size: 12px; line-height: 1.7; color: var(--text-muted); margin-top: 2px; }
 
-/* 卡死任务清理表单 */
-.stuckForm { display: flex; gap: var(--sp-2-5); align-items: flex-end; flex-wrap: wrap; padding: var(--sp-3-5); }
-.stuckField { display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-base); color: var(--text-dim); }
-.stuckInput { width: 120px; }
-.stuckMsg { padding: 0 var(--sp-3-5) var(--sp-3-5); }
-
-/* 面板右上角的说明字 */
-.panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
-
-/* 页脚口径 */
-.footNote { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.8; }
-
-/* ================= 0.4.39-04 CLS 修复 =================
-   成因（2026-11-09 实测 /system/health@390，scrollHeight 3625 -> 3701 -> 4341）：
-     ① 页头副标题里的「逐源数据时刻」从「未知/加载中」变成具体时间后多折 1 行（45px -> 68px），
-        把指标带（kpi-grid）与页头 chips（headerTags）整体推下去 —— 这是 @390 主要的可见位移；
-     ② DataTable 的 loading 骨架固定 5 行（223px），数据到达后换成真实行
-        （服务 4 行 230px / 会话状态 4 行 230px / 健康度 7 行 360px），表下区块被推走；
-     ③ 「无异常：N 个服务全部在线」这句是 ping 结果到达后才渲染的，出现时把服务表推下 39px(@390)/20px(@1440)。
-   对策：① 副标题移动端预留实测高度（72px，终态 68px + 4px 余量）；
-        ② 表格容器在首屏加载态用 min-height 顶到实测终态高度
-           （注意：本页各表实际行数 4/4/7 < N=10，所以这里按**实测终态高度**占位，
-             不能按 N 行算 —— 按 N 行会在数据到达后向下缩，反而制造位移）；
-        ③ 「无异常」槽位空着时也占住实测高度。
-   min-height 只在首屏加载态生效（data-loading="1"）：筛选后行数变少时不会留下大片空白。 */
-@media (max-width: 640px) {
-  .subtitleStable { min-height: 72px; }
-}
-.healthTableBox[data-loading="1"] { min-height: 230px; } /* 服务存活 4 行 / 会话状态 4 行：39 + 4 × 48 = 231，实测 230 */
-.healthTableBoxTall[data-loading="1"] { min-height: 360px; } /* 健康度 7 行：39 + 7 × 48 = 375，实测 360 */
-
-/* 「无异常」提示行：空槽占位高度 = 实测终态高度（@1440 一行 20px / @390 两行 39px） */
-.svcNoteSlot[data-empty="1"] { min-height: 20px; }
-@media (max-width: 640px) {
-  .svcNoteSlot[data-empty="1"] { min-height: 39px; }
-}
-
-/* 「显示全部 / 收起」一行（与 /system/client-releases、/platform/logic 同款排布） */
-.showAllBar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin: var(--sp-2) var(--sp-3-5);
-}
-.showAllHint { font-size: var(--fs-sm); color: var(--text-muted); }
+/* 数据库与发布窗口：设计要 kv —— 用 <dl>/<dt>/<dd>（语义即键值），不用纯 div 伪装。 */
+.kvList { margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.kvList > div { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; font-size: 13px; line-height: 1.6; }
+.kvList dt { color: var(--text-muted); flex: 0 0 auto; }
+.kvList dd { margin: 0; font-weight: 500; text-align: right; word-break: break-all; }

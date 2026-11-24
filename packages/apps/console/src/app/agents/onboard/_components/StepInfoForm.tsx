@@ -22,7 +22,7 @@ export default function StepInfoForm({
       <h2 className={styles.title}>{t('onboard.step1')}</h2>
       {[
         { k: "agent_id", label: "智能体编号", ph: "agent-e", hint: "小写字母+横杠，唯一标识" },
-        { k: "display_name", label: "显示名称", ph: "agent-x / 雷欧", hint: "在平台上显示的名称" },
+        { k: "display_name", label: "显示名称", ph: "agent-e / 雷欧", hint: "在平台上显示的名称" },
         { k: "host", label: "终端主机", ph: "operator", hint: "运行所在的终端" },
       ].map(f => (
         <div key={f.k} className={styles.field}>

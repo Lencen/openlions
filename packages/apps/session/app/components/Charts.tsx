@@ -11,8 +11,8 @@ const AGENT_COLOR: Record<string,string> = {
   "agent-operator": "var(--agent-operator)",
 };
 const AGENT_NAME: Record<string,string> = {
-  "agent-h": "UT", "agent-g": "UTC", "agent-b": "agent-x", "agent-c": "agent-x",
-  "agent-e": "agent-x", "agent-operator": "operator",
+  "agent-h": "UT", "agent-g": "UTC", "agent-b": "agent-b", "agent-c": "agent-c",
+  "agent-e": "agent-e", "agent-operator": "operator",
 };
 
 export function TrendChart({ trend }: { trend: Trend[] }) {

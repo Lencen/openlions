@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     let contextSeed = "";
     try {
       const hits = await searchContext({ query: (String(task?.title || "") + " " + String(task?.theme || "")).slice(0, 120), theme: task?.theme || undefined, limit: 5, source: "task-claim" });
-      contextSeed = renderContextSeed(hits); // 2026-09-23 agent-x #1: 容量 1200 字符 -> MEMORY_SEED_MAX_TOKENS(默认 50K+)
+      contextSeed = renderContextSeed(hits); // 2026-09-23 agent-f #1: 容量 1200 字符 -> MEMORY_SEED_MAX_TOKENS(默认 50K+)
       if (hits.length) {
         // 2026-09-11 P0 记忆->使用闭环: 原写 "ids=a,b,c"(非 JSON), submit 侧 JSON.parse 必然失败,
         //   该路径注入的产物永远不计入使用。改为与 claim 路径一致的 JSON 形态(buildInjectedTitle)。

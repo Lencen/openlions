@@ -34,7 +34,7 @@
   border-radius: 10px;
   border: 1px solid var(--border);
   background: color-mix(in srgb, var(--primary) 15%, transparent);
-  font-size: 11px;
+  font-size: 12px;
   cursor: default;
 }
 

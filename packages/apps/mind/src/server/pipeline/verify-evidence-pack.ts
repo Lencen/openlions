@@ -35,6 +35,14 @@ export interface VerifyEvidencePack {
   resolvedTheme: { theme: string; source: string; candidateTheme: string; variants: string[]; reliable: boolean; classLabel?: boolean };
   /** 该主题下产物存量(判断"这件事到底落过地没有"); 主题不可解析/不可信时为 null(不编) */
   productsByTheme: { memory: number; knowledge: number; practice: number; skill: number; reflection: number } | null;
+  /**
+   * 2026-10-25 撤回流程补漏: 该主题下**活行**产物存量(未撤回 + 未被取代)。
+   *   productsByTheme 是**原始计数**(含被撤回行), 保留是为了与历史基线逐项对照(见下方注释);
+   *   但复核者据此判断"这件事到底落过地没有"时, 被撤回的行**不算落地** —— 这是撤回流程
+   *   的基本语义(撤回=结论被推翻, 不能继续充数)。故并列给出活行口径, 两个数都在包内。
+   *   主题不可解析/不可信时为 null(不编)。
+   */
+  liveProductsByTheme: { memory: number; knowledge: number; practice: number; skill: number; reflection: number } | null;
   /** 复核人可直接引用的查询清单 */
   queries: Array<{ what: string; sql: string; result: unknown }>;
   notes: string[];
@@ -194,10 +202,13 @@ export async function buildVerifyEvidencePack(candidate: {
   let duplicateByHash = 0;
   if (candidate.contentHash) {
     try {
-      const sql = "SELECT COUNT(*) AS n FROM Knowledge WHERE contentHash=?";
+      // 2026-10-25 撤回流程补漏: 同内容判重只看**活行**(未撤回 + 未被取代)。
+      //   原实现无任何过滤 -> 被撤回(stale=1)的同内容行也算"已存在", 复核者会据此
+      //   误判"该结论已被别人产出过", 反而放过一条已被推翻的结论。
+      const sql = "SELECT COUNT(*) AS n FROM Knowledge WHERE contentHash=? AND supersededBy IS NULL AND COALESCE(stale,0)=0";
       const rows: any[] = await prisma.$queryRawUnsafe(sql, candidate.contentHash);
       duplicateByHash = Number(rows?.[0]?.n ?? 0);
-      queries.push({ what: "同内容哈希是否已存在", sql, result: duplicateByHash });
+      queries.push({ what: "同内容哈希是否已存在(仅活行)", sql, result: duplicateByHash });
     } catch { /* 忽略 */ }
   } else {
     notes.push("候选没有 contentHash, 无法做同内容判重");
@@ -206,7 +217,11 @@ export async function buildVerifyEvidencePack(candidate: {
   // 计数口径保持与历史一致(主题精确行数, 不做 live/stale 过滤), 只改**聚合键** —— 便于与
   //   缺陷报告基线(Knowledge=1007 / Memory=21 / Reflection=1)逐项对照; 新增 Reflection 一类,
   //   因为该主题的产物恰恰以 Reflection 形态存在, 漏计会重新造成"没落过地"的误判。
+  // 2026-10-25 撤回流程补漏: 上面的原始计数**含被撤回行**。撤回 = 结论被推翻, 不能继续充数,
+  //   故并列给出**活行口径**(supersededBy IS NULL + 未撤回; Memory/Reflection 无 stale 列只按前者),
+  //   复核者判断"到底落过地没有"时用活行数, 与历史基线对照时用原始数。
   let productsByTheme: VerifyEvidencePack["productsByTheme"] = null;
+  let liveProductsByTheme: VerifyEvidencePack["liveProductsByTheme"] = null;
   if (themeIn.length) {
     try {
       const q = "SELECT (SELECT COUNT(*) FROM Memory WHERE theme IN (" + ph + ")) m,"
@@ -224,6 +239,24 @@ export async function buildVerifyEvidencePack(candidate: {
         queries.push({ what: "该主题五类产物存量(主题=" + theme + ", 别名族 " + JSON.stringify(themeIn) + ")", sql: q, result: productsByTheme });
       }
     } catch (e: any) { notes.push("主题产物存量查询失败: " + String(e?.message || e).slice(0, 60)); }
+    try {
+      // 活行口径: Memory/Reflection 无 stale 列 -> 只按 supersededBy IS NULL;
+      //   Knowledge/Practice/Skill 另需 COALESCE(stale,0)=0(未被撤回)。
+      const ql = "SELECT (SELECT COUNT(*) FROM Memory WHERE theme IN (" + ph + ") AND supersededBy IS NULL) m,"
+        + "(SELECT COUNT(*) FROM Knowledge WHERE theme IN (" + ph + ") AND supersededBy IS NULL AND COALESCE(stale,0)=0) k,"
+        + "(SELECT COUNT(*) FROM Practice WHERE theme IN (" + ph + ") AND supersededBy IS NULL AND COALESCE(stale,0)=0) p,"
+        + "(SELECT COUNT(*) FROM Skill WHERE theme IN (" + ph + ") AND supersededBy IS NULL AND COALESCE(stale,0)=0) s,"
+        + "(SELECT COUNT(*) FROM Reflection WHERE theme IN (" + ph + ") AND supersededBy IS NULL) r";
+      const rowsL: any[] = await prisma.$queryRawUnsafe(ql, ...themeIn, ...themeIn, ...themeIn, ...themeIn, ...themeIn);
+      if (rowsL && rowsL.length) {
+        liveProductsByTheme = {
+          memory: Number(rowsL[0].m ?? 0), knowledge: Number(rowsL[0].k ?? 0),
+          practice: Number(rowsL[0].p ?? 0), skill: Number(rowsL[0].s ?? 0),
+          reflection: Number(rowsL[0].r ?? 0),
+        };
+        queries.push({ what: "该主题五类产物存量(仅活行: 未撤回+未被取代)", sql: ql, result: liveProductsByTheme });
+      }
+    } catch (e: any) { notes.push("主题活行产物存量查询失败: " + String(e?.message || e).slice(0, 60)); }
   }
 
   notes.push("本证据包由开单侧确定性生成(可复算); 未列出的项表示平台当前无法用查询判定, 需要执行体进一步核实。");
@@ -231,7 +264,7 @@ export async function buildVerifyEvidencePack(candidate: {
   const pack: VerifyEvidencePack = {
     generatedAt: new Date().toISOString(),
     candidate: { id: candidate.id, title: String(candidate.title || "").slice(0, 120), submitter: String(candidate.agentSource || "unknown"), qualityScore: candidate.qualityScore ?? null },
-    sameThemeKnowledge, duplicateByHash, sourceTask, resolvedTheme, productsByTheme, queries, notes,
+    sameThemeKnowledge, duplicateByHash, sourceTask, resolvedTheme, productsByTheme, liveProductsByTheme, queries, notes,
   };
   // 控制体积: 超限则只保留 queries/notes 与计数
   const s = JSON.stringify(pack);
@@ -257,10 +290,19 @@ export function renderEvidencePack(p: VerifyEvidencePack): string {
     lines.push("· 统计主题: 未能解析(候选行 theme=「" + p.resolvedTheme.candidateTheme + "」是分类标签, 非主题)");
   }
   lines.push("· 同主题已存在知识 " + p.sameThemeKnowledge.length + " 条" + (p.sameThemeKnowledge.length ? ": " + p.sameThemeKnowledge.map((k) => k.title.slice(0, 24) + "(" + (k.verification || "未标注") + ")").join("; ") : ""));
-  lines.push("· 同内容哈希命中: " + p.duplicateByHash + " 条(>0 说明内容已存在)");
+  lines.push("· 同内容哈希命中: " + p.duplicateByHash + " 条(>0 说明内容已存在; 仅计活行, 被撤回的不算)");
   if (p.sourceTask) lines.push("· 来源任务: " + p.sourceTask.id.slice(0, 12) + " status=" + p.sourceTask.status + " 执行记录 " + p.sourceTask.executionCount + " 条");
   if (p.productsByTheme) {
     lines.push("· 该主题产物存量: Memory " + p.productsByTheme.memory + " / Knowledge " + p.productsByTheme.knowledge + " / Practice " + p.productsByTheme.practice + " / Skill " + p.productsByTheme.skill + " / Reflection " + p.productsByTheme.reflection);
+    // 2026-10-25 撤回流程补漏: 明确区分"原始计数(含被撤回行)"与"活行计数(未撤回+未被取代)"。
+    //   复核者判断"这件事到底落过地没有"时, 被撤回的行**不算落地**(撤回=结论被推翻)。
+    if (p.liveProductsByTheme) {
+      const raw = p.productsByTheme, live = p.liveProductsByTheme;
+      const retracted = raw.memory + raw.knowledge + raw.practice + raw.skill + raw.reflection
+        - (live.memory + live.knowledge + live.practice + live.skill + live.reflection);
+      lines.push("· 其中活行(未撤回+未被取代): Memory " + live.memory + " / Knowledge " + live.knowledge + " / Practice " + live.practice + " / Skill " + live.skill + " / Reflection " + live.reflection
+        + (retracted > 0 ? "  [被撤回/被取代 " + retracted + " 条 —— 撤回的结论不算落地]" : ""));
+    }
   } else {
     lines.push("· 该主题产物存量: 未统计(真实主题不可解析; 用 candidate.theme 计数会得到分类标签的全平台计数, 属误导, 故不输出)");
   }

@@ -94,3 +94,4 @@
 /* 紧上间距（原内联 marginTop: var(--sp-0-5) 已派单待开始；var(--sp-1) 最近产出质量） */
 .topSm { margin-top: var(--sp-0-5); }
 .topMd { margin-top: var(--sp-1); }
+.todoLink { min-height: 24px; display: inline-flex; align-items: center; padding: 3px 0; }

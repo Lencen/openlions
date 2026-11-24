@@ -559,34 +559,67 @@ export interface ExpireStaleResult {
  * expires_at 在库里**混合存储**(Prisma 写整数毫秒 / 裸 SQL 写 ISO 文本, 实测 44 整 + 17 文本),
  *   所以按 `typeof()` 分流比较 —— 只写一种比较会漏掉另一种。
  */
+export function buildExpireStaleKeysSql(isPg: boolean, nowMs: number, nowIso: string): string {
+  // 2026-11-13 P0：方言分支。PG 下 expires_at 是 timestamp（无 typeof），且标识符大小写敏感需加引号。
+  //   SQLite 旧分支保留（本地/回退），PG 分支只按 timestamp 比较（列值口径=UTC naive）。
+  if (isPg) {
+    return "UPDATE \"AgentServicePermission\" " +
+      "SET \"status\" = 'EXPIRED', \"updated_at\" = (to_timestamp(" + nowMs + " / 1000.0) at time zone 'UTC') " +
+      "WHERE \"status\" = 'ACTIVE' AND \"expires_at\" <= (now() at time zone 'UTC')";
+  }
+  return "UPDATE AgentServicePermission " +
+    "SET status = 'EXPIRED', updated_at = " + nowMs + " " +
+    "WHERE status = 'ACTIVE' AND (" +
+    "(typeof(expires_at) IN ('integer','real') AND expires_at <= " + nowMs + ") " +
+    "OR (typeof(expires_at) = 'text' AND expires_at <= '" + nowIso + "'))";
+}
+
+/**
+ * 明文清空 UPDATE 的 PG 方言 SQL（2026-11-13 追加修复）。
+ * PG 列 idempotent_until / updated_at 是 timestamp，不能与 bigint 毫秒比较 -> 显式 to_timestamp(...) at time zone 'UTC'。
+ * includeLegacyPlain=true 时连「存量行（idempotent_until IS NULL）」一起清，否则只清窗口内已过期的行。
+ */
+export function buildClearPlaintextSql(isPg: boolean, nowMs: number, includeLegacyPlain: boolean): string {
+  const nowTs = "(to_timestamp(" + nowMs + " / 1000.0) at time zone 'UTC')";
+  if (isPg) {
+    const where = includeLegacyPlain
+      ? "WHERE \"api_key_plain\" IS NOT NULL AND (\"idempotent_until\" IS NULL OR \"idempotent_until\" <= " + nowTs + ")"
+      : "WHERE \"api_key_plain\" IS NOT NULL AND \"idempotent_until\" IS NOT NULL AND \"idempotent_until\" <= " + nowTs;
+    return "UPDATE \"AgentServicePermission\" " +
+      "SET \"api_key_plain\" = NULL, \"idempotent_until\" = NULL, \"updated_at\" = " + nowTs + " " + where;
+  }
+  const where = includeLegacyPlain
+    ? "WHERE api_key_plain IS NOT NULL AND (idempotent_until IS NULL OR idempotent_until <= " + nowMs + ")"
+    : "WHERE api_key_plain IS NOT NULL AND idempotent_until IS NOT NULL AND idempotent_until <= " + nowMs;
+  return "UPDATE AgentServicePermission SET api_key_plain = NULL, idempotent_until = NULL, updated_at = " + nowMs + " " + where;
+}
+
 export async function expireStaleKeys(opts: { includeLegacyPlain?: boolean; actor?: string; actorType?: string } = {}): Promise<ExpireStaleResult> {
   const now = Date.now();
   const nowIso = new Date(now).toISOString();
+  const isPg = String(process.env.MIND_DB_DRIVER || "").toLowerCase() === "pg";
 
-  const expiredKeys = await prisma.$executeRaw`
-    UPDATE AgentServicePermission
-       SET status = 'EXPIRED', updated_at = ${now}
-     WHERE status = 'ACTIVE'
-       AND (
-         (typeof(expires_at) IN ('integer','real') AND expires_at <= ${now})
-         OR (typeof(expires_at) = 'text' AND expires_at <= ${nowIso})
-       )
-  `;
+  const expiredKeys = await prisma.$executeRawUnsafe(buildExpireStaleKeysSql(isPg, now, nowIso));
 
-  const cleared = opts.includeLegacyPlain
-    ? await prisma.$executeRaw`
-        UPDATE AgentServicePermission
-           SET api_key_plain = NULL, idempotent_until = NULL, updated_at = ${now}
-         WHERE api_key_plain IS NOT NULL
-           AND (idempotent_until IS NULL OR idempotent_until <= ${now})
-      `
-    : await prisma.$executeRaw`
-        UPDATE AgentServicePermission
-           SET api_key_plain = NULL, idempotent_until = NULL, updated_at = ${now}
-         WHERE api_key_plain IS NOT NULL
-           AND idempotent_until IS NOT NULL
-           AND idempotent_until <= ${now}
-      `;
+  // 2026-11-13 追加修复（0.4.44 上线后实测 42883 的第二处）：
+  //   PG 下 idempotent_until / updated_at 是 timestamp，不能与 bigint 毫秒比较（operator does not exist: timestamp <= bigint）。
+  //   -> PG 分支显式 to_timestamp(...) at time zone 'UTC'（UTC naive，与列口径一致）；SQLite 分支保留 integer 毫秒语义。
+  const cleared = isPg
+    ? await prisma.$executeRawUnsafe(buildClearPlaintextSql(true, now, !!opts.includeLegacyPlain))
+    : opts.includeLegacyPlain
+      ? await prisma.$executeRaw`
+          UPDATE AgentServicePermission
+             SET api_key_plain = NULL, idempotent_until = NULL, updated_at = ${now}
+           WHERE api_key_plain IS NOT NULL
+             AND (idempotent_until IS NULL OR idempotent_until <= ${now})
+        `
+      : await prisma.$executeRaw`
+          UPDATE AgentServicePermission
+             SET api_key_plain = NULL, idempotent_until = NULL, updated_at = ${now}
+           WHERE api_key_plain IS NOT NULL
+             AND idempotent_until IS NOT NULL
+             AND idempotent_until <= ${now}
+        `;
 
   // 券过期(逐 agent; 只有 profile 里带 claimTicket 的行会被改, 量级 = 待接入 agent 数)
   let expiredTickets = 0;

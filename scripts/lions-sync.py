@@ -13,7 +13,7 @@ LIONS 统一同步客户端 v1
 
 用法:
   lions-sync.py                 # 同步所有激活 agent
-  lions-sync.py --agent agent-x    # 只同步指定 agent
+  lions-sync.py --agent agent-e    # 只同步指定 agent
   lions-sync.py --dry-run      # 不上传, 只打印
   lions-sync.py --incremental  # 增量同步 (since-last-sync)
   lions-sync.py --init         # 生成默认配置文件
@@ -97,7 +97,7 @@ SYSTEM_INJECT_PREFIXES = (
     "You've reached the maximum number of tool-calling iterations",
     "Your previous turn was interrupted",
     "[IMPORTANT: MCP servers have been reloaded",
-    # 2026-09-03 openclaw 自动化注入 (agent-x 反馈: heartbeat/hook 被判成 user)
+    # 2026-09-03 openclaw 自动化注入 (agent-b 反馈: heartbeat/hook 被判成 user)
     "[OpenClaw heartbeat poll]",
     "Task: Hook | Job ID:",
     "Continue the OpenClaw runtime event",
@@ -207,7 +207,7 @@ class HermesJSON:
 
     def list_sessions(self, since_ts=0):
         """hermes ~/.hermes/sessions/*.json — 2026-09-04 重写
-        agent-x 端同会话有多份按日期命名的快照文件, 时间字段是 session_start/last_updated
+        agent-e 端同会话有多份按日期命名的快照文件, 时间字段是 session_start/last_updated
         → 按内部 session_id 分组只留最新快照(last_updated 大者, 同值取消息多者);
         since 过滤用 last_updated(长会话今天更新也能进); 兼容旧 start_time/started_at"""
         if not os.path.isdir(self.dir):
@@ -480,7 +480,7 @@ class OpenClawJSONL:
             #   原为 obj.get("message", {}) —— hermes 的部分记录该 key 存在但值为 None,
             #   于是 m=None, 下一行 m.get("role") 抛 'NoneType' object has no attribute 'get',
             #   被上层逐条 try/except 记 [ERR] -> 每轮 75/75 全失败(ok=0 fail=75), 每 10 分钟一次,
-            #   连续 3 周无人发现(错误只落在机器本地日志 ~/lions-sync-agent-x.log)。
+            #   连续 3 周无人发现(错误只落在机器本地日志 ~/lions-sync-agent-f.log)。
             #   实测证据: 104 上该日志 12147 行 ok=0, 末次成功在 09-03。
             m = obj.get("message") or {}
             role = m.get("role", "user")
@@ -706,7 +706,7 @@ def load_state():
         _state = {}
     # 2026-09-15 修复(独立复核 session-sync 实锤): 文件内容若是 JSON 字面量 null(曾因异常写入),
     #   json.load 返回 None -> 下游 state.get("agents",{}) 抛 'NoneType' object has no attribute
-    #   'get' -> 本机 agent-x/operator 同步每轮全灭(agent-x 11 天会话未进平台), 且 save_state 把 None 写回
+    #   'get' -> 本机 agent-e/operator 同步每轮全灭(agent-e 11 天会话未进平台), 且 save_state 把 None 写回
     #   "null" 自锁。任何非 dict 一律归一为空 dict。
     if not isinstance(_state, dict):
         _state = {}

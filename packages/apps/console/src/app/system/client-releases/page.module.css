@@ -1,60 +1,69 @@
-/* /system/client-releases 页内样式（P1 试点页呈现层改造 ord-20261104-032 · 模板 A 列表）
-   只放本页需要、globals.css 里没有的几条；能复用 .panel / .tiny / .mono / .nowrap / .kpi-grid 的一律复用。
-   规则：本页 style={{ 计数必须为 0。 */
+/* /system/client-releases · 0.5 批次C demo slot 还原（2026-11-13）
+   4 KPI + 提示 + s8 发布记录 + s4 通道与策略 + s12 客户端实例 + s12 安装包矩阵；
+   12 列栅格，断点 ≤1280 六列、≤900 两列。颜色与字号走 tokens，不复制色值。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
 
-.bcDim { color: var(--text-dim); }
-.headerTags { display: flex; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--sp-2); align-items: center; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap-block); margin-bottom: var(--gap-sect); }
+.noteWarn { border: 1px solid var(--border); border-left: 3px solid var(--status-warn); border-radius: var(--radius-md); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); color: var(--status-warn); background: var(--bg-surface); line-height: 1.6; margin-bottom: var(--gap-sect); }
 
-/* 工具条：搜索 + 只读说明（模板 A §搜索：位置最左、占位文案写清范围） */
-.toolRow { display: flex; align-items: center; gap: var(--sp-2-5); flex-wrap: wrap; margin-bottom: var(--sp-2); }
-.searchInput { width: 340px; max-width: 100%; }
-.toolNote { font-size: var(--fs-sm); color: var(--text-dim); }
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: var(--gap-block); align-items: start; }
+.s4 { grid-column: span 4; }
+.s8 { grid-column: span 8; }
+.s12 { grid-column: span 12; }
 
-/* ---------------------------------------------------------------------------
-   FilterBar（白名单组件）内部的 .toolbar/.filters/.filter/.spacer 目前**在
-   app/globals.css 里没有任何定义**（实测 grep 为空），组件渲染出来是无样式的裸按钮。
-   本批不允许改共享文件（components/、globals.css），所以在这里按组件类名做页内补齐；
-   共享层补齐后这几条可删（已报给主会话，见交付报告「共享缺口」）。
---------------------------------------------------------------------------- */
-.filterBarWrap { margin-bottom: var(--gap-sect); }
-.filterBarWrap :global(.toolbar) { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; }
-.filterBarWrap :global(.filters) { display: flex; align-items: center; gap: var(--sp-1-5); flex-wrap: wrap; }
-.filterBarWrap :global(.spacer) { flex: 1 1 auto; }
-.filterBarWrap :global(.filter) { display: inline-flex; align-items: center; gap: var(--sp-1); height: 28px; padding: 0 var(--sp-2-5);
-  border: 1px solid var(--border); border-radius: 999px; background: var(--bg-surface); color: var(--text-dim);
-  font: inherit; font-size: var(--fs-sm); cursor: pointer; }
-.filterBarWrap :global(.filter:hover) { border-color: var(--border-hi); color: var(--text); }
-.filterBarWrap :global(.filter.on) { background: var(--primary-dim); border-color: transparent; color: var(--primary); font-weight: 600; }
-.filterBarWrap :global(.filter .n) { font-variant-numeric: tabular-nums; opacity: .8; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tagNa { font-size: var(--fs-xs); color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
 
-.panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
-.tableFoot { font-size: var(--fs-sm); color: var(--text-muted); margin-top: var(--gap-label); }
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.tbl tbody tr:hover td { background: var(--bg-hover); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.monoCell { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+.nameCell { color: var(--text); }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.6; }
+.chipOk, .chipWarn, .chipCrit, .chipIdle { display: inline-block; font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chipOk { color: var(--status-ok); }
+.chipWarn { color: var(--status-warn); }
+.chipCrit { color: var(--status-crit); }
+.chipIdle { color: var(--text-muted); }
 
-/* ---------------------------------------------------------------------------
-   0.4.39-04 CLS 修复（@1920 0.558 / @1440 0.029）
-   成因：43 行一次渲染，table 223px -> 3776px，页脚/下方面板被推走。
-   对策：
-     ① 首屏只渲染前 N 行（page.tsx：桌面 20 / 移动端 10）+「显示全部」按钮；
-     ② DataTable 的 loading 骨架固定 5 行（组件本轮禁改），所以用容器 min-height
-        顶到「表头 39px + N 行 × 89px」。
-   依据（2026-11-09 实测 1920/1440/390 三档完全一致）：
-     表头 39px；数据行每行 89px（签名 chip + key_id 两行）；kpi-grid 数据到达前后 125px -> 145px。
-   min-height 只在首屏加载态生效（data-loading="1"）：筛选后行数变少时不会留下大片空白。
---------------------------------------------------------------------------- */
-.tableBox[data-loading="1"] { min-height: calc(39px + 20 * 89px); } /* 桌面 N=20：39 + 1780 = 1819px */
-@media (max-width: 640px) {
-  .tableBox[data-loading="1"] { min-height: calc(39px + 10 * 89px); } /* 移动端 N=10：39 + 890 = 929px */
+.kv { display: grid; grid-template-columns: 92px 1fr; gap: var(--sp-2); margin: 0; font-size: var(--fs-sm); }
+.kv dt { color: var(--text-muted); }
+.kv dd { margin: 0; color: var(--text-dim); line-height: 1.6; }
+
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateErr { border-left: 3px solid var(--status-crit); }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.stateMini { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: var(--fs-xs); }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+
+.skelRow { display: flex; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.skel { height: 12px; border-radius: 6px; background: var(--bg-surface2); display: inline-block; }
+.skelW1 { width: 14%; }
+.skelW2 { width: 24%; }
+.skelW3 { width: 20%; }
+.skelW4 { width: 16%; }
+
+@media (max-width: 1280px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .s4 { grid-column: span 3; }
+  .s8 { grid-column: span 6; }
+  .s12 { grid-column: span 6; }
 }
-
-/* kpi-grid：实测 1920 加载态 125px、数据到达 145px（最新版本卡 hint 多一行「通道 …」） */
-.kpiGrid { min-height: 145px; }
-
-/* 移动端（<=640px）页头副标题：数据到达后「数据时刻 2026-11-09 14:44:00」比加载态的「—」多占一行
-   （实测 390：加载态 23px -> 数据到达 45px），预留 45px，保证下方内容不被下推。
-   1920 / 1440 实测副标题高度恒为 23px，不做预留（预留会在宽屏留下空白）。 */
-@media (max-width: 640px) { .subtitle { min-height: 45px; } }
-
-/* 「显示全部 N 条」/「收起」工具条 */
-.showAllBar { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-top: var(--gap-label); }
-.keyId { margin-top: 2px; font-family: var(--font-mono); }
-.footNote { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.8; }
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: 1fr; }
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s4, .s8, .s12 { grid-column: span 2; }
+}

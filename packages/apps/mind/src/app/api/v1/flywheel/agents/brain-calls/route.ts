@@ -37,7 +37,11 @@ export async function POST(req: Request) {
       empty?: boolean;
       error?: boolean;
       taskId?: string;
+      /** 2026-11-19 (#2, 运营团队批准): 实际使用的模型名（responder 追加字段；旧 responder 不发 -> undefined） */
+      model?: string;
     }>;
+    /** #2: top-level 兼容位（responder 同时也在 batch[0] 里发；两处任一存在即可） */
+    model?: string;
   };
   try {
     body = await req.json();
@@ -67,13 +71,22 @@ export async function POST(req: Request) {
   let failed = 0;
   // 单条失败不阻塞整批; 但也不把整批回滚 — FlywheelEvent 是 append-only 观测流
   for (const e of entries) {
+    // 2026-11-16：expand 时 ts 已逐条 +i，sourceId=String(ts) 逐条唯一；
+    //   但 sourceId ≈ flush 时刻 + i（偏差 <=maxBatch ms），下游不要把它当调用时间戳解析。
     const ts = Number(e.ts || Date.now());
     const brainType = String(e.brainType || "unknown").slice(0, 40);
+    // 2026-11-19 (#2, 运营团队批准)：事件里必须能看出**实际**打的是哪个模型。
+    //   与 0a876d9b1 同族缺陷（CALL_LLM 写死 MiniMax-M3 -> 成本页按 model= 聚合整段错判）。
+    //   向后兼容：旧 responder 不发该字段 -> 空串 -> 标题**逐字与旧行为相同**（不含 model=）。
+    const model = String((e as { model?: string }).model || body.model || "").trim().slice(0, 80);
     const ok = e.ok === true;
     const empty = e.empty === true;
     const error = e.error === true;
     const targetStage = ok ? "OK" : (empty ? "FAIL:EMPTY" : (error ? "FAIL:ERROR" : "FAIL:UNKNOWN"));
-    const title = "brain=" + brainType + " ok=" + String(ok) + " empty=" + String(empty) + " err=" + String(error) + " entry=agent-brain-call";
+    const title =
+      "brain=" + brainType + " ok=" + String(ok) + " empty=" + String(empty) + " err=" + String(error)
+      + (model ? " model=" + model : "")
+      + " entry=agent-brain-call";
     try {
       await prisma.flywheelEvent.create({
         data: {

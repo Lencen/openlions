@@ -1,4 +1,3 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
 import { runtimeRepo } from "@/server/lib/runtime-repo";
 import { NextRequest, NextResponse } from "next/server";
@@ -23,22 +22,6 @@ export const dynamic = "force-dynamic";
  *   因此讨论表走 better-sqlite3; prisma 继续负责 Task / FlywheelEvent 等模型表。
  */
 const TABLE = "Discussion";
-const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
-async function openDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "route" });
-
-  db.exec(
-    "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
-      "id TEXT PRIMARY KEY, entityType TEXT NOT NULL, entityId TEXT NOT NULL, " +
-      "authorType TEXT NOT NULL, authorId TEXT, kind TEXT NOT NULL, body TEXT NOT NULL, " +
-      "replyToId TEXT, taskId TEXT, meta TEXT, createdAt INTEGER NOT NULL)"
-  );
-  db.exec("CREATE INDEX IF NOT EXISTS idx_discussion_entity ON " + TABLE + "(entityType, entityId, createdAt)");
-  return db;
-}
-
 /** 平台自动时间线: 谁在什么时候对这个实体做了什么 -> 可读对话 */
 async function buildTimeline(entityType: string, entityId: string) {
   const out: Array<{ at: string; actor: string; kind: string; text: string; ref?: string }> = [];

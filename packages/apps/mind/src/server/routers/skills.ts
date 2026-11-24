@@ -64,7 +64,7 @@ export const skillsRouter = createRouter({
     const sortOrder = input?.sortOrder || "desc";
     const orderBy: any = { [sortBy]: sortOrder };
 
-    // 2026-09-23 agent-x #2 Skills 按需加载(方案 A): 列表只返回轻量字段, **不下传 content(steps 全文)**
+    // 2026-09-23 agent-f #2 Skills 按需加载(方案 A): 列表只返回轻量字段, **不下传 content(steps 全文)**
     //   (默认 pageSize=100 → 旧实现一次注入 100+ 全文, 浪费 token/带宽); 有步骤全文以 hasContent
     //   布尔标识(UI 徽标用), 全文按需走 skill_view(name) / skill_get(id)。
     const [rows, total] = await Promise.all([

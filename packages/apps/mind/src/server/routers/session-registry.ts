@@ -752,7 +752,7 @@ export const sessionRegistryRouter = createRouter({
     }),
 
   // ==========================================================================
-  // 2026-06-18 NEW: bulkUpload — 远端 agent (agent-x/13) 通过 uploader client 推 session
+  // 2026-06-18 NEW: bulkUpload — 远端 agent (agent-b/13) 通过 uploader client 推 session
   // 用途: bulkSyncFromLocal 只能扫本机磁盘, 远端机器的 session 走这个端点 push
   // 入参: { agent_id, sessions: [{source, source_id, title?, started_at?, ended_at?,
   //         last_message_at?, message_count?, raw_messages?: [...] }], dry_run?: boolean }

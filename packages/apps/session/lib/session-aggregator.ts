@@ -64,7 +64,7 @@ export function inferAgentType(source: string | null, agentId: string | null): s
     if (agentId.includes("codex")) return "codex";
     if (agentId.includes("opencode")) return "opencode";
     if (agentId.includes("openclaw")) return "openclaw";
-    if (agentId.includes("agent-x") || agentId.includes("agent-x")) return "hermes";
+    if (agentId.includes("agent-b") || agentId.includes("agent-c")) return "hermes";
     if (agentId.includes("agent-h")) return "hermes";
   }
   if (source) {

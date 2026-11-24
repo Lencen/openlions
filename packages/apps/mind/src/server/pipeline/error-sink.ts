@@ -1,6 +1,6 @@
 /**
  * Flywheel 错误落库 (P2 错误分类落库)
- * 2026-08-21 agent-x
+ * 2026-08-21 agent-e
  *
  * 用途: 让所有飞轮阶段的错误按类型落 FlywheelErrorLog 表, 可历史分析
  *

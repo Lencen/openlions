@@ -11,7 +11,7 @@
  *   后端 brain-calls 路由只遍历 batch => **每次 flush 只写 1 条 CALL_LLM**, 聚合次数被丢弃。
  *   实测证据 (2026-10-11):
  *     - `node scripts/llm-usage-real.cjs` => 真实 666 次/5h, 平台可见 58 次, 盲区 608 次;
- *     - `journalctl --user -u macs-responder-agent-x` => 每轮 "brain_call_stat flush OK: written=1"(与真实 calls 无关)。
+ *     - `journalctl --user -u macs-responder-agent-d` => 每轮 "brain_call_stat flush OK: written=1"(与真实 calls 无关)。
  *
  * 口径 (goal-gap 与 agent-quota 共用, 只此一份):
  *   platform = COUNT(FlywheelEvent stage='CALL_LLM' AND createdAt >= w5)  // 后端修复后每次调用 1 条
@@ -74,17 +74,20 @@ function dbCandidates(): string[] {
 
 /** 主路径: prisma 原生查询 */
 async function readViaPrisma(sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
-  // 内联整数毫秒窗口边界(非用户输入): 不依赖驱动对 Date/ISO 的序列化, 实测最稳。
-  const w = Math.trunc(sinceMs);
+  // 2026-10-26 SQLite 退役(P3): 时间参数用 epoch ms（方言层会包 to_timestamp），JSON 用 jsonb。
+  const since = Math.trunc(sinceMs);
   const calls: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= " + w + " AND " + COUNTED_TARGET_PREDICATE
+    "SELECT COUNT(*)::bigint c FROM \"FlywheelEvent\" WHERE \"stage\"='CALL_LLM' AND \"createdAt\" >= ? AND " + COUNTED_TARGET_PREDICATE,
+    since
   );
   const net: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= " + w + " AND " + NETWORK_FAILURE_PREDICATE
+    "SELECT COUNT(*)::bigint c FROM \"FlywheelEvent\" WHERE \"stage\"='CALL_LLM' AND \"createdAt\" >= ? AND " + NETWORK_FAILURE_PREDICATE,
+    since
   );
   const real: any[] = await prisma.$queryRawUnsafe(
-    "SELECT COALESCE(SUM(CAST(json_extract(sourceTitle,'$.calls') AS INTEGER)),0) s FROM FlywheelEvent " +
-      "WHERE stage='LLM_USE_REAL' AND json_valid(sourceTitle) AND createdAt >= " + w
+    "SELECT COALESCE(SUM((\"sourceTitle\"::jsonb->>'calls')::numeric),0)::bigint s FROM \"FlywheelEvent\" " +
+      "WHERE \"stage\"='LLM_USE_REAL' AND \"sourceTitle\" ~ '^\\s*\\{' AND \"createdAt\" >= ?",
+    since
   );
   return {
     platform: Number(calls?.[0]?.c ?? 0),
@@ -93,49 +96,9 @@ async function readViaPrisma(sinceMs: number): Promise<{ platform: number; real:
   };
 }
 
-/** 兜底 1: 直连只读 sqlite(绕开 prisma 连接池; 连接池故障/脏视图时仍可复算) */
-async function readViaSqlite(sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
-  const mod: any = await import("better-sqlite3");
-  const Database = mod.default ?? mod;
-  let lastErr: any = null;
-  for (const p of dbCandidates()) {
-    try {
-      if (!fs.existsSync(p)) continue;
-      const db = new Database(p, { readonly: true, fileMustExist: true });
-      try {
-        const platform = Number(
-          db
-            .prepare(
-              "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= ? AND " + COUNTED_TARGET_PREDICATE
-            )
-            .get(sinceMs).c
-        );
-        const networkFailures = Number(
-          db
-            .prepare(
-              "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt >= ? AND " + NETWORK_FAILURE_PREDICATE
-            )
-            .get(sinceMs).c
-        );
-        const real = Math.round(
-          Number(
-            db
-              .prepare(
-                "SELECT COALESCE(SUM(CAST(json_extract(sourceTitle,'$.calls') AS INTEGER)),0) s FROM FlywheelEvent " +
-                  "WHERE stage='LLM_USE_REAL' AND json_valid(sourceTitle) AND createdAt >= ?"
-              )
-              .get(sinceMs).s
-          )
-        );
-        return { platform, real, networkFailures };
-      } finally {
-        db.close();
-      }
-    } catch (e: any) {
-      lastErr = e;
-    }
-  }
-  throw lastErr || new Error("no readable mind db candidate");
+/** 兜底 1（2026-10-26 已退役）：不再直连 SQLite；失败直接落到快照兜底。 */
+async function readViaSqlite(_sinceMs: number): Promise<{ platform: number; real: number; networkFailures: number }> {
+  throw new Error("[llm-calls-5h] SQLite 已退役：数据源是 PG；只保留快照兜底");
 }
 
 /** 兜底 2: 上次成功读到的快照(本地缓存, 跨进程重启可用) */
@@ -177,7 +140,14 @@ export function expandBrainCallEntries<T>(batch: T[], declaredCalls: number, max
   const declared = Number.isFinite(declaredCalls) ? Math.trunc(declaredCalls) : 0;
   if (declared > 0 && Array.isArray(batch) && batch.length > 0) {
     return {
-      entries: Array.from({ length: Math.min(declared, maxBatch) }, () => batch[0]),
+      // 2026-11-16 21:19 运营团队终裁：克隆 N 份时必须逐条错开 ts（sourceId=String(ts)），
+      //   否则 N 条不同调用共享同一 sourceId，判据按 sourceId 去重会少计。
+      // 边界（mb2 静态审查）：假定 batch[0] 为对象（responder 恒发对象；原始值 spread 会丢字段）；
+      //   ts=0 时 || 兜底 Date.now()（无害）；sourceId 变为 flush 时刻+i，不再等于调用时刻。
+      entries: Array.from({ length: Math.min(declared, maxBatch) }, (_v, i) => ({
+        ...(batch[0] as any),
+        ts: (Number((batch[0] as any)?.ts) || Date.now()) + i,
+      } as T)),
       truncated: declared > maxBatch ? declared - maxBatch : 0,
     };
   }

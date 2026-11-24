@@ -5,7 +5,7 @@
 //   · 本组件**只报「值」**——hint 只写口径来源，不写阈值、不标「异常/正常」色标；
 //   · 阈值 + pass/fail 判定归「卡 9 判据条」（Card9Checks，读 /api/flywheel/card9）；
 //     同一个数只在一处带异常色标，指标带保持中性。
-// 口径来源：docs/design/uiux-bento-2026-11/data-cards/card-9-flywheel.md 行 15 / 行 26-73。
+// 口径来源：[internal-doc] 行 15 / 行 26-73。
 // 取数：复用页面既有的 /api/flywheel-health（本组件不发请求），只消费其只读块 card9。
 // 纪律：未知不填 0（value=null ->「未知」+ 原因）；④ 不写 0、不自造口径。
 import KpiCard from "@/components/KPICard";

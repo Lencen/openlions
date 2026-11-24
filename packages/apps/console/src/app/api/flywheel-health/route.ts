@@ -5,7 +5,7 @@ import { openMind, one } from "@/lib/server/lions-db";
 export const dynamic = "force-dynamic";
 
 // ── 2026-11-06 · 0.4.32-03 · 数据卡 9 指标带（/flywheel）─────────────────────
-// 口径唯一来源：docs/design/uiux-bento-2026-11/data-cards/card-9-flywheel.md
+// 口径唯一来源：[internal-doc]
 //   第 15 行「指标（≤4）」+ 第 26-73 行「异常判据（可复跑，2026-11-06 标定；platform-data 已签）」。
 //   · SQL 与判据逐字一致（表名 / 状态值 / 时间窗），不另立口径；
 //   · 未知不填 0：查询失败或分母为 0 -> value=null + reason；只有真 0 才给 0；

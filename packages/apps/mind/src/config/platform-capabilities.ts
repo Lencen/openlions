@@ -1,5 +1,5 @@
 /**
- * platform-capabilities.ts — 平台动态"我能调什么"单一来源 (agent-x P2#10 配套, 2026-09-24)
+ * platform-capabilities.ts — 平台动态"我能调什么"单一来源 (agent-f P2#10 配套, 2026-09-24)
  *
  * 【与 documentation 的边界 (硬约束, 平台记忆 cmuc5i5jy / cmue9y6gw)】
  *   capabilities  = **动态活接口列表 + 鉴权状态** → 回答"我**现在**能调什么";

@@ -20,6 +20,14 @@ import { expireStaleKeys } from "@/server/lib/key-governance";
  *
  * 建议(部署步骤里给出, 本轮**未**改 systemd/crontab): 由 5 分钟级 timer 调本端点,
  *   curl -s -X POST http://127.0.0.1:3000/api/v1/agent/expire-stale-keys -H "x-admin-key: $MIND_ADMIN_API_KEY"
+ *
+ * ⚠️ 2026-11-13 更正（[team] 实测，[team] / github-maintenance-line 踩过）：
+ *   $MIND_ADMIN_API_KEY 的**唯一事实源是运行进程的 env（unit 的 Environment=/drop-in）**，
+ *   **不是**发布树里的 packages/apps/mind/.env —— 两者实测不同源（进程 43 字符 vs .env 57 字符），
+ *   按 .env 取值会 **401**。脚本/自动化请用：
+ *     systemctl --user show lions-mind -p Environment --value   （取其中的 MIND_ADMIN_API_KEY）
+ *     或从 /proc/<MainPID>/environ 读取（tr '\0' '\n' 后 grep MIND_ADMIN_API_KEY）
+ *   对齐 .env 与运行值属部署侧动作（本线不改生产配置）。
  */
 export const dynamic = "force-dynamic";
 

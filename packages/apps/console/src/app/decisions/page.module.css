@@ -1,0 +1,22 @@
+.state { padding: var(--sp-6); background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.state b { display: block; margin-bottom: var(--sp-2); }
+.state p { margin: 0 0 var(--sp-3); color: var(--text-muted); }
+.bar { display: flex; align-items: center; gap: var(--sp-4); margin-bottom: var(--sp-4); }
+.count { font-weight: 600; }
+.asOf { color: var(--text-muted); font-size: 13px; }
+.tbl { width: 100%; border-collapse: collapse; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+.tbl th, .tbl td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); font-size: 13px; vertical-align: top; }
+.tbl th { background: var(--bg-subtle, rgba(0,0,0,.02)); font-weight: 600; }
+.tbl tr:last-child td { border-bottom: none; }
+.name a { color: var(--c-link, #2563eb); text-decoration: none; }
+.name a:hover { text-decoration: underline; }
+.reason { max-width: 420px; color: var(--text-muted); }
+.tag { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--bg-subtle, rgba(0,0,0,.04)); }
+.tag[data-status="done"] { color: var(--c-status-ok); }
+.tag[data-status="rejected"] { color: var(--c-status-crit); }
+.tag[data-status="pending"] { color: var(--c-status-warn); }
+.pri[data-pri="P0"] { color: var(--c-status-crit); font-weight: 600; }
+
+/* 判据 4：排序控件 */
+.sort { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-muted); }
+.sort select { padding: 3px 6px; font-size: 13px; color: var(--text); background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); }

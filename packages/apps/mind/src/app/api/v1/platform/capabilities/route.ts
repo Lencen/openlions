@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { describePlatformCapabilities } from "@/config/platform-capabilities";
 
 /**
- * GET /api/v1/platform/capabilities — 平台动态能力清单 (agent-x P2#10 配套, A 类只读, 无入参)
+ * GET /api/v1/platform/capabilities — 平台动态能力清单 (agent-f P2#10 配套, A 类只读, 无入参)
  *
  * 交付物: 回答"我**现在**能调什么"—— 当前可用 A 类只读接口活清单 + 调用方鉴权状态。
  *   活: 清单每请求从 readonly-protocol-whitelist 现算 (白名单扩一条即多一条)。

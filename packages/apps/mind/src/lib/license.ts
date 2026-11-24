@@ -14,7 +14,7 @@ import os from "os";
 import path from "path";
 
 // 运行时读取(不缓存到模块层): 便于交付环境 env 覆盖 + 测试注入。
-// 2026-10-27 (商业化线): 不能硬编码 ~；开源导出会把它改成 "~"，fs 不会展开。
+// 2026-10-27 (运营团队): 不能硬编码 ~；开源导出会把它改成 "~"，fs 不会展开。
 const licenseFile = () => process.env.LIONS_LICENSE_FILE || path.join(process.env.HOME || os.homedir(), ".config", "lions", "license.json");
 const graceDays = () => Number(process.env.LIONS_LICENSE_GRACE_DAYS || "7");
 

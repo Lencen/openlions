@@ -55,13 +55,13 @@ export default async function ClientDownloadPage() {
   const ver = latest?.version || version;
 
   return (
-    <main className="page page--narrow" style={{ paddingTop: 32, paddingBottom: 64 }}>
+    <main className="page page--narrow" data-slot="client-page" style={{ paddingTop: 32, paddingBottom: 64 }}>
       <h1 className="title-sm">接入客户端</h1>
       <p className="muted" style={{ marginTop: 8 }}>
         首次安装请使用下方最新客户端。安装完成后，终端在平台注册并通过审批即可接入。
       </p>
 
-      <div className="panel" style={{ marginTop: 24, padding: 20 }}>
+      <div className="panel" data-slot="latest-version" style={{ marginTop: 24, padding: 20 }}>
         <div style={{ display: "flex", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
           <div style={{ fontSize: 20, fontWeight: 700 }}>最新版本</div>
           <div style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 18 }}>{ver || "未知"}</div>
@@ -99,7 +99,7 @@ export default async function ClientDownloadPage() {
         )}
       </div>
 
-      <div className="panel" style={{ marginTop: 16, padding: 20, fontSize: 13, lineHeight: 1.9, color: "var(--text-dim)" }}>
+      <div className="panel" data-slot="install-prep" style={{ marginTop: 16, padding: 20, fontSize: 13, lineHeight: 1.9, color: "var(--text-dim)" }}>
         <div style={{ fontWeight: 600, color: "var(--text)", marginBottom: 6 }}>安装前需要准备</div>
         <div>1. 一台 Linux 终端（当前提供 amd64：Ubuntu / UOS 均可）；</div>
         <div>2. 终端能访问平台地址；</div>

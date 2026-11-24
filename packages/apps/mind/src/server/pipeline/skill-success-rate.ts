@@ -1,5 +1,5 @@
 /**
- * skill-success-rate.ts — agent-x #8 Skills 成功率统计 (轻量版)
+ * skill-success-rate.ts — agent-f #8 Skills 成功率统计 (轻量版)
  *
  * 口径 (2026-09-11 operator 拍板 / 平台记忆 cmuc5i87t003k1hqrub6quq3y):
  *   - "生成即成功": 一次 skill 候选进入写入阶段且通过 SKILL-SPEC (content/steps >= 30 字)

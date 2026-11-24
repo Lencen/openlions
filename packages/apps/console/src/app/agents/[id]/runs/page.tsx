@@ -1,269 +1,176 @@
-// [UI-S6 / 屏06 智能体详情 · 运行]
-// 服务端渲染真实运行读数: 实时状态 / 执行统计 / 最近一次执行与产出 / 该智能体的会话档案。
-// Phase3 屏06 增量 (2026-09-18): 在『最近会话』下方接 D 型密度热力图 <DensityHeatmap>,
-//   行 = 近 30 天 (2026-09-18 注: 实测 pending24h=0, 最近会话在 8 月, 7 天窗口无数据;
-//   故窗口扩到 30 天保证密度图能呈现, 否则只有空态文字), 列 = 会话状态, 单元格 = 当天该状态归档数。
-//   语义色 = --brand 单色 ramp, 三主题跟随 (规范 §7)。
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 五张手写 .tbl 表 → 白名单 DataTable。
-//   四张「标签 → 值」表用 .kvTable 藏掉 DataTable 的空表头行；取数与字段一字未改。
+// 0.5.1 B4-9 /agents/[id]/runs · Bento 运行记录（2026-11-15）
+// SLOT-MAP（B4 §4）：s12 页头 → s12 运行列表（时间/运行ID/状态/耗时/结果）→ s12 分页 → s12 相关视图。
+// 数据：/api/session-list?page=&pageSize=&agent_id=（真实会话档案，字段用 task 侧无接口，故如实标注 n/a+原因）。
+// 只读；四态：loading（loading.tsx）/ empty「无运行记录」/ error（端点+状态码+重试）/ unavailable（分块 n/a）。
 import type { ReactNode } from "react";
 import Link from "next/link";
-import KPICard from "@/components/KPICard";
-import AgentShell, { AgentTabHeader } from "../_components/AgentShell";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import AgentMissing from "../_components/AgentMissing";
-import AgentSourceError from "../_components/AgentSourceError";
-import DensityHeatmap, { type DensityHeatmapCell } from "@/components/DensityHeatmap";
-import { fmtAgo, fmtTime, loadAgent, loadLive, loadSessions } from "../_data";
+import AgentShell from "../_components/AgentShell";
+import { B4Card, B4Grid, B4Kv, B4PageHead, B4State } from "../_components/B4";
+import { EXEC_STATUS_LABEL, fmtDuration, fmtTime, loadAgent, loadLive, loadSessions } from "../_data";
 import { Alert } from "@/components/primitives";
-import TableCopyButton from "@/components/TableCopyButton";
 import DataTable from "@/components/DataTable";
 import type { DataColumn } from "@/components/DataTable";
-import styles from "./page.module.css";
+import s from "../_components/b4.module.css";
 
 export const dynamic = "force-dynamic";
 
-const SCOPE_LABELS: Record<string, string> = {
-  MECHANISM: "机制修复类",
-  VERIFY: "智能体型（验证裁决）",
-  DISCUSSION: "对话问答",
-  OTHER: "其他",
+const PAGE_SIZE = 20;
+
+const STATUS_LABEL: Record<string, string> = {
+  PENDING: "待提炼",
+  DONE: "已提炼",
+  PROCESSED: "已提炼",
+  SKIPPED: "已跳过",
+  FAILED: "失败",
 };
 
-function badgeClass(status?: string | null): string {
-  // 2026-10-26：活库状态键是 DONE；原来只认 COMPLETED/PROCESSED → 已提炼不绿。
-  if (status === "COMPLETED" || status === "DONE" || status === "PROCESSED") return "badge badge-green";
-  if (status === "FAILED") return "badge badge-red";
-  if (status === "PENDING" || status === "IN_PROGRESS") return "badge badge-yellow";
-  return "badge badge-blue";
+function statusBadge(raw?: string | null): ReactNode {
+  const st = String(raw || "").toUpperCase();
+  const cls = st === "FAILED" ? "badge badge-red"
+    : st === "PENDING" ? "badge badge-yellow"
+    : st === "DONE" || st === "PROCESSED" ? "badge badge-green"
+    : st === "SKIPPED" ? "badge"
+    : "badge badge-blue";
+  return <span className={cls}>{STATUS_LABEL[st] || (st || "n/a")}</span>;
 }
 
-/** 「标签 → 值」两列（改前是 手写表格<tbody> 里逐行 <th>/<td>） */
-type KvRow = { label: string; value: ReactNode };
-/** 最近会话表：每个单元格都是服务端已渲染好的节点（列定义里没有函数） */
-type SessionTableRow = {
-  title: ReactNode;
-  source: ReactNode;
-  message_count: ReactNode;
-  status: ReactNode;
-  updated_at: ReactNode;
-};
-// 2026-11-05 热修：服务端组件不能把 render 函数传给客户端 DataTable，
-//   列只留可序列化字段，单元格值在服务端预算成 ReactNode/字符串放进 rows。
-const KV_COLUMNS: DataColumn<KvRow>[] = [
-  { key: "label", title: "" },
-  { key: "value", title: "" },
+type RunRow = { time: ReactNode; runId: ReactNode; status: ReactNode; duration: ReactNode; result: ReactNode };
+const RUN_COLUMNS: DataColumn<RunRow>[] = [
+  { key: "time", title: "时间", width: 150 },
+  { key: "runId", title: "运行编号" },
+  { key: "status", title: "状态", width: 90 },
+  { key: "duration", title: "耗时", width: 130 },
+  { key: "result", title: "结果（消息数 / 失败原因）" },
 ];
 
-export default async function AgentRunsPage({ params }: { params: { id: string } }) {
+export default async function AgentRunsPage({
+  params, searchParams,
+}: { params: { id: string }; searchParams?: { page?: string } }) {
   const id = decodeURIComponent(params.id || "");
-  const [agentLoad, liveS, sessionsS] = await Promise.all([loadAgent(id), loadLive(id), loadSessions(id, 15)]);
-  // 2026-11-06 D-03：先备好页签页头 —— 名册失败/智能体不存在/正常三条分支都要渲染它，
-  //   否则 SSR 首屏没有 page-header（0.4.31 dev 实测 5 页 70/75 的根因就是只有"正常"分支带页头）。
-  const tabHeader = (
-    <AgentTabHeader
-      id={id}
-      tab="运行"
-      title="智能体详情 · 运行"
-      subtitle="实时状态、执行统计与最近产出"
-      agent={agentLoad.ok ? agentLoad.agent : null}
-      live={liveS.data}
-    />
-  );
-  if (!agentLoad.ok) return <AgentSourceError id={id} header={tabHeader} />;
+  const rawPage = Number(searchParams?.page || 1);
+  let page = Number.isFinite(rawPage) && rawPage >= 1 ? Math.floor(rawPage) : 1;
+  const [agentLoad, liveS, sessionsS] = await Promise.all([
+    loadAgent(id), loadLive(id, "24h"), loadSessions(id, page, PAGE_SIZE),
+  ]);
   const agent = agentLoad.agent;
   const live = liveS.data;
-  const sessions = sessionsS.data;
+  let sess = sessionsS.data;
+  const asOf = sessionsS.asOf || liveS.asOf || agentLoad.asOf || null;
+  const totalPages = Math.max(1, Math.ceil(sess.total / Math.max(1, sess.limit || PAGE_SIZE)));
+  if (page > totalPages) {
+    const fixed = await loadSessions(id, totalPages, PAGE_SIZE);
+    if (fixed.ok) sess = fixed.data;
+    page = totalPages;
+  }
   const degraded: string[] = [];
-  if (!liveS.ok) degraded.push("实时状态 /api/agents-live");
-  if (!sessionsS.ok) degraded.push("会话档案 /api/session-list");
-  if (!agent && !live) return <AgentMissing id={id} header={tabHeader} />;
-  const sess = sessions.items;
-  const exec = live?.execStats ?? {};
-  const lastExec = live?.lastExecution ?? null;
-  const lastOut = live?.lastOutput ?? null;
-  const scopes = live?.doneByScope ?? {};
-  const scopeKeys = Object.keys(scopes);
+  if (!liveS.ok) degraded.push(`实时状态 /api/agents-live（HTTP ${liveS.status ?? "连接失败"}）`);
+  if (!sessionsS.ok) degraded.push(`会话档案 /api/session-list（HTTP ${sessionsS.status ?? "连接失败"}）`);
 
-  const liveRows: KvRow[] = [
-    { label: "状态", value: live?.stateLabel || "-" },
-    { label: "卡住原因", value: live?.stuckReason || "无" },
-    { label: "近 24 小时消息", value: <span className={styles.numCell}>{(live?.macsMessages24h ?? 0).toLocaleString()}</span> },
-    { label: "最近露面", value: <>{fmtTime(live?.lastSeenAt)}（{fmtAgo(live?.lastSeenAt)}）</> },
-    { label: "最近执行时间", value: <span className={styles.monoSm}>{fmtTime(exec.lastAt)}</span> },
-  ];
-  const scopeRows: KvRow[] = scopeKeys.map((k) => ({
-    label: SCOPE_LABELS[k] || k,
-    value: <span className={styles.numCell}>{(scopes[k] ?? 0).toLocaleString()}</span>,
-  }));
-  const lastExecRows: KvRow[] = [
-    { label: "任务", value: lastExec?.taskTitle || lastExec?.id || "-" },
-    { label: "状态", value: <span className={badgeClass(lastExec?.status)}>{lastExec?.status || "-"}</span> },
-    { label: "质量通过", value: lastExec?.qualityPassed ? "是" : "否" },
-    { label: "完成时间", value: <span className={styles.monoSm}>{fmtTime(lastExec?.completedAt)}</span> },
-  ];
-  const lastOutRows: KvRow[] = [
-    { label: "产出时间", value: <span className={styles.monoSm}>{fmtTime(lastOut?.at)}</span> },
-    { label: "产出质量", value: lastOut?.quality != null ? `${Math.round(Number(lastOut.quality) * 100)}%` : "-" },
-    { label: "累计产出", value: (lastOut as any)?.n != null ? String((lastOut as any).n) : "-" },
-  ];
-  const sessionColumns: DataColumn<SessionTableRow>[] = [
-    { key: "title", title: "标题" },
-    { key: "source", title: "来源", width: 130 },
-    { key: "message_count", title: "消息", width: 60, align: "right" },
-    { key: "status", title: "状态", width: 100 },
-    { key: "updated_at", title: "更新时间", width: 120 },
-  ];
-  const sessionRows: SessionTableRow[] = sess.map((s) => ({
-    title: (
-      <Link className={styles.sessionLink} href={`/sessions/detail?id=${encodeURIComponent(s.session_uid)}`}>{s.title || s.session_uid}</Link>
-    ),
-    source: <span className={styles.monoSm}>{s.source || "-"}</span>,
-    message_count: <>{s.message_count ?? 0}</>,
-    status: <span className={badgeClass(s.status)}>{s.status || "-"}</span>,
-    updated_at: <span className={styles.monoSm}>{fmtTime(s.updated_at || s.uploaded_at)}</span>,
-  }));
+  const head = <B4PageHead id={id} page="运行" title="智能体详情 · 运行" subtitle="该智能体的运行（会话档案）记录与分页" agent={agent} live={live} asOf={asOf} />;
+  const fallback = (phase: "empty" | "error", title: string, detail: ReactNode, retry?: string) => (
+    <div className="layout-with-sidebar"><main className="main">
+      {head}
+      <B4Grid><B4Card span={12} state={phase === "error" ? "unavailable" : "ok"}><B4State phase={phase} title={title} detail={detail} retryHref={retry} /></B4Card></B4Grid>
+    </main></div>
+  );
+  if (!id) return fallback("empty", "缺少对象标识", "本页需要智能体 id（/agents/{id}/runs）；请从智能体列表进入。", "/agents");
+  if (!agentLoad.ok) {
+    return fallback("error", "名册接口取数失败", `端点 /api/agent-list 返回 ${agentLoad.status ?? "连接失败"}；这不等于「没有这个智能体」，请稍后重试。`, `/agents/${encodeURIComponent(id)}/runs`);
+  }
+  if (!agent && !live) return fallback("empty", "未找到该智能体", `名册里查不到 ${id}；可能 id 有误或该智能体已下线。`, "/agents");
+
+  const base = `/agents/${encodeURIComponent(agent?.agent_id || id)}/runs`;
+  const rows: RunRow[] = sess.items.map((r) => {
+    const st = String(r.status || "").toUpperCase();
+    const start = r.started_at ? Date.parse(r.started_at) : NaN;
+    const end = r.ended_at ? Date.parse(r.ended_at) : NaN;
+    const dur = Number.isFinite(start) && Number.isFinite(end) ? fmtDuration(end - start) : "";
+    return {
+      time: <span className={s.sm}>{fmtTime(r.started_at || r.last_message_at || r.updated_at)}</span>,
+      runId: <span className={s.mono + " " + s.sm}>{String(r.session_uid || "").split(":").slice(-1)[0]}</span>,
+      status: statusBadge(st),
+      duration: dur ? <span className={s.sm}>{dur}</span> : <span className={s.dim + " " + s.sm} title="会话未结束或接口未下发 ended_at">n/a（未结束/无 ended_at）</span>,
+      result: st === "FAILED"
+        ? <span className={s.dim + " " + s.sm}>{r.processing_error || "失败（接口未下发失败原因）"}</span>
+        : <span className={s.dim + " " + s.sm}>{r.message_count != null ? `${r.message_count} 条消息` : "n/a（接口未下发消息数）"}</span>,
+    };
+  });
+  // R2（B4-FIELDS §13）：最近执行时间取 lastExecution.completedAt（不是 execStats.lastAt——
+  // 后者在 execStats=null 时会显示 "-"，与真实的 2026-11-11 COMPLETED 自相矛盾）。
+  const lastExec = live?.lastExecution ?? null;
+  const prevHref = page > 1 ? `${base}?page=${page - 1}` : "";
+  const nextHref = page < totalPages ? `${base}?page=${page + 1}` : "";
 
   return (
-    <AgentShell
-      id={id}
-      active="runs"
-      agent={agent}
-      live={live}
-      header={tabHeader}
-    >
-      {degraded.length ? (
-        <div className={styles.alertRow}>
-          <Alert type="warning" showIcon title="部分数据源降级" description={degraded.join("；")} />
-        </div>
-      ) : null}
-      <div className="kpi-grid">
-        <KPICard label="在办任务" value={(live?.taskStats?.running ?? 0).toLocaleString()} />
-        <KPICard label="待开始任务" value={(live?.assignedPendingCount ?? 0).toLocaleString()} />
-        <KPICard label="近期完成" value={(exec.completed ?? 0).toLocaleString()} />
-        <KPICard label="近期失败" value={(exec.failed ?? 0).toLocaleString()} />
-        <KPICard label="执行通过" value={(exec.passed ?? 0).toLocaleString()} />
-        <KPICard label="产出质量" value={live?.outputQuality != null ? `${Math.round(Number(live.outputQuality) * 100)}%` : "-"} />
-      </div>
+    <AgentShell id={id} active="runs" agent={agent} live={live} header={head}>
+      {degraded.length ? <Alert type="warning" showIcon className={s.alertRow} title="部分数据源降级" description={degraded.join("；")} /> : null}
 
-      <div className="grid-2">
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">实时状态</span></div>
-          <TableCopyButton />
-          <div className={styles.kvTable + " " + styles.kvW120}>
-            <DataTable columns={KV_COLUMNS} rows={liveRows} />
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">按统计范围拆分（已办）</span></div>
-          <TableCopyButton />
-          <div className={styles.kvTable + " " + styles.kvW180}>
-            <DataTable
-              columns={KV_COLUMNS}
-              rows={scopeRows}
-              empty={{ title: "暂无已办记录" }}
+      <B4Grid>
+        <B4Card
+          span={12}
+          title="运行列表"
+          sub={`会话档案口径 · 共 ${sess.total.toLocaleString()} 条 · 每页 ${PAGE_SIZE} 条 · 第 ${page}/${totalPages} 页`}
+          state={sessionsS.ok ? "ok" : "unavailable"}
+          actions={<span className={s.dim + " " + s.sm}>只读</span>}
+        >
+          {!sessionsS.ok ? (
+            <B4State
+              phase="unavailable"
+              title="运行列表不可得"
+              detail={`端点 /api/session-list 返回 ${sessionsS.status ?? "连接失败"}；分块 n/a，页面其余信息可用。`}
+              retryHref={base}
             />
+          ) : (
+            <div className={s.tableWrap}>
+              <DataTable columns={RUN_COLUMNS} rows={rows} empty={{ title: "无运行记录", desc: "该智能体在 /api/session-list 下没有可展示的会话档案。", action: <Link href="/agents" className={s.link}>返回智能体列表</Link> }} />
+            </div>
+          )}
+        </B4Card>
+
+        <B4Card
+          span={12}
+          title="最近执行"
+          sub="来源：接口「最近一次执行」字段（不用窗口聚合的最近时间，避免空值横线与真实执行矛盾）"
+          state={liveS.ok ? "ok" : "unavailable"}
+        >
+          {!liveS.ok ? (
+            <B4State phase="unavailable" title="最近执行不可得" detail={`端点 /api/agents-live 返回 ${liveS.status ?? "连接失败"}；本分块 n/a。`} retryHref={base} />
+          ) : lastExec ? (
+            <B4Kv items={[
+              { label: "最近执行任务", value: lastExec.taskTitle || lastExec.id || "n/a（接口未下发任务标题）" },
+              { label: "执行状态", value: EXEC_STATUS_LABEL[String(lastExec.status || "").toUpperCase()] || lastExec.status || "n/a" },
+              { label: "质量通过", value: lastExec.qualityPassed ? "是" : "否" },
+              { label: "完成时间", value: fmtTime(lastExec.completedAt), mono: true },
+              { label: "窗口执行聚合", value: live?.execStats ? "有（窗口统计见概览）" : "n/a（窗口内无执行聚合；不用它当最近执行时间）" },
+            ]} />
+          ) : (
+            <B4State phase="empty" title="无最近执行记录" detail="lastExecution 为 null（接口有返回、值确实为空）。" />
+          )}
+        </B4Card>
+
+        <B4Card span={12} title="分页">
+          {sess.total === 0 ? (
+            <div className={s.emptyNote}>共 0 条运行记录，无分页。</div>
+          ) : (
+            <div className={s.pager}>
+              <a className={s.link} href={prevHref || undefined} aria-disabled={prevHref ? "false" : "true"}>← 上一页</a>
+              <span className={s.pageInfo}>第 {page} / {totalPages} 页</span>
+              <a className={s.link} href={nextHref || undefined} aria-disabled={nextHref ? "false" : "true"}>下一页 →</a>
+              <span className={s.dim}>共 {sess.total.toLocaleString()} 条（来源 /api/session-list，limit={sess.limit}，offset={sess.offset}）</span>
+              {!nextHref ? <span className={s.dim}>已到最后一页</span> : null}
+            </div>
+          )}
+        </B4Card>
+
+        <B4Card span={12} title="相关视图">
+          <div className={s.related}>
+            <Link href={`/agents/${encodeURIComponent(agent?.agent_id || id)}/overview`} className={s.link}>概览 →</Link>
+            <Link href={`/agents/${encodeURIComponent(agent?.agent_id || id)}/versions`} className={s.link}>版本/变更 →</Link>
+            <Link href={`/agents/${encodeURIComponent(agent?.agent_id || id)}/config`} className={s.link}>配置（只读） →</Link>
+            <Link href="/agents" className={s.link}>全部智能体 →</Link>
           </div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">最近一次执行</span></div>
-          {lastExec ? (
-            <div className={styles.kvTable + " " + styles.kvW110}>
-              <DataTable columns={KV_COLUMNS} rows={lastExecRows} />
-            </div>
-          ) : (
-            <div className={styles.emptyBlock}>暂无执行记录</div>
-          )}
-        </div>
-
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">最近一次产出</span></div>
-          {lastOut ? (
-            <div className={styles.kvTable + " " + styles.kvW110}>
-              <DataTable columns={KV_COLUMNS} rows={lastOutRows} />
-            </div>
-          ) : (
-            <div className={styles.emptyBlock}>暂无产出记录</div>
-          )}
-        </div>
-      </div>
-
-      <div className="panel">
-        <div className="panel-header">
-          <span className="panel-title">最近会话（{sessions.total.toLocaleString()} 条档案中最近 {sess.length} 条）</span>
-          <Link href={`/sessions?agent=${encodeURIComponent(agent?.agent_id || id)}`} className={styles.adjustLink}>
-            会话中心
-          </Link>
-        </div>
-        <TableCopyButton />
-        <DataTable
-          columns={sessionColumns}
-          rows={sessionRows}
-          empty={{ title: "暂无会话档案" }}
-        />
-      </div>
-
-      {/* Phase3 屏06 D 型密度热力图 (近 90 天 × 状态) */}
-      <div className={"panel " + styles.panelTop}>
-        <div className="panel-header">
-          <span className="panel-title">会话密度热力（近 90 天 × 状态）</span>
-          <span className={styles.metaSm}>色深 = 该状态当天归档数</span>
-        </div>
-        {(() => {
-          // 行: 近 90 天 (按近到远), 列: 4 个状态
-          //   实测 (2026-09-18) 该智能体最近 15 条会话跨度 2026-07-25 ~ 2026-07-27, 全部落在 90 天窗口内。
-          //   因此采用 90 天而不是 7/30 天, 保证密度图可呈现 (否则永远空态)。
-          // 2026-10-26：补 DONE（活库键），否则密度图把"已提炼"整类排除在外。
-          const statuses = ["DONE", "PROCESSED", "PENDING", "FAILED", "SKIPPED"];
-          const today = new Date();
-          today.setHours(0, 0, 0, 0);
-          const dayLabels: string[] = [];
-          for (let i = 0; i < 90; i++) {
-            const d = new Date(today.getTime() - i * 86_400_000);
-            dayLabels.unshift(`${d.getMonth() + 1}/${d.getDate()}`);
-          }
-          // 计算: key[status][dayLabel] -> count
-          const m = new Map<string, number>();
-          for (const s of sess) {
-            const ts = s.updated_at || s.uploaded_at;
-            if (!ts) continue;
-            const ms = Date.parse(ts);
-            if (!Number.isFinite(ms)) continue;
-            const d = new Date(ms);
-            d.setHours(0, 0, 0, 0);
-            const diffDays = Math.floor((today.getTime() - d.getTime()) / 86_400_000);
-            if (diffDays < 0 || diffDays >= 90) continue;
-            const dayLabel = dayLabels[dayLabels.length - 1 - diffDays];
-            const st = (s.status || "").toUpperCase();
-            const key = `${dayLabel} ${st}`;
-            m.set(key, (m.get(key) ?? 0) + 1);
-          }
-          const cells: DensityHeatmapCell[] = [];
-          for (const day of dayLabels) {
-            for (const st of statuses) cells.push({ row: day, col: st, value: m.get(`${day} ${st}`) ?? 0 });
-          }
-          const totalCount = cells.reduce((s, c) => s + c.value, 0);
-          return totalCount === 0 ? (
-            <div className={styles.emptyBlockMd}>
-              近 90 天该智能体在最近 {sess.length} 条会话中没有命中, 无法绘制密度图。
-            </div>
-          ) : (
-            <div className={styles.heatWrap}>
-              <DensityHeatmap
-                rows={dayLabels}
-                cols={statuses}
-                cells={cells}
-                colWidth={42}
-                ariaLabel={`近 90 天会话按状态密度分布, 共 ${totalCount} 条`}
-              />
-            </div>
-          );
-        })()}
-      </div>
+        </B4Card>
+      </B4Grid>
     </AgentShell>
   );
 }

@@ -18,7 +18,7 @@
   /* 2026-11-09 轮 A：--border-subtle 从未定义（全仓仅此一处使用），token 守门判 [undefined]。
      该页已 301 到 /messages（next.config），此文件是残留；补 fallback 而不是新造一个 token ——
      新造 token 会让"看起来有设计规范、实际没人用"的假象多一条。 */
-  border: 1px solid var(--border-subtle, var(--border));
+  border: 1px solid var(--border);
   color: var(--text-muted);
 }
 .stateBox[data-tone="error"] { border-color: var(--status-crit); color: var(--status-crit); }
@@ -94,7 +94,7 @@
 
 /* 参与方单元格里的原生按钮：外观与纯文本一致，只为保留键盘可达（Tab / Enter / Space）。
    原先键盘入口是 tr 上的 interactiveProps；DataTable 的 tr 不进 Tab 序列，故下沉到按钮。 */
-/* 键盘焦点（uiux 批10 提醒）：行内按钮接管了原 tr 的键盘入口，必须给可见焦点环，
+/* 键盘焦点（设计 批10 提醒）：行内按钮接管了原 tr 的键盘入口，必须给可见焦点环，
    否则键盘用户看不到当前位置。用 :focus-visible 只在键盘态显示，不污染鼠标点击。 */
 .rowBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: var(--radius-xs); }
 .rowBtn {

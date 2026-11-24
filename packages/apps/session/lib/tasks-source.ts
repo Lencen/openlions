@@ -90,7 +90,7 @@ function detectAgent(command: string): string {
     if (m) return "agent-" + m[1];
   }
   if (command.includes("stock-screener") || command.includes("chanlun")) return "agent-main (openclaw)";
-  if (command.includes("hermes")) return "agent-e/agent-x (hermes)";
+  if (command.includes("hermes")) return "agent-e/agent-c (hermes)";
   return "-";
 }
 
@@ -121,7 +121,7 @@ function readCrontab(): CrontabEntry[] {
     }
     if (command.includes("~/.local/bin/lions-sync-cron.sh")) {
       out.push({ raw: line, schedule, command, business,
-        description: "LIONS session 增量同步 (agent-x/operator/agent-x)",
+        description: "LIONS session 增量同步 (agent-e/operator/agent-d)",
         agent: "agent-e + agent-operator + agent-d", agentPlatform: detectPlatform(command),
         logFile: "~/lions/logs/lions-sync-cron.log", sessionKey: null });
       continue;

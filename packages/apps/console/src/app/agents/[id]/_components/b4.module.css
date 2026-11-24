@@ -1,0 +1,115 @@
+/* B4 智能体详情 5 页 · Bento 栅格/卡片/指标/四态（2026-11-15）
+   依据 B4-BENTO-DESIGN-2026-11-15.md：12 列 / gutter 16 / card padding 24 / 字号 8 档内 / 语义 token。
+   只服务 app/agents/detail/** 与 app/agents/[id]/**，不改 globals.css、不复用其它批次页面样式。
+   1440 视口下内容区 1184px -> s12=1184 / s8=784 / s4=384（(1184-11*16)/12=84）。 */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+.card {
+  grid-column: span 4;
+  min-width: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.card[data-state="unavailable"] { border-style: dashed; }
+.s3 { grid-column: span 3; }
+.s4 { grid-column: span 4; }
+.s6 { grid-column: span 6; }
+.s8 { grid-column: span 8; }
+.s12 { grid-column: span 12; }
+
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.cardTitle { margin: 0; font-size: var(--fs-lg); font-weight: 600; color: var(--text); }
+.cardSub { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--text-muted); }
+.cardActions { flex: 0 0 auto; font-size: var(--fs-sm); }
+.cardBody { min-width: 0; }
+
+.kpiLabel { font-size: var(--fs-xs); color: var(--text-muted); }
+.kpiValue { font-size: var(--fs-3xl); font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--text); }
+.kpiValue[data-na="true"] { font-size: var(--fs-xl); color: var(--text-muted); }
+.kpiValue[data-tone="ok"] { color: var(--status-ok); }
+.kpiValue[data-tone="warn"] { color: var(--status-warn); }
+.kpiValue[data-tone="crit"] { color: var(--status-crit); }
+.kpiUnit { font-style: normal; font-size: var(--fs-base); font-weight: 400; margin-left: 2px; color: var(--text-muted); }
+.kpiHint { font-size: var(--fs-xs); color: var(--text-muted); line-height: var(--lh-base); }
+.kpiHint[data-tone="warn"] { color: var(--status-warn); }
+.kpiAsOf { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.crumbLink { min-height: 24px; display: inline-flex; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; font-size: var(--fs-xs); color: var(--text-muted); }
+.chip { border: 1px solid var(--border); border-radius: 999px; padding: 0 10px; line-height: 24px; min-height: 24px; }
+.chipOn { color: var(--status-ok); border-color: var(--status-ok); }
+
+.statusRow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: var(--fs-sm); color: var(--text-dim); }
+.statusRow .mono { font-family: var(--font-mono); }
+.headMeta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.asOf { font-size: var(--fs-xs); color: var(--text-muted); }
+.asOfMono { font-family: var(--font-mono); }
+
+.state { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 0; }
+.state strong { font-size: var(--fs-base); color: var(--text); }
+.state p { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); line-height: var(--lh-base); }
+.state[data-tone="warn"] strong { color: var(--status-warn); }
+.state[data-tone="crit"] strong { color: var(--status-crit); }
+.stateLink { font-size: var(--fs-sm); color: var(--primary); min-height: 24px; display: inline-flex; align-items: center; }
+
+.skel { display: block; width: 100%; height: 12px; border-radius: 6px; background: var(--bg-surface2); }
+.skelSm { width: 40%; }
+.skelCard { grid-column: span 4; min-height: 120px; display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.skelCard > .skel:first-child { width: 30%; }
+.skelCard > .skel:nth-child(2) { width: 70%; height: 22px; }
+
+.kv { margin: 0; display: grid; grid-template-columns: minmax(96px, 140px) minmax(0, 1fr); gap: 8px 16px; font-size: var(--fs-base); }
+.kv dt { color: var(--text-muted); font-size: var(--fs-sm); }
+.kv dd { margin: 0; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.mono { font-family: var(--font-mono); }
+.dim { color: var(--text-muted); }
+.sm { font-size: var(--fs-sm); }
+.wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.nowrap { white-space: nowrap; }
+.link { color: var(--primary); text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; }
+.link:hover { text-decoration: underline; }
+
+.related { display: flex; flex-wrap: wrap; gap: 16px; }
+.related a { font-size: var(--fs-base); }
+
+.timeline { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.tlItem { display: grid; grid-template-columns: 8px minmax(0, 1fr); gap: 10px; align-items: start; }
+.tlDot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); margin-top: 6px; }
+.tlDot[data-tone="warn"] { background: var(--status-warn); }
+.tlDot[data-tone="muted"] { background: var(--text-muted); }
+.tlBody { min-width: 0; }
+.tlTitle { font-size: var(--fs-base); color: var(--text); }
+.tlMeta { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+
+.pager { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: var(--fs-sm); color: var(--text-dim); }
+.pager .link[aria-disabled="true"] { color: var(--text-muted); pointer-events: none; text-decoration: none; }
+.pageInfo { font-variant-numeric: tabular-nums; }
+
+.alertRow { margin-bottom: 0; }
+.note { font-size: var(--fs-sm); color: var(--text-muted); line-height: var(--lh-base); }
+.emptyNote { font-size: var(--fs-sm); color: var(--text-muted); }
+.tableWrap { min-width: 0; overflow-x: auto; }
+
+@media (max-width: 1280px) {
+  .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .card { grid-column: span 3; }
+  .s4 { grid-column: span 3; }
+  .s6 { grid-column: span 3; }
+  .s8, .s12 { grid-column: span 6; }
+  .skelCard { grid-column: span 3; }
+}
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .card, .s3, .s4, .s6, .s8, .s12, .skelCard { grid-column: span 2; }
+}

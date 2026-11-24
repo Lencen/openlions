@@ -67,8 +67,26 @@ SELECT json_build_object(
                  FROM base ORDER BY "lastMessageAt" DESC NULLS LAST LIMIT 10) x)
 ) AS payload`;
 
+/**
+ * 0.6.5（devops 06:52 诊断）：上面的 SQL 是 **PG-only**（json_build_object / to_char / date_trunc /
+ * interval / ::text / now()），SQLite 下直跑报 `unrecognized token: ":"` -> dev 首页 500。
+ * prod :3002 / test :14102 用 PG 正常，所以**不是 prod 缺陷**，只影响 dev(SQLite) 预览。
+ *
+ * 修法（devops 选项 a）：**加 SQLite 分支（JS 聚合），PG 路径一行不改**。
+ *   · PG     -> 仍走原来的单条 CTE 大 SQL（零改动）
+ *   · SQLite -> 用 Prisma ORM 取数 + 在 Node 里做同样口径的聚合（dev 库小，可全量）
+ * 口径与 PG 版逐条对应：us/cs/base 三个集合、trend 按日、hours +8h、agent7d 近 7 天。
+ */
+const IS_PG = (process.env.SESSION_DB_DRIVER || "").toLowerCase() === "pg";
+
 export async function loadOverview(): Promise<Overview> {
   if (cache && Date.now() - cache.at < TTL_MS) return cache.data;
+  const data = IS_PG ? await loadOverviewPg() : await loadOverviewSqlite();
+  cache = { at: Date.now(), data };
+  return data;
+}
+
+async function loadOverviewPg(): Promise<Overview> {
   const rows = await prisma.$queryRawUnsafe<Array<{ payload: any }>>(SQL);
   const p = rows[0]?.payload || {};
   const toMap = (arr: any[], k: string) => (arr || []).map((r) => ({ [k]: r[k], _count: Number(r.c) }));
@@ -96,7 +114,96 @@ export async function loadOverview(): Promise<Overview> {
     })),
     sourceDist: (p.sources || []).map((r: any) => ({ source: r.source || "UNKNOWN", count: Number(r.c) })),
   };
-  cache = { at: Date.now(), data };
   return data;
+}
+
+/** SQLite 分支：与 PG 版同口径的 JS 聚合（不改 PG 路径；dev 库小，全量取数可接受） */
+async function loadOverviewSqlite(): Promise<Overview> {
+  const db = prisma as any;
+  // us / cs：有 user 消息的 sessionId 集合 / 其中 content 以 [cron: 开头的集合（对应 PG 的 us / cs CTE）
+  const msgs: Array<{ sessionId: string | null; content: any }> = await db.message.findMany({
+    where: { role: "user" },
+    select: { sessionId: true, content: true },
+  });
+  const us = new Set<string>();
+  const cs = new Set<string>();
+  for (const m of msgs) {
+    if (!m.sessionId) continue;
+    us.add(m.sessionId);
+    const c = typeof m.content === "string" ? m.content : "";
+    if (c.startsWith("[cron:")) cs.add(m.sessionId); // PG: content::text LIKE '[cron:%'
+  }
+  const all: any[] = await db.session.findMany({
+    where: { messageCount: { gt: 0 } },
+    select: {
+      id: true, title: true, agentId: true, agentName: true, source: true, channel: true,
+      messageCount: true, lastMessageAt: true, extractStatus: true, startedAt: true, sourceId: true,
+    },
+    take: 50000,
+  });
+  // base：等价于 PG 的 SESSION_EXCLUDE_FILTER（sourceId 排除 cron / cron_ / session_cron_）
+  const isCronSource = (v: any) => {
+    const s = v == null ? "" : String(v);
+    return s.startsWith("cron:") || s.startsWith("cron_") || s.startsWith("session_cron_");
+  };
+  const base = all.filter((s) => us.has(s.id) && !cs.has(s.id) && !isCronSource(s.sourceId));
+
+  const byAgent = new Map<string | null, number>();
+  const byStatus = new Map<string | null, number>();
+  const bySource = new Map<string | null, number>();
+  const trendMap = new Map<string, { sessions: number; messages: number }>();
+  const hourDist = new Array(24).fill(0);
+  const agent7dMap = new Map<string, { sessions: number; messages: number }>();
+  const now = Date.now();
+  const sevenDayAgo = now - 7 * 24 * 3600 * 1000;
+  for (const s of base) {
+    byAgent.set(s.agentId ?? null, (byAgent.get(s.agentId ?? null) || 0) + 1);
+    byStatus.set(s.extractStatus ?? null, (byStatus.get(s.extractStatus ?? null) || 0) + 1);
+    bySource.set(s.source ?? null, (bySource.get(s.source ?? null) || 0) + 1);
+    if (s.startedAt == null) continue;
+    const d = new Date(s.startedAt);
+    if (isNaN(d.getTime())) continue;
+    const mmdd = String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+    const t = trendMap.get(mmdd) || { sessions: 0, messages: 0 };
+    t.sessions += 1;
+    t.messages += Number(s.messageCount || 0);
+    trendMap.set(mmdd, t);
+    // PG: extract(hour from (startedAt + interval '8 hours')) -> 本地小时 +8 取模
+    hourDist[(d.getHours() + 8) % 24] += 1;
+    if (d.getTime() >= sevenDayAgo) {
+      const k = s.agentId || "unknown";
+      const a = agent7dMap.get(k) || { sessions: 0, messages: 0 };
+      a.sessions += 1;
+      a.messages += Number(s.messageCount || 0);
+      agent7dMap.set(k, a);
+    }
+  }
+  const messageCount = await db.message.count();
+  const recentSessions = base
+    .slice()
+    .sort((a, b) => {
+      const ta = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const tb = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 10)
+    .map((s) => ({
+      id: s.id, title: s.title, agentId: s.agentId, agentName: s.agentName, source: s.source,
+      channel: s.channel, messageCount: s.messageCount, extractStatus: s.extractStatus,
+      lastMessageAt: s.lastMessageAt ? new Date(s.lastMessageAt) : null,
+    }));
+  return {
+    sessionCount: base.length,
+    messageCount: Number(messageCount || 0),
+    byAgent: Array.from(byAgent.entries()).map(([agentId, c]) => ({ agentId, _count: c })) as any,
+    byStatus: Array.from(byStatus.entries()).map(([extractStatus, c]) => ({ extractStatus, _count: c })) as any,
+    recentSessions,
+    trend: Array.from(trendMap.entries())
+      .sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+      .map(([date, v]) => ({ date, sessions: v.sessions, messages: v.messages })),
+    hourDist,
+    agent7d: Array.from(agent7dMap.entries()).map(([agentId, v]) => ({ agentId, sessions: v.sessions, messages: v.messages })),
+    sourceDist: Array.from(bySource.entries()).map(([source, count]) => ({ source: source || "UNKNOWN", count })),
+  };
 }
 

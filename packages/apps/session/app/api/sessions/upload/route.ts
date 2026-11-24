@@ -6,7 +6,7 @@ import { verifyMindApiKey } from "@/lib/mindAuth";
 
 // ===== 2026-09-03: 自动化会话治理 =====
 // 1) 系统注入消息规范化: 客户端常把 heartbeat / cron 任务 / [IMPORTANT] 等系统注入标成 role=user,
-//    UI 与提炼管线会把它们当用户消息 (agent-x 反馈: 一些不是 user 发的被判成 user)。
+//    UI 与提炼管线会把它们当用户消息 (agent-b 反馈: 一些不是 user 发的被判成 user)。
 //    平台侧兜底: 命中前缀 → role=system (不管客户端版本, 一律修正)。
 // 2) 自动化会话标记 SKIPPED: openclaw cron run / hook / 无真实 user 的纯自动化产出
 //    → extractStatus=SKIPPED, mind 提炼管线 (status=PENDING 拉取) 不会消费 → 不烧 API/token。
@@ -146,7 +146,7 @@ export async function POST(req: Request) {
   // 自动化判定 (2026-09-07 修订, 修复自主 agent 会话被误杀):
   //   ① cron/hook 源 (定时任务执行记录) → SKIPPED 不提炼
   //   ② 非 cron 但既无 user 也无 assistant/tool 工作内容 (纯壳/heartbeat) → SKIPPED
-  //   ③ 其余 (有 user 真人对话, 或有 assistant/tool 的自主工作会话如 agent-x/operator) → 进提炼 PENDING
+  //   ③ 其余 (有 user 真人对话, 或有 assistant/tool 的自主工作会话如 agent-e/operator) → 进提炼 PENDING
   //   原逻辑 "无 user 即 auto" 误杀了自主 agent (openclaw/hermes 任务驱动, 无人工逐条输入) 的工作会话
   const autoBySource = isAutoSessionSource(sourceId);
   const hasWorkContent = Array.isArray(messages) && messages.some(

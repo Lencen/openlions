@@ -31,7 +31,7 @@ function refuseReason(home) {
 function plan(home, opts) {
   const h = path.resolve(home);
   const rec = JSON.parse(fs.readFileSync(path.join(h, "install.json"), "utf8"));
-  // 2026-10-27 (商业化线): 安装时 --skip-units 的根没有自己的 systemdDir；
+  // 2026-10-27 (运营团队): 安装时 --skip-units 的根没有自己的 systemdDir；
   //   不能回退到用户全局 systemd 目录去删别的安装/主环境的单元。
   const systemdDir = typeof rec.systemdDir === "string" && rec.systemdDir ? rec.systemdDir : null;
   const units = (systemdDir && rec.apps) ? Object.values(rec.apps).map((a) => a.unit) : [];

@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     const data = await res.json().catch(() => null);
     if (!res.ok || !data) {
       return NextResponse.json({
-        ok: false, entityType, entityId, count: 0, rows: [], timeline: [], asOf: asOf(),
+        ok: false, entityType, entityId, count: null, rows: null, timeline: null, asOf: asOf(),
         warnings: ["mind discussions 接口返回 " + res.status],
       });
     }
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     });
   } catch (e: any) {
     return NextResponse.json({
-      ok: false, entityType, entityId, count: 0, rows: [], timeline: [], asOf: asOf(),
+      ok: false, entityType, entityId, count: null, rows: null, timeline: null, asOf: asOf(),
       warnings: ["mind 服务 (3000) 不可达: " + String(e?.message || e).slice(0, 120)],
     });
   }

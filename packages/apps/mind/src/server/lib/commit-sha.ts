@@ -26,14 +26,14 @@ export function verifyCommitSha(evidence: string, ownerId?: string | null): ShaV
   const owner = String(ownerId || "").trim();
   if (!owner) return { ok: true, sha, reason: "ok（未提供 owner，只校存在性）" };
 
-  // 分支名单：agent/agent-e、agent/agent-e-*、agent/agent-x-* 等
+  // 分支名单：agent/agent-e、agent/agent-e-*、agent/agent-e-* 等
   const refs = git(["for-each-ref", "--format=%(refname:short)", "refs/heads"]).out.split("\n").filter(Boolean);
   const tokens = [owner, owner.replace(/^agent-/, "")].filter(Boolean);
   const branches = refs.filter((b) => tokens.some((t) => b.includes(t)));
   for (const b of branches) {
     if (git(["merge-base", "--is-ancestor", sha, b]).ok) return { ok: true, sha, reason: "ok（属于 " + b + "）" };
   }
-  // 兜底：提交作者/提交者署名是 owner（agent-x 那次就是这么提交的）
+  // 兜底：提交作者/提交者署名是 owner（agent-d 那次就是这么提交的）
   const who = git(["show", "-s", "--format=%an|%cn|%ae|%ce", sha]).out;
   if (who && tokens.some((t) => who.includes(t))) return { ok: true, sha, reason: "ok（署名匹配 owner）" };
   return { ok: false, sha, reason: "该提交不属于 " + owner + "（不在其分支上，署名也不匹配）" };

@@ -10,3 +10,7 @@
 /* 页脚状态点：数据实时 / 当前模块（原来是内联 background） */
 .dotOk { background: var(--status-ok); }
 .dotCore { background: var(--module-core); }
+/* 0.6.0 shell v1：SubSidebar 232 / item 36 */
+.subSidebar { width: 232px; }
+.subSidebar :global(.sidebar-item) { min-height: 36px; padding-top: 0; padding-bottom: 0; }
+@media (max-width: 1279px) { .subSidebar { width: 64px; } .subSidebar :global(.sidebar-item) > span:not(.icon) { display: none; } }

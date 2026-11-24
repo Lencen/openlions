@@ -1,63 +1,68 @@
-/* /lineage 页内样式（P2 呈现层改造：内联 style 清零）
-   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
-   能复用 .page / .card-grid / .panel / .tiny / .mono / .nowrap 的一律复用。 */
+/* /lineage · demo slot（0.5 批次B）— 只用全局令牌，无裸 hex */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: 12px; color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--c-status-ok); }
 
-/* 数据源降级提示与下方链路留白（原来是内联 margin-bottom） */
-.warnAlert { margin-bottom: var(--sp-4); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.s12 { grid-column: span 12; }
+.s8 { grid-column: span 8; }
+.s4 { grid-column: span 4; }
+.k { font-size: 12px; color: var(--text-muted); }
+.vXl { font-size: 30px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.na { color: var(--text-muted); }
+.warn { color: var(--c-status-warn); }
+.d { font-size: 12px; color: var(--text-muted); }
+.naLine { font-size: 12px; color: var(--text-muted); margin: 6px 0 0; }
 
-/* 右侧三块面板纵向排列（原来是内联 flex 列 + gap） */
-.sideCol { display: flex; flex-direction: column; gap: var(--sp-4); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cardTitle { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.6; }
+.sub { font-size: 12px; color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: 12px; color: var(--c-status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.tagNa { font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
 
-/* 页脚取数时刻：右对齐（原来是内联 text-align） */
-.asOf { text-align: right; }
+.lane { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.laneNode { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; background: var(--bg-surface2); min-width: 0; }
+.laneLabel { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.laneValue { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.laneUnit { font-size: 12px; color: var(--text-muted); }
+.laneNote { font-size: 12px; color: var(--text-muted); line-height: 1.45; max-height: 44px; overflow: hidden; }
 
-/* 页脚相关视图链接行（原来是内联 flex + margin-top） */
-.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+.stats { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.stats li { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.statK { font-size: 12px; color: var(--text-muted); }
+.statV { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
 
-/* 面包屑上级节点：沿用 globals.css 的 .breadcrumb/.sep/.current 结构，只补"上级用弱色"这一层 */
-.headerMeta { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin: 0 0 var(--sp-3); }
-.crumbDim { color: var(--text-dim); }
+.tblWrap { overflow-x: auto; margin-top: 8px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 860px; }
+.tbl th { text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; white-space: nowrap;  line-height: 24px; }
+.tbl td { border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; vertical-align: top;  line-height: 24px; }
+.tbl tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.name { font-weight: 500; white-space: nowrap; }
+.dim { color: var(--text-muted); }
 
-/* —— LineageArtifactsTable —— */
+.noteBox { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface2); padding: 10px 14px; margin-top: 10px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+.noteTitle { font-weight: 600; color: var(--text); }
+.sumList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; color: var(--text-muted); }
+.warnNote { border: 1px solid var(--c-status-warn); border-radius: 12px; padding: 10px 14px; font-size: 12px; color: var(--text-muted); margin-top: 16px; }
+.state { border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: var(--text-muted); }
+.state b { color: var(--text); }
+.foot { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+.footNote { font-size: 12px; color: var(--text-muted); }
 
-/* 类型列：色相身份沿用 --table-* 令牌，但文字色按 lib/ink.ts 的口径向正文色混一次
-   （原来由 inkOf(TABLE_COLOR[v]) 现算，现在改成 data-table 属性选择器，等价于 55% 混合）。 */
-.typeName { font-weight: 600; font-size: var(--fs-base); }
-.typeName[data-table="Memory"] { color: color-mix(in srgb, var(--table-memory) 55%, var(--text)); }
-.typeName[data-table="Knowledge"] { color: color-mix(in srgb, var(--table-knowledge) 55%, var(--text)); }
-.typeName[data-table="Practice"] { color: color-mix(in srgb, var(--table-practice) 55%, var(--text)); }
-.typeName[data-table="Skill"] { color: color-mix(in srgb, var(--table-skill) 55%, var(--text)); }
-
-/* 产物标题（原来是内联 font-size） */
-.artifactTitle { font-size: var(--fs-base); }
-
-/* 来源单元格（原来是内联 font-size） */
-.sourceCell { font-size: var(--fs-sm); }
-
-/* 质量分：等宽数字（原来是内联 font-family + font-size） */
-.quality { font-family: var(--font-mono); font-size: var(--fs-base); }
-
-/* 质量档位色：由 qualityTone().cls 映射成 data-q（原来是内联 color） */
-.quality[data-q="ok"] { color: var(--status-ok); }
-.quality[data-q="warn"] { color: var(--status-warn); }
-.quality[data-q="crit"] { color: var(--status-crit); }
-.quality[data-q="mute"] { color: var(--text-muted); }
-
-/* —— LineageLane（端到端链路；P2 批2 追加） —— */
-
-/* 节点左边框按阶段色取令牌（原来是内联 borderLeftColor） */
-.laneToneNode[data-tone="skill"] { border-left-color: var(--table-skill); }
-.laneToneNode[data-tone="knowledge"] { border-left-color: var(--table-knowledge); }
-.laneToneNode[data-tone="memory"] { border-left-color: var(--table-memory); }
-.laneToneNode[data-tone="practice"] { border-left-color: var(--table-practice); }
-.laneToneNode[data-tone="reflection"] { border-left-color: var(--table-reflection); }
-.laneToneNode[data-tone="primary"] { border-left-color: var(--primary); }
-
-/* 数值按阶段色取令牌（原来是内联 color）；
-   选择器带上节点类，特异性高于 globals.css 的 ".lane-node .ln-value"。 */
-.laneToneNode[data-tone="skill"] .laneToneValue { color: var(--table-skill); }
-.laneToneNode[data-tone="knowledge"] .laneToneValue { color: var(--table-knowledge); }
-.laneToneNode[data-tone="memory"] .laneToneValue { color: var(--table-memory); }
-.laneToneNode[data-tone="practice"] .laneToneValue { color: var(--table-practice); }
-.laneToneNode[data-tone="reflection"] .laneToneValue { color: var(--table-reflection); }
-.laneToneNode[data-tone="primary"] .laneToneValue { color: var(--primary); }
+@media (max-width: 1280px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .s12 { grid-column: span 6; }
+  .s8 { grid-column: span 6; }
+  .s4 { grid-column: span 3; }
+  .lane { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: 1fr; }
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s12, .s8, .s4 { grid-column: span 2; }
+  .lane { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

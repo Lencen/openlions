@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { SESSION_EXCLUDE_FILTER } from "@/lib/session-filters";
+// 0.6.5 U-60：方言判断复用现成工具（lib/sql-dialect.ts:13），不再自己写 IS_PG
+import { isPgDriver } from "@/lib/sql-dialect";
 // D-01: snippet 安全转义 (独立模块可单测)
 import { escapeSnippet } from "@/lib/snippet";
 import Topbar from "../components/Topbar";
@@ -150,6 +152,79 @@ async function ftsSearch(q: string, platform?: string, from?: string, to?: strin
   }));
 }
 
+/**
+ * 0.6.5 U-60：PG 分支（FTS5 未适配 PG）。
+ * 背景：ftsSearch 的 raw SQL 用 message_fts MATCH / snippet() / rowid —— SQLite 专用；
+ *       PG 报 42601 -> 未捕获 -> 整页 500（无 q 不走它，所以「空搜索 200」掩盖了问题）。
+ * 做法：PG 下按 Message.content 模糊匹配关联 Session，**返回与 FTS 分支同结构的 Hit**，页面渲染不变。
+ * 用 Prisma ORM 而非 raw SQL：方言交给 Prisma，彻底避开 MATCH/snippet/rowid。
+ */
+async function contentSearchPg(
+  q: string,
+  platform?: string,
+  from?: string,
+  to?: string
+): Promise<Hit[]> {
+  // 第一步：找命中消息并聚合到 session（不跨关系查询，避免 Prisma 客户端版本差异）
+  const msgs = await prisma.message.findMany({
+    where: { content: { contains: q } },
+    select: { sessionId: true, content: true },
+    orderBy: { timestamp: "desc" },
+    take: 2000,
+  });
+  if (msgs.length === 0) return [];
+  const agg = new Map<string, { hits: number; snippet: string }>();
+  const ql = q.toLowerCase();
+  for (const m of msgs) {
+    const cur = agg.get(m.sessionId);
+    if (cur) {
+      cur.hits += 1;
+      continue;
+    }
+    const text = (m.content || "").replace(/\s+/g, " ").trim();
+    const idx = text.toLowerCase().indexOf(ql);
+    const snippet =
+      idx >= 0
+        ? (idx > 20 ? "…" : "") + text.slice(Math.max(0, idx - 20), idx + 60) + (text.length > idx + 60 ? "…" : "")
+        : text.slice(0, 80);
+    agg.set(m.sessionId, { hits: 1, snippet });
+  }
+  // 第二步：取会话元信息 + 沿用 FTS 分支的过滤语义（排除 cron 触发、0 消息、平台/时间区间）
+  const sessions = await prisma.session.findMany({
+    where: {
+      ...(SESSION_EXCLUDE_FILTER as any),
+      messageCount: { gt: 0 },
+      sourceId: { not: { startsWith: "cron:" } },
+      ...(platform ? { platform } : {}),
+      ...(from || to
+        ? {
+            lastMessageAt: {
+              ...(from ? { gte: new Date(from) } : {}),
+              ...(to ? { lte: new Date(to) } : {}),
+            },
+          }
+        : {}),
+      id: { in: [...agg.keys()] },
+    },
+    select: { id: true, title: true, platform: true, messageCount: true, lastMessageAt: true },
+    take: 200,
+  });
+  return sessions
+    .map((s) => ({
+      sessionId: s.id,
+      title: s.title,
+      platform: s.platform,
+      messageCount: s.messageCount,
+      lastMessageAt: s.lastMessageAt,
+      hits: agg.get(s.id)?.hits || 0,
+      snippet: agg.get(s.id)?.snippet || "",
+      toolHits: 0,
+      toolSnippet: "",
+    }))
+    .sort((a, b) => b.hits - a.hits || (b.lastMessageAt?.getTime() || 0) - (a.lastMessageAt?.getTime() || 0))
+    .slice(0, 50);
+}
+
 export default async function SearchPage({
   searchParams,
 }: {
@@ -161,11 +236,41 @@ export default async function SearchPage({
   const to = searchParams.to;
 
   let hits: Hit[] = [];
-  let mode: "fts" | "like" | "none" = "none";
+  // 0.6.5 U-60：mode 增加 pg-ilike（PG 降级内容匹配）/ unavailable（降级也失败 -> 显式不可用态）
+  let mode: "fts" | "like" | "pg-ilike" | "unavailable" | "none" = "none";
+  let unavailableReason = "";
   if (q) {
-    hits = await ftsSearch(q, platform, from, to);
-    mode = q.length >= 3 ? "fts" : "like";
+    if (isPgDriver()) {
+      // PG：FTS5 不可用 -> 内容模糊匹配；失败也不抛 500，改为显式 unavailable 态
+      try {
+        hits = await contentSearchPg(q, platform, from, to);
+        mode = "pg-ilike";
+      } catch (e) {
+        mode = "unavailable";
+        unavailableReason = String((e as Error)?.message || e).slice(0, 120);
+      }
+    } else {
+      // SQLite：行为完全不变（FTS5 + 短词 LIKE 回退）
+      hits = await ftsSearch(q, platform, from, to);
+      mode = q.length >= 3 ? "fts" : "like";
+    }
   }
+
+  // 0.6.5 U-39b §2.6：搜索页只加 2 格（索引会话总数 / 平台分布），搜索框是主角
+  let indexedTotal: number | null = null;
+  let platformDist: Array<{ platform: string | null; count: number }> = [];
+  let metaReason = "";
+  try {
+    const [cnt, dist] = await Promise.all([
+      prisma.session.count({ where: SESSION_EXCLUDE_FILTER as any }),
+      prisma.session.groupBy({ by: ["platform"], _count: true, where: SESSION_EXCLUDE_FILTER as any }),
+    ]);
+    indexedTotal = cnt;
+    platformDist = (dist as any[]).map((x) => ({ platform: x.platform, count: x._count }));
+  } catch (e) {
+    metaReason = "索引统计不可用：" + String((e as Error)?.message || e).slice(0, 60);
+  }
+  const platformTop = platformDist.slice().sort((a, b) => b.count - a.count).slice(0, 5);
 
   const formatDate = (d: Date | null) =>
     d
@@ -180,17 +285,43 @@ const platformLabels: Record<string, string> = {
   return (
     <>
       <Topbar active="search" stats={q ? `${hits.length} results` : ""} />
-      <main className="page page--narrow">
-        <div className="eyebrow">Full-text search · FTS5</div>
+      <main className="page page--narrow" data-phase={indexedTotal && indexedTotal > 0 ? "ok" : "empty"} data-search-mode={q ? mode : "idle"}>
+        {/* 0.6.5 U-60：PG 下无 FTS5，眉标不能还写 FTS5（否则又是「文案说有能力、实际没有」） */}
+        <div className="eyebrow">{isPgDriver() ? "Full-text search · PG 内容匹配（FTS5 未适配）" : "Full-text search · FTS5"}</div>
         <h1 className="title-sm">Find a <em>session</em>.</h1>
 
-        <form className="search-form">
+        <form className="search-form" data-slot="search-form">
           <input
             name="q"
             defaultValue={q}
-            placeholder="搜索消息内容、工具调用、标题... (≥3 字符走 FTS5)"
+            placeholder={
+              isPgDriver()
+                ? "搜索消息内容（PG 暂用模糊匹配；FTS5 待适配）"
+                : "搜索消息内容、工具调用、标题... (≥3 字符走 FTS5)"
+            }
             className="search-form__input"
           />
+          <div className="kpi-strip kpi-strip--2" style={{ width: "100%" }} data-slot="kpi-index">
+            <div className="kpi-card bento-cell" data-kpi="indexed" data-cell="index-total">
+              <div className="kpi-k">索引会话总数</div>
+              <div className="kpi-v">{indexedTotal == null ? <span className="na">n/a</span> : indexedTotal.toLocaleString()}</div>
+              <div className="kpi-d">{indexedTotal == null ? "原因：" + (metaReason || "索引统计不可用") : "可被全文检索的会话"}</div>
+            </div>
+            <div className="kpi-card bento-cell" data-kpi="platform" data-cell="platform-dist">
+              <div className="kpi-k">平台分布</div>
+              {platformTop.length === 0 ? (
+                <div className="kpi-d">n/a（原因：无可统计的平台分布）</div>
+              ) : (
+                <div className="s6-platform">
+                  {platformTop.map((x) => (
+                    <span key={x.platform || "x"} className="s6-platform__item">
+                      <b>{x.count.toLocaleString()}</b><span>{platformLabels[x.platform || ""] || x.platform || "—"}</span>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <select name="platform" defaultValue={platform || ""} className="search-form__select">
             <option value="">All platforms</option>
             <option value="hermes_session">Hermes</option>
@@ -202,15 +333,36 @@ const platformLabels: Record<string, string> = {
           <button type="submit" className="search-form__submit">Search</button>
         </form>
 
-        {q && (
+        {q && mode === "unavailable" && (
+          <div
+            className="search-meta"
+            data-search-unavailable="true"
+            style={{ borderLeft: "3px solid var(--status-crit, #dc2626)", paddingLeft: 10 }}
+          >
+            搜索暂不可用（原因：{unavailableReason || "查询失败"}）——
+            <b>这不是「没有结果」</b>，是本次查询没能执行。
+          </div>
+        )}
+        {q && mode === "pg-ilike" && (
+          <div className="search-meta" data-search-degraded="true">
+            全文检索（FTS5）在当前数据库上暂未适配，本次为<b>消息内容模糊匹配</b>降级结果；
+            命中质量与排序会低于 FTS5，待 0.6.6 换成 PG 全文索引。
+          </div>
+        )}
+        {q && mode !== "unavailable" && (
           <div className="search-meta">
             {hits.length} results for &ldquo;{q}&rdquo;
             {mode === "fts" && <span className="tag tag--src" style={{ marginLeft: 8 }}>FTS5</span>}
             {mode === "like" && <span className="tag tag--src" style={{ marginLeft: 8 }}>title LIKE (短词)</span>}
+            {mode === "pg-ilike" && <span className="tag tag--src" style={{ marginLeft: 8 }}>内容模糊匹配（PG）</span>}
           </div>
         )}
 
-        <div className="search-results">
+        {/* 0.6.5 U-60 / devops 08:00 约束②：降级结果必须在**结果区**有独立标记，
+            不得让用户误以为是全文命中（横幅标记 + 区块标记双保险）。
+            设计 2026-11-18 定稿（纪律 28）：状态必须由「值」表达，不用「属性缺失」表达；
+            => 非降级态写 "false"，不留 undefined（否则判据无法区分"非降级"与"忘了加属性"） */}
+        <div className="search-results" data-degraded={mode === "pg-ilike" ? "true" : "false"} data-slot="search-results">
           {hits.map((h) => (
             <a key={h.sessionId} href={`/sessions/${h.sessionId}`} className="search-card">
               <div className="search-card__head">
@@ -245,8 +397,10 @@ const platformLabels: Record<string, string> = {
             </a>
           ))}
 
-          {q && hits.length === 0 && (
-            <div className="search-empty">No results found</div>
+          {q && hits.length === 0 && mode !== "unavailable" && (
+            <div className="search-empty">
+              No results found{mode === "pg-ilike" ? "（本次为内容模糊匹配降级，见上方说明）" : ""}
+            </div>
           )}
 
           {!q && (

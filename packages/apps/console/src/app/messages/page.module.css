@@ -10,3 +10,52 @@
 .dot[data-tone="live"] { background: var(--status-ok); }
 .dot[data-tone="down"] { background: var(--status-warn); }
 .dot[data-tone="connecting"] { background: var(--text-dim); }
+
+/* ── 0.5 批次A：demo slot 还原新增类（2026-11-13）──
+   只服务本页新结构；旧类保留（历史 client 岛未删，仍是既有引用）。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap-block); margin-bottom: var(--gap-sect); }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.tbl tbody tr:hover td { background: var(--bg-hover); }
+.name { display: block; color: var(--text); }
+.subCell { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); word-break: break-all; }
+.monoCell { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); }
+.chipOk, .chipWarn, .chipCrit, .chipIdle { display: inline-block; font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chipOk { color: var(--status-ok); }
+.chipWarn { color: var(--status-warn); }
+.chipCrit { color: var(--status-crit); }
+.chipIdle { color: var(--text-muted); }
+.toolbarRow { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.segTabs { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.segTab, .segTabOn { display: inline-flex; align-items: center; font-size: var(--fs-xs); padding: 4px 10px; text-decoration: none; }
+.segTab { color: var(--text-muted); }
+.segTab:hover { color: var(--primary); }
+.segTabOn { color: var(--text); background: var(--bg-surface2); font-weight: 600; }
+.hint { margin-left: auto; font-size: var(--fs-xs); color: var(--text-muted); }
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateErr { border-left: 3px solid var(--status-crit); }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.stateMini { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: var(--fs-xs); }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+.skelRow { display: flex; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.skel { height: 12px; border-radius: 6px; background: var(--bg-surface2); display: inline-block; }
+@media (max-width: 1280px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .kpis { grid-template-columns: 1fr; } .hint { margin-left: 0; } }
+
+
+/* 骨架条宽度档位（替代内联 style，保持 0 内联样式） */
+.skelW1 { width: 16%; } .skelW2 { width: 26%; } .skelW3 { width: 18%; } .skelW4 { width: 14%; } .skelW5 { width: 12%; }

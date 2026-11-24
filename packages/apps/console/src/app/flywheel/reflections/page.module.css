@@ -16,3 +16,17 @@
 
 /* 面包屑首段（当前层级）压暗（原来是内联 color: var(--text-dim)） */
 .reflCrumbDim { color: var(--text-dim); }
+.chips { display: flex; gap: 6px; margin: 6px 0 12px; font-size: 12px; color: var(--text-muted); }
+.chips span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
+.crumbOn { color: var(--c-status-ok); }
+.b2main :global(a), .b2main :global(button) { min-height: 24px; }
+.b2main :global(a) { display: inline-flex; align-items: center; }
+.slotS4 { width: 100%; }
+.slotS8 { width: 100%; }
+.slotS12 { width: 100%; }
+.b2grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.b2grid > * { grid-column: 1 / -1; }
+.b2grid > .slotS4 { grid-column: span 4; }
+.b2grid > .slotS8 { grid-column: span 8; }
+.b2grid > .slotS12 { grid-column: 1 / -1; }
+.b2main :global(.ui-table-expand) { min-width: 24px; min-height: 24px; }

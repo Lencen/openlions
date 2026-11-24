@@ -57,7 +57,17 @@ export default async function SessionsPage({
   // groupBy/count 也走相同过滤 (filter chips 计数才一致)
   const whereAny = where as any;
 
-  const [sessions, total, allAgents, sources, statuses] = await Promise.all([
+  // 0.6.5 U-39b §2.2：4 KPI（总会话 / 近 24h / 平台数 / 分组数）
+  const dayAgo = new Date(Date.now() - 24 * 3600 * 1000);
+  let groupCount: number | null = null;
+  let groupReason = "";
+  try {
+    const { getNonCronGroupIds } = await import("@/lib/session-filters");
+    groupCount = (await getNonCronGroupIds()).size;
+  } catch (e) {
+    groupReason = "分组查询不可用：" + String((e as Error)?.message || e).slice(0, 60);
+  }
+  const [sessions, total, allAgents, sources, statuses, total24h] = await Promise.all([
     prisma.session.findMany({
       where,
       orderBy,
@@ -73,6 +83,7 @@ export default async function SessionsPage({
     prisma.session.groupBy({ by: ["agentId"], _count: true, where: whereAny }),
     prisma.session.groupBy({ by: ["source"], _count: true, where: whereAny }),
     prisma.session.groupBy({ by: ["extractStatus"], _count: true, where: whereAny }),
+    prisma.session.count({ where: { ...(where as any), lastMessageAt: { gte: dayAgo } } }),
   ]);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
@@ -96,8 +107,32 @@ export default async function SessionsPage({
   return (
     <>
       <Topbar active="sessions" stats={`${total.toLocaleString()} sessions`} />
-      <main className="page page-wide">
-        <div className="list-header">
+      <main className="page page-wide" data-phase={total > 0 ? "ok" : "empty"}>
+        {/* 0.6.5 U-39b §2.2：4 KPI 条（表格是主体，格位只做概览） */}
+        <div className="kpi-strip" data-slot="kpi-sessions">
+          <div className="kpi-card bento-cell" data-kpi="total" data-cell="session-total">
+            <div className="kpi-k">总会话</div>
+            <div className="kpi-v">{total.toLocaleString()}</div>
+            <div className="kpi-d">当前过滤条件下</div>
+          </div>
+          <div className="kpi-card bento-cell" data-kpi="24h" data-cell="session-24h">
+            <div className="kpi-k">近 24h</div>
+            <div className="kpi-v">{total24h.toLocaleString()}</div>
+            <div className="kpi-d">最近 24 小时有消息</div>
+          </div>
+          <div className="kpi-card bento-cell" data-kpi="sources" data-cell="platform-count">
+            <div className="kpi-k">平台数</div>
+            <div className="kpi-v">{sources.length.toLocaleString()}</div>
+            <div className="kpi-d">有会话的数据来源数</div>
+          </div>
+          <div className="kpi-card bento-cell" data-kpi="groups" data-cell="group-count">
+            <div className="kpi-k">分组数</div>
+            <div className="kpi-v">{groupCount == null ? <span className="na">n/a</span> : groupCount.toLocaleString()}</div>
+            <div className="kpi-d">{groupCount == null ? "原因：" + (groupReason || "分组查询不可用") : "有内容的分组"}</div>
+          </div>
+        </div>
+
+        <div className="list-header" data-slot="page-head">
           <div className="left">
             <h1>Sessions</h1>
             <div className="subtitle">{total.toLocaleString()} archived sessions · 按 agent / 来源 / 状态过滤</div>
@@ -117,7 +152,7 @@ export default async function SessionsPage({
         </div>
 
         {/* Agent filter */}
-        <div className="filter-section">
+        <div className="filter-section" data-slot="agent-filter">
           <div className="filter-label">Agent</div>
           <div className="chips">
             <a href={link({ agent: null })} className={`chip ${!agent ? "active" : ""}`}>All</a>
@@ -156,7 +191,7 @@ export default async function SessionsPage({
         </div>
 
         {/* Table */}
-        <div className="table-wrap">
+        <div className="table-wrap" data-slot="session-table">
           <table className="session-table">
             <thead>
               <tr>
@@ -211,7 +246,7 @@ export default async function SessionsPage({
                 </tr>
               ))}
               {sessions.length === 0 && (
-                <tr><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--ink-muted)" }}>No sessions match these filters.</td></tr>
+                <tr data-empty-row="true"><td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "var(--ink-muted)" }}>No sessions match these filters.</td></tr>
               )}
             </tbody>
           </table>

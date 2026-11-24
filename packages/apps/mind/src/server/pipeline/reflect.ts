@@ -9,7 +9,8 @@
  * 触发源: 整点 cron / 手动 API
  */
 
-import { extractLlmText } from "@/server/llm/extract-text";
+// 2026-11-19 [team]: LLM 协议抽象（openai|anthropic，默认 anthropic）
+import { callLlm, hasLlmCredentials, resolveLlmTarget, llmErrorType, llmErrorTarget, llmErrorMessage, llmTruncationKind } from "@/server/llm/client";
 import { sessionApiKey } from "@/lib/secret";
 import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma"; // V1 原状, Next.js dev alias 解析
@@ -121,7 +122,7 @@ const SESSION_API_BASE = "http://localhost:3002/api/v1";
 const SESSION_API_KEY = sessionApiKey(/* LIONS_SESSION_API_KEY */);
 const REFLECT_MODEL = process.env.REFLECT_MODEL || process.env.ANTHROPIC_MODEL || "MiniMax-M3";
 // 2026-11-05（Q7-min）：max_tokens 改为可配置。
-// 为什么：两条链已切到 thinking 模型（agent-x-flash / M3.1），长反思在 8192 会被截断，
+// 为什么：两条链已切到 thinking 模型（agent-d-flash / M3.1），长反思在 8192 会被截断，
 // 表现为 "all chunks failed"，把"模型没答完"误报成"API 不可用"。
 // 2026-11-05（Q7-auto）：再往前一步 —— 按模型取上限，不再写死一个数。
 //   写死的两种错法：小/未知模型吃 16384 直接 400（max_tokens 超上限）；
@@ -132,7 +133,7 @@ const REFLECT_MAX_TOKENS_MIN = 1024;
 const REFLECT_MAX_TOKENS_MAX = 32768;
 const REFLECT_MAX_TOKENS_DEFAULT = 8192;
 const REFLECT_MAX_TOKENS_BY_MODEL: Array<[RegExp, number]> = [
-  [/agent-x/i, 16384],
+  [/agent-d/i, 16384],
   [/minimax/i, 16384],
   [/claude/i, 8192],
 ];
@@ -713,42 +714,46 @@ ${products.reflection.slice(0, 20).map(p => `- [${p.id.slice(-6)}] ${(p.title ||
 
   const userPrompt = `=== Memory/Knowledge/Practice/Reflection 产物 (按主题聚合) ===\n${productSummary}\n\n=== 原始对话全文 (节选) ===\n${messagesText}${lastFindingsContext}`;
 
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://api.minimaxi.com/anthropic";
-  const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY || "";
-  if (!apiKey) throw new Error("LLM API key 未配置 (ANTHROPIC_AUTH_TOKEN)");
+  // 2026-11-19 [team]（运营团队最高优先级）：协议抽象，一处实现。
+  //   LLM_PROTOCOL=openai|anthropic（默认 anthropic = 逐字回退旧行为）；
+  //   uniontech 已禁用 Anthropic 协议（/v1/messages -> 403 permission_error），只改 env 无效。
+  //   超时/并发语义不变：仍走 fetchWithTimeout(REFLECT_TIMEOUT_MS, signal) + withLlmConcurrency。
+  if (!hasLlmCredentials()) {
+    throw new Error(`LLM API key 未配置 (${resolveLlmTarget().protocol === "openai" ? "LLM_API_KEY/OPENAI_API_KEY/UNIONTECH_API_KEY" : "ANTHROPIC_AUTH_TOKEN"})`);
+  }
 
   const t0 = Date.now();
-  // P0-3 (2026-09-01): 全局并发信号量
-  const res = await withLlmConcurrency(() => fetchWithTimeout(`${baseUrl}/v1/messages`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let call: Awaited<ReturnType<typeof callLlm>>;
+  try {
+    // P0-3 (2026-09-01): 全局并发信号量
+    call = await withLlmConcurrency(() => callLlm({
+      entry: "reflect",
       model: REFLECT_MODEL,
-      max_tokens: reflectMaxTokens(REFLECT_MODEL),
+      maxTokens: reflectMaxTokens(REFLECT_MODEL),
       system: REFLECT_SYSTEM_PROMPT,
       messages: [{ role: "user", content: userPrompt }],
-    }),
-  }, REFLECT_TIMEOUT_MS, signal));
-
-  if (!res.ok) {
-    const text = await res.text();
-    recordLlmCall({ entry: "reflect", ok: false, durationMs: Date.now() - t0, errorType: `HTTP_${res.status}`, promptLength: userPrompt.length });
-    throw new Error(`LLM API ${res.status}: ${text.slice(0, 200)}`);
+      timeoutMs: REFLECT_TIMEOUT_MS,
+      signal,
+    }));
+  } catch (e: any) {
+    // 失败记账：errorType 口径保留旧值（HTTP_xxx），新增协议类（PARSE_INVALID_JSON/TRUNCATED/...）原样暴露；
+    //   同时必须把 model/host 记进事件，否则跨协议后无法归因"到底打到了哪"。
+    const tgt = llmErrorTarget(e);
+    recordLlmCall({ entry: "reflect", ok: false, durationMs: Date.now() - t0, errorType: llmErrorType(e), truncationKind: llmTruncationKind(e), promptLength: userPrompt.length, model: tgt.model, baseUrlHost: tgt.baseUrlHost });
+    throw new Error(llmErrorMessage(e, "LLM API"));
   }
-  const data = await res.json();
   // 2026-11-05（Q7-min）：记录 stop_reason，供失败归因使用（区分"被截断"与"真不可用"）。
-  lastStopReason = String((data as any)?.stop_reason || "");
+  lastStopReason = String(call.finishReason || "");
   // 2026-09-01: 记录真实 usage token (MiniMax 后台按次数计费不展示 token)
-  const usage = (data as any)?.usage;
-  const tokenUsed = usage && typeof usage.input_tokens === "number" ? usage.input_tokens + (usage.output_tokens || 0) : undefined;
-  recordLlmCall({ entry: "reflect", ok: true, durationMs: Date.now() - t0, promptLength: userPrompt.length, tokenUsed });
-  const rawText: string = extractLlmText(data);
+  const tokenUsed = call.tokenUsed;
+  const rawText: string = call.text;
   const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("LLM 返回非 JSON: " + rawText.slice(0, 200));
+  if (!jsonMatch) {
+    // 2026-11-16（A 记账修复）：空/非 JSON 必须记 ok:false（空 -> EMPTY，有内容但非 JSON -> NON_JSON）
+    recordLlmCall({ entry: "reflect", ok: false, durationMs: Date.now() - t0, errorType: rawText ? "NON_JSON" : "EMPTY", promptLength: userPrompt.length, tokenUsed, model: call.model, baseUrlHost: call.baseUrlHost });
+    throw new Error("LLM 返回非 JSON: " + rawText.slice(0, 200));
+  }
+  recordLlmCall({ entry: "reflect", ok: true, durationMs: Date.now() - t0, promptLength: userPrompt.length, tokenUsed, model: call.model, baseUrlHost: call.baseUrlHost });
 
   let parsed: any;
   try {
@@ -1266,9 +1271,8 @@ export async function confirmSemanticPairs(
   const confirmed = auto.map((p) => ({ a: p.a, b: p.b, hamming: p.hamming, llm: false }));
   if (ask.length === 0) return { confirmed, llmUsed: false };
 
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://api.minimaxi.com/anthropic";
-  const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY || "";
-  if (!apiKey) {
+  // 2026-11-19 [team]: 无凭据退化分支与原逻辑一致（只是把 key 检查收敛到 llm-client）
+  if (!hasLlmCredentials()) {
     // 无 key: 保守退化 (仅 >=0.5 长度比 + 汉明<=4)
     for (const p of ask) if (p.hamming <= 4) confirmed.push({ a: p.a, b: p.b, hamming: p.hamming, llm: false });
     return { confirmed, llmUsed: false };
@@ -1276,14 +1280,20 @@ export async function confirmSemanticPairs(
   const listText = ask.map((p, i) => `[${i + 1}] A: ${p.aText}\n    B: ${p.bText}`).join("\n");
   const prompt = `主题: "${theme}"\n下面是若干 Memory 条目对。请判断每对是否为"同一事实/知识点的重复表述"(改写、同义、详略差异都算重复), 而非仅是主题相关。\n\n${listText}\n\n只输出严格 JSON: {"dups":[{"i":1,"same":true,"why":"≤40字"}]}`;
   try {
-    const res = await withLlmConcurrency(() => fetchWithTimeout(`${baseUrl}/v1/messages`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: REFLECT_MODEL, max_tokens: 800, system: "你是严谨的记忆去重判定器, 只输出 JSON。", messages: [{ role: "user", content: prompt }] }),
-    }, 60000));
+    // 协议抽象：LLM_PROTOCOL=openai 时走 /chat/completions（uniontech）；默认 anthropic 逐字回退。
+    const call = await withLlmConcurrency(() => callLlm({
+      entry: "reflect-semantic",
+      model: REFLECT_MODEL,
+      maxTokens: 800,
+      system: "你是严谨的记忆去重判定器, 只输出 JSON。",
+      messages: [{ role: "user", content: prompt }],
+      timeoutMs: 60000,
+    }));
+    // 说明（2026-11-19）：原实现在 res 未判 ok 时就 recordLlmSuccess（HTTP 5xx 也记成功），
+    //   协议抽象后只有"真的拿到 2xx 响应"才到这里，失败走下面的 recordLlmFailure —— 这是有意修正，
+    //   否则 403/500 会被 health 探针记成成功（假绿）。
     recordLlmSuccess();
-    const data: any = await res.json();
-    const raw = String(extractLlmText(data));
+    const raw = String(call.text);
     const m = raw.match(/\{[\s\S]*\}/);
     const parsed = m ? JSON.parse(m[0]) : { dups: [] };
     for (const d of parsed.dups || []) {

@@ -1,266 +1,108 @@
 "use client";
-// 2026-10-26：资产可见性设置页（console）。文案与降级规则见
-//   docs/notes/2026-10-26-asset-visibility-copy-frozen.md（冻结），后端口径见 asset 文档 §19。
-//
-// 三个设计取舍（都来自 asset-line 对 mock 的核对）：
-//   1. 平台未开放选择时**不渲染被禁用的单选控件** —— 禁用控件会让人以为点一下就能改；
-//   2. 字段名（mode/fixedTo/存量计数来源）**不进界面**，只留用户能读的那半句；
-//   3. 存量条数取不到时显示"未知"而**不是 0**，且**不阻止切换** ——
-//      「未知」与「没有存量」是两件事，显示 0 等于告诉用户切换零代价。
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零（改由 page.module.css 的类承载）。
-//   冻结文案与取数（/api/asset-policy、/api/asset-policy/ownerless）一字未改。
-import { useEffect, useMemo, useState } from "react";
-import { Alert, Button, Skeleton, Tag } from "@/components/primitives";
-import { useApi } from "@/lib/api";
+// 0.5.1 B5-3 /system/assets · Bento P3/P7 资产可见性（2026-11-15）
+// 数据：GET /api/asset-policy（三类策略：mode/selectable/fixedTo）+ GET /api/asset-policy/ownerless（无主存量计数/asOf/stale）。
+// 口径：资产清单接口不存在（只有策略与无主计数）→「资产总数/清单」n/a + 原因，不写 0；
+//       0.5.1 只读：原页「切换私有」写路径（POST /api/asset-policy）不渲染。
+import { useState, useEffect } from "react";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import styles from "./page.module.css";
+import BentoGrid from "@/components/bento/BentoGrid";
+import BentoCard from "@/components/bento/BentoCard";
+import BentoState from "@/components/bento/BentoState";
+import DataTable from "@/components/DataTable";
+import type { DataColumn } from "@/components/DataTable";
+import type { Metric } from "@/components/bento/types";
+import { Chips, KpiTile, Note, States, Tone, usePhaseOverride, useResource } from "../_components/bento-kit";
+import kit from "../_components/bento-kit.module.css";
+import { fmtNum, fmtTime } from "@/lib/format";
 
-type Kind = "memory" | "knowledge" | "skill";
+interface KindPolicy { mode?: string; selectable?: boolean; fixedTo?: string | null; defaultMode?: string | null }
+interface PolicyResp { ok?: boolean; types?: Record<string, KindPolicy>; hint?: string | null }
+interface OwnerlessResp { ok?: boolean; counts?: Record<string, number | null> | null; stale?: boolean; asOf?: string | null; reason?: string }
 
-interface KindPolicy {
-  mode?: string;
-  selectable?: boolean;
-  fixedTo?: string | null;
-  defaultMode?: string | null;
-}
-
-interface PolicyResp {
-  ok?: boolean;
-  types?: Record<string, KindPolicy>;
-  hint?: string | null;
-  error?: string;
-}
-
-interface OwnerlessResp {
-  ok?: boolean;
-  counts?: Record<Kind, number | null> | null;
-  stale?: boolean;
-  asOf?: string | null;
-  reason?: string;
-}
-
-const KINDS: { key: Kind; name: string }[] = [
-  { key: "memory", name: "记忆" },
-  { key: "knowledge", name: "知识" },
-  { key: "skill", name: "技能" },
-];
-
-const MODE_LABEL: Record<string, string> = {
-  public: "全平台可见",
-  private: "仅所属执行体可见",
-};
-
-const HELP = "该类型由平台统一配置，单个执行体不能自行更改；如需调整请联系平台管理员。";
-
-const fmtNum = (n: number) => n.toLocaleString("zh-CN");
+const KIND_NAME: Record<string, string> = { memory: "记忆", knowledge: "知识", skill: "技能", reflection: "反思" };
+const MODE_LABEL: Record<string, string> = { public: "全平台可见", private: "仅所属执行体可见" };
 
 export default function AssetVisibilityPage() {
-  const { data, loading, error } = useApi<PolicyResp>("/api/asset-policy");
-  // 存量条数只在"准备切私有"时才需要；这里仍提前取一次，避免弹窗打开时空白
-  const ownerless = useApi<OwnerlessResp>("/api/asset-policy/ownerless");
+  const policy = useResource<PolicyResp>("/api/asset-policy", { emptyWhen: (d) => Object.keys(d.types || {}).length === 0 });
+  const ownerless = useResource<OwnerlessResp>("/api/asset-policy/ownerless");
+  const [reqAt, setReqAt] = useState<string | null>(null);
+  useEffect(() => { setReqAt(new Date().toISOString()); }, []);
+  const forced = usePhaseOverride();
+  const phase = forced && forced !== "ok" ? forced : policy.phase;
 
-  const [dialog, setDialog] = useState<Kind | null>(null);
-  const [pending, setPending] = useState<Kind | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [doneMsg, setDoneMsg] = useState<string | null>(null);
+  const types = policy.data?.types || {};
+  const kinds = Object.keys(types);
+  const counts = ownerless.data?.counts || null;
+  const countValues = kinds.map((k) => counts?.[k]);
+  const allCounted = counts != null && countValues.every((v) => typeof v === "number");
+  const totalOwnerless = allCounted ? countValues.reduce((a, b) => a + Number(b), 0) : null;
+  const publicCount = kinds.filter((k) => (types[k].mode || "public") === "public").length;
 
-  const types = data?.types ?? {};
-  const counts = ownerless.data?.counts ?? null;
-  const stale = ownerless.data?.stale === true;
+  const k = (v: number | null, hint: string): Metric =>
+    v == null ? { kind: "na", reason: hint } : { kind: "value", value: fmtNum(v), hint };
 
-  const anySelectable = useMemo(() => KINDS.some((k) => types[k.key]?.selectable === true), [types]);
-
-  useEffect(() => {
-    if (!dialog) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !saving) setDialog(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [dialog, saving]);
-
-  async function confirmSwitch(kind: Kind) {
-    setSaving(true);
-    setPending(kind);
-    try {
-      const r = await fetch("/api/asset-policy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, mode: "private", confirmed: true }),
-      });
-      const j = (await r.json()) as { ok?: boolean; error?: string };
-      if (!r.ok || j.ok === false) {
-        setDoneMsg(j.error || "切换没有完成，请重试或联系平台管理员");
-      } else {
-        const name = KINDS.find((k) => k.key === kind)?.name ?? "该类型";
-        setDoneMsg(`已提交：${name}的可见性改为「仅所属执行体可见」`);
-        setDialog(null);
-        ownerless.mutate?.();
-      }
-    } catch {
-      setDoneMsg("切换没有完成，请重试或联系平台管理员");
-    } finally {
-      setSaving(false);
-      setPending(null);
-    }
-  }
-
-  const dialogKind = dialog ? KINDS.find((k) => k.key === dialog) : null;
-  const dialogCount = dialog ? counts?.[dialog] ?? null : null;
+  const cols: DataColumn<{ key: string }>[] = [
+    { key: "kind", title: "资产类型", width: 140, render: (r) => <b>{KIND_NAME[r.key] || r.key}</b> },
+    { key: "mode", title: "可见性", width: 180, render: (r) => <Tone tone="ok">{MODE_LABEL[types[r.key].mode || "public"] || (types[r.key].mode || "n/a")}</Tone> },
+    { key: "sel", title: "执行体可否自选", width: 160, render: (r) => types[r.key].selectable ? <Tone tone="info">可自选</Tone> : <Tone tone="mute">不可（平台统一配置）</Tone> },
+    { key: "fixed", title: "固定值", render: (r) => <span className={kit.mono}>{types[r.key].fixedTo || types[r.key].defaultMode || "n/a"}</span> },
+  ];
 
   return (
-    <div className="layout-with-sidebar"><main className="main">
+    <main className="page">
+      <h1 className={kit.srOnly}>资产可见性</h1>
       <PageHeader>
-        <div>
-          <PageTitle>资产可见性</PageTitle>
-          <div className="page-subtitle">记忆、知识、技能三类 · 由平台统一配置</div>
-        </div>
+        <PageTitle>资产可见性</PageTitle>
+        <div className="page-subtitle">记忆 / 知识 / 技能三类可见性策略 · 无主存量计数 · 0.5.1 只读 · 数据时刻 {ownerless.data?.asOf ? fmtTime(ownerless.data.asOf) : reqAt ? fmtTime(reqAt) + "（请求时刻；ownerless asOf n/a）" : "n/a（请求时刻未就绪）"}</div>
+        <Chips group="系统" page="资产" />
       </PageHeader>
 
-      {doneMsg ? (
-        <div className={styles.alertGap}>
-          <Alert type="success" showIcon title={doneMsg} closable onClose={() => setDoneMsg(null)} />
-        </div>
-      ) : null}
+      <States phase={phase} endpoint="GET /api/asset-policy" error={policy.error} status={policy.status} onRetry={policy.reload}
+        emptyTitle="无资产策略" emptyDetail="策略接口正常返回但没有任何资产类型（空集，不是不可得）。"
+        unavailableTitle="资产策略不可得" unavailableDetail="asset-policy 未返回 types；补齐路径：BFF 输出 types 对象。" />
 
-      {error ? (
-        <div className={styles.alertGap}>
-          <Alert
-            type="warning"
-            showIcon
-            title="策略暂时取不到"
-            description="这不影响已有资产的使用；稍后刷新本页即可。"
-          />
-        </div>
-      ) : null}
+      {phase === "ok" && (
+        <BentoGrid>
+          <KpiTile span={3} label="资产类型" metric={k(kinds.length, "策略接口返回的类型数")} />
+          <KpiTile span={3} label="无主存量合计" metric={k(totalOwnerless, "计数缺失时 n/a；不把取不到当 0")} />
+          <KpiTile span={3} label="平台统一可见" metric={k(publicCount, "mode=public 的类型数")} />
+          <KpiTile span={3} label="资产总数" metric={{ kind: "na", reason: "无资产清单接口（只有策略与无主计数）——需新 BFF" }} />
 
-      <div className="panel">
-        <div className="panel-header">
-          <div className="panel-title">当前策略</div>
-        </div>
+          <BentoCard span={8} title="当前策略" sub="由平台统一配置；单个执行体不可更改">
+            <DataTable<{ key: string }> columns={cols} rows={kinds.map((key) => ({ key }))} rowKey={(r) => r.key}
+              empty={{ title: "无策略数据", desc: "types 为空。" }} />
+            <Note>{policy.data?.hint || "selectable=false 时平台把该项固定为固定值，执行体不可选。"}</Note>
+          </BentoCard>
 
-        {loading ? (
-          <Skeleton paragraph={{ rows: 3 }} />
-        ) : (
-          <>
-            <p className={"tiny " + styles.flushTop}>
-              平台已将「记忆、知识、技能三类」统一配置为「全平台可见」。单个执行体不能自行更改；如需调整请联系平台管理员。
-            </p>
+          <BentoCard span={4} title="无主存量" sub={ownerless.phase === "ok" ? "GET /api/asset-policy/ownerless · " + (ownerless.data?.asOf ? fmtTime(ownerless.data.asOf) : "asOf n/a") : "计数取不到"}>
+            {ownerless.phase === "loading" && <BentoState phase="loading" />}
+            {ownerless.phase === "error" && <BentoState phase="error" title="无主存量不可得" detail={"端点 GET /api/asset-policy/ownerless · " + (ownerless.status ? "返回码 " + ownerless.status : ownerless.error) + " · 可重试。"} onRetry={ownerless.reload} />}
+            {ownerless.phase === "ok" && (
+              <>
+                <ul className={kit.kv}>
+                  {kinds.map((key) => {
+                    const v = counts?.[key];
+                    return <li key={key}><span>{KIND_NAME[key] || key}</span><b>{typeof v === "number" ? fmtNum(v) : "n/a（计数缺失）"}</b></li>;
+                  })}
+                </ul>
+                <Note tone={ownerless.data?.stale ? "warn" : "mute"}>
+                  {ownerless.data?.stale ? "计数可能不是最新（stale=true）。" : "计数为接口实测值；stale=false。"}
+                  计数口径：无归属执行体的历史资产条数（切换可见性只影响此后新写入）。
+                </Note>
+              </>
+            )}
+          </BentoCard>
 
-            {KINDS.map((k) => {
-              const p = types[k.key];
-              const mode = p?.mode ?? "public";
-              const selectable = p?.selectable === true;
-              return (
-                <div
-                  key={k.key}
-                  className={"dt-row " + styles.policyRow}
-                >
-                  <div className={styles.kindName}>{k.name}</div>
-                  <div className={styles.grow}>
-                    {selectable ? (
-                      <div>
-                        <div className={styles.decideTitle}>由你决定</div>
-                        <label className={styles.radioLabel}>
-                          <input type="radio" name={"mode-" + k.key} checked={mode !== "private"} readOnly />
-                          公开（全平台可见）
-                        </label>
-                        <label className={styles.radioLabel}>
-                          <input
-                            type="radio"
-                            name={"mode-" + k.key}
-                            checked={mode === "private"}
-                            onChange={() => setDialog(k.key)}
-                          />
-                          私有（仅所属执行体可见）
-                        </label>
-                        <div className={"tiny " + styles.hintTop}>
-                          仅在平台允许时可选，默认{/* 默认值取后端给的档位，不自行假定 */}
-                          {MODE_LABEL[p?.defaultMode || "public"] ?? "全平台可见"}。
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Tag color="green">{MODE_LABEL[mode] ?? "全平台可见"}</Tag>
-                        <span className={"tiny " + styles.hintLeft}>
-                          不可选（平台统一配置）
-                        </span>
-                        <span
-                          className={"tiny " + styles.helpDot}
-                          title={HELP}
-                          aria-label={HELP}
-                        >
-                          ?
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
-
-      {anySelectable ? (
-        <div className={"panel " + styles.panelTop}>
-          <div className="panel-header">
-            <div className="panel-title">切换说明</div>
-          </div>
-          <div className="tiny">切换只影响此后新写入的资产；没有归属执行体的历史资产仍保持公开。</div>
-        </div>
-      ) : null}
-
-      {dialogKind ? (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={`将${dialogKind.name}切换为仅所属执行体可见`}
-          className={styles.overlay}
-          onClick={() => (saving ? null : setDialog(null))}
-        >
-          <div
-            className={"panel " + styles.dialog}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="panel-header">
-              <div className="panel-title">{`将「${dialogKind.name}」切换为「仅所属执行体可见」？`}</div>
-            </div>
-            <div className={styles.dialogBody}>
-              {dialogCount === null ? (
-                <p className={styles.flushTop}>
-                  存量条数未知（不影响切换，仅影响提示精度）。切换后，无归属执行体的历史资产仍保持公开（只影响此后新写入）。确认切换？
-                </p>
-              ) : (
-                <p className={styles.flushTop}>
-                  当前存量中有 <b>{fmtNum(dialogCount)}</b> 条历史资产没有归属执行体，切换后它们仍保持公开（只影响此后新写入）。确认切换？
-                </p>
-              )}
-
-              {ownerless.loading ? <div className="tiny">正在取存量条数…</div> : null}
-              {stale && dialogCount !== null ? (
-                <div className={"tiny " + styles.hintBottom}>
-                  数据可能不是最新{doneMsg ? "" : "（上游暂时取不到，显示的是上次结果）"}
-                </div>
-              ) : null}
-              {dialogCount === null && !ownerless.loading ? (
-                <div className={"tiny " + styles.hintBottom}>
-                  为什么显示「未知」而不是 0：未知与「没有存量」是两件事；显示 0 等于告诉您切换零代价。切换动作不依赖这个数，仍可正常确认。
-                </div>
-              ) : null}
-
-              <div className={styles.dialogActions}>
-                <Button onClick={() => setDialog(null)} disabled={saving}>
-                  取消
-                </Button>
-                <Button type="primary" onClick={() => confirmSwitch(dialogKind.key)} loading={saving && pending === dialogKind.key}>
-                  确认切换
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </main></div>
+          <BentoCard span={12} title="缺口与只读说明">
+            <ul className={kit.kv}>
+              <li><span>资产清单 / 资产总数</span><b>n/a —— 平台只有「策略 + 无主计数」两个接口，无资产清单端点；补齐需新 BFF（本批不新增接口）。</b></li>
+              <li><span>切换可见性（写）</span><b>0.5.1 只读：原页「切换私有」写路径（POST /api/asset-policy）不渲染，待写通路契约开放。</b></li>
+              <li><span>审计</span><b>n/a —— console 无 /api/audit 只读接口（实测 404）；写路径审计在服务端。</b></li>
+            </ul>
+            <Note>口径：可见性只影响此后新写入的资产；无归属执行体的历史资产保持公开。相关视图：<a className={kit.link} href="/system">系统总览</a> · <a className={kit.link} href="/system/permissions">权限管理</a></Note>
+          </BentoCard>
+        </BentoGrid>
+      )}
+    </main>
   );
 }

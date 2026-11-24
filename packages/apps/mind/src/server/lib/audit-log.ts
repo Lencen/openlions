@@ -10,7 +10,8 @@
 import { prisma } from "@/lib/prisma";
 
 function auditTs(): any {
-  return String(process.env.MIND_DB_DRIVER || "").toLowerCase() === "pg" ? new Date() : Date.now();
+  // 2026-11-06: mind runtime is PG-only (SQLite retired); AuditLog.createdAt is timestamp.
+  return new Date();
 }
 
 export async function recordAudit(args: {
@@ -26,7 +27,7 @@ export async function recordAudit(args: {
   try {
     const id = "audit_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
     await prisma.$executeRaw`
-      INSERT INTO AuditLog (id, entityType, entityId, action, actor, actorType, before, after, metadata, createdAt)
+      INSERT INTO "AuditLog" ("id", "entityType", "entityId", "action", "actor", "actorType", "before", "after", "metadata", "createdAt")
       VALUES (${id}, ${args.entityType}, ${args.entityId}, ${args.action},
               ${args.actor ?? null}, ${args.actorType ?? null}, ${args.before ?? null},
               ${args.after ?? null},

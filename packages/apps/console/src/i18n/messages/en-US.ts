@@ -417,4 +417,16 @@ export const enUS: Record<string, string> = {
   'heatmap.subtitle.7dStatus': 'Color depth = daily archive count by status',
   'heatmap.empty.7dStatus': 'No archived sessions for this agent in the last 7 days.',
   'heatmap.ariaLabel.7dStatus': 'Session density distribution by status in last 7 days',
+  // ===== Decision governance (0.6.3 U-19) =====
+  'decisions.status.pending': 'Pending',
+  'decisions.status.decided': 'Decided',
+  'decisions.status.executing': 'Executing',
+  'decisions.status.done': 'Done',
+  'decisions.status.rejected': 'Rejected',
+  'decisions.status.unknown': 'Unknown status: {status}',
+  'decisions.track.todo': 'To do',
+  'decisions.track.doing': 'In progress',
+  'decisions.track.done': 'Done',
+  'decisions.track.blocked': 'Blocked',
+  'decisions.track.unknown': 'Unknown status: {status}',
 };

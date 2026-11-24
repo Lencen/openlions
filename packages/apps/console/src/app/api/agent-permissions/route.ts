@@ -185,11 +185,33 @@ async function pushClientConfig(agentId: string, tier: number): Promise<{ ok: bo
   }
 }
 
+// 2026-11-13 安全修复（P0）：BFF 层字段白名单（与 mind select 白名单双保险）。
+//   本路由 GET 原先直通 mind agent.list 的整行对象；0.4.42 旧包会带 token_hash 与
+//   permissions.api_key_hash / api_key_plain（后者是明文 sk- 钥匙）。此处再拦一道。
+const AGENT_ALLOW = [
+  "id", "agent_id", "display_name", "channel", "host", "avatar", "profile", "status",
+  "role", "tenant_id", "created_at", "updated_at", "last_seen_at",
+];
+const PERM_ALLOW = [
+  "id", "agent_id", "service_name", "token_id", "expires_at", "permissions", "config",
+  "status", "scope", "created_at", "updated_at", "last_used_at", "idempotent_until",
+];
+const pick = (o: any, keys: string[]) => {
+  const out: any = {};
+  for (const k of keys) if (o && Object.prototype.hasOwnProperty.call(o, k)) out[k] = o[k];
+  return out;
+};
+const sanitizeAgent = (o: any) => {
+  const safe = pick(o, AGENT_ALLOW);
+  if (Array.isArray(o?.permissions)) safe.permissions = o.permissions.map((p: any) => pick(p, PERM_ALLOW));
+  return safe;
+};
+
 export async function GET() {
   try {
     const agents = await callTrpc("agent.list?input=%7B%22json%22%3Anull%7D");
     const list = Array.isArray(agents) ? agents : [];
-    return NextResponse.json(list);
+    return NextResponse.json(list.map((a: any) => sanitizeAgent(a)));
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message || e) }, { status: 500 });
   }

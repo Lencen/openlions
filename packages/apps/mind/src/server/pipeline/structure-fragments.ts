@@ -16,11 +16,12 @@
  * 不复用 db-writer.ts 主入口的原因: db-writer 是 session 级批量入口,
  * V1.7 是按 theme 反向入口 (输入语义不同), 复用其内部 runResolver() 而非主入口。
  */
-import { extractLlmText } from "@/server/llm/extract-text";
+// 2026-11-19 [team]: LLM 协议抽象（openai|anthropic，默认 anthropic）
+import { callLlm, hasLlmCredentials, resolveLlmTarget, llmErrorType, llmErrorTarget, llmErrorMessage, llmTruncationKind } from "@/server/llm/client";
 import { prisma } from "../../lib/prisma";
 import crypto from "node:crypto";
 // P1-A 2026-08-31: 统一 fetch 封装 (原本地重复实现移除)
-import { fetchWithTimeout, withLlmConcurrency } from "./with-retry";
+import { withLlmConcurrency } from "./with-retry";
 // P1-C 2026-08-31: LLM 调用观测
 import { recordLlmCall } from "./llm-observability";
 // 2026-09-14 FW-QUALITY 机制修复: 产物评分/门槛收敛到单一权威入口 product-quality.ts
@@ -282,46 +283,43 @@ async function callLLMStructureFragments(
 ): Promise<StructuredOutput[]> {
   // V1.7 §3.4 LLM 调用 - 跟 V1.5 reflect.ts 一致用 MiniMax/Anthropic API
   // (原代码用 SESSION_API/OPENAI_BASE_URL fallback 到 localhost:11434, 本地无 ollama -> fetch failed)
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://api.minimaxi.com/anthropic";
-  const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY || "";
-  if (!apiKey) throw new Error("LLM API key 未配置 (ANTHROPIC_AUTH_TOKEN)");
+  // 2026-11-19 [team]：协议抽象（LLM_PROTOCOL=openai|anthropic，默认 anthropic 逐字回退）。
+  //   uniontech OpenAI 协议的三个坑都在 llm-client 里统一处理：
+  //     ① content 空 -> 回落 reasoning_content/reasoning；② finish_reason=length -> 抛 TRUNCATED（判失败）；
+  //     ③ 真空响应与协议解析错分开（前者 empty=true 走下面 EMPTY 分支，后者直接抛 PARSE_INVALID_JSON）。
+  if (!hasLlmCredentials()) {
+    throw new Error(`LLM API key 未配置 (${resolveLlmTarget().protocol === "openai" ? "LLM_API_KEY/OPENAI_API_KEY/UNIONTECH_API_KEY" : "ANTHROPIC_AUTH_TOKEN"})`);
+  }
   const MODEL = process.env.ANTHROPIC_MODEL || "MiniMax-M3";
 
   const prompt = buildStructurePrompt(theme, chunk);
 
   const t0 = Date.now();
-  // P0-3 (2026-09-01): 全局并发信号量
-  const resp = await withLlmConcurrency(() => fetchWithTimeout(`${baseUrl}/v1/messages`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-    },
-    body: JSON.stringify({
+  let call: Awaited<ReturnType<typeof callLlm>>;
+  try {
+    // P0-3 (2026-09-01): 全局并发信号量
+    call = await withLlmConcurrency(() => callLlm({
+      entry: "structured",
       model: MODEL,
-      max_tokens: 8192,
+      maxTokens: 8192,
       system: "你是 LIONS 飞轮引擎的结构化整理专家。把碎片反向整理为 V3 五件套, 严格按 JSON 返回。",
       messages: [{ role: "user", content: prompt }],
-    }),
-  }));
-
-  if (!resp.ok) {
-    recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: `HTTP_${resp.status}`, promptLength: prompt.length });
-    throw new Error(`LLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+    }));
+  } catch (e: any) {
+    const tgt = llmErrorTarget(e);
+    recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: llmErrorType(e), truncationKind: llmTruncationKind(e), promptLength: prompt.length, model: tgt.model, baseUrlHost: tgt.baseUrlHost });
+    throw new Error(llmErrorMessage(e, "LLM HTTP"));
   }
   // 2026-10-26 精确 token: 先解析响应拿 usage，再记账（此前先记后解析 -> token 永远缺失）。
-  const data: any = await resp.json().catch(() => null);
-  if (!data) {
-    recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: "PARSE_INVALID_JSON", promptLength: prompt.length, model: MODEL });
-    throw new Error("LLM 返回不是合法 JSON");
+  const _tk = Number(call.tokenUsed ?? 0);
+  // 正文：anthropic 取 content[] 的 text 块；openai 取 choices[0].message.content（空则回落 reasoning*）
+  const content = call.text;
+  if (!content) {
+    // 2026-11-16（A 记账修复）：空内容必须记 ok:false。原先先记 ok:true 再判空 => 失败被记成成功调用。
+    recordLlmCall({ entry: "structured", ok: false, durationMs: Date.now() - t0, errorType: "EMPTY", promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: call.model, baseUrlHost: call.baseUrlHost });
+    throw new Error("LLM 无返回内容");
   }
-  const _u = data.usage || {};
-  const _tk = Number(_u.input_tokens ?? _u.prompt_tokens ?? 0) + Number(_u.output_tokens ?? _u.completion_tokens ?? 0);
-  recordLlmCall({ entry: "structured", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: MODEL });
-  // Anthropic API 格式: data.content[0].text (不是 data.choices[0].message.content)
-  const content = extractLlmText(data);
-  if (!content) throw new Error("LLM 无返回内容");
+  recordLlmCall({ entry: "structured", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: call.model, baseUrlHost: call.baseUrlHost });
 
   // 2026-09-11 第 29 轮诊断(实测缺陷): 畸形 JSON 的真实形态必须看原始返回才能定位, 不能靠错误信息猜。
   //   env STRUCTURE_DEBUG_RAW_DIR 指向目录时, 把每次 LLM 原始返回落盘(文件名含主题与时间戳)。
@@ -329,9 +327,13 @@ async function callLLMStructureFragments(
   if (debugDir) {
     try {
       const fs = await import("node:fs");
-      fs.mkdirSync(debugDir, { recursive: true });
+      // 2026-11-16 platform-data: 权限必须按登记规格 —— 目录 0700 / 文件 0600。
+      //   原实现只有 recursive 选项，权限随进程 umask（实测 umask=0002 => 目录 0775 / 文件 0664），
+      //   与 AGENTS §七 登记「落盘目录 0700/文件 0600」不符；raw 文件含 LLM 原始返回（业务内容）。
+      //   注意：mode 只在**创建**时生效，已存在的文件不受影响（需 chmod 一次存量）。
+      fs.mkdirSync(debugDir, { recursive: true, mode: 0o700 });
       const safeTheme = encodeURIComponent(theme).replace(/%/g, "");
-      fs.writeFileSync(debugDir + "/" + safeTheme + "_" + Date.now() + ".txt", content, "utf8");
+      fs.writeFileSync(debugDir + "/" + safeTheme + "_" + Date.now() + ".txt", content, { encoding: "utf8", mode: 0o600 });
     } catch { /* 诊断落盘失败不影响主流程 */ }
   }
 

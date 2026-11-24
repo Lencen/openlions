@@ -14,8 +14,11 @@ export default function AgentsLiveHero({ data, s, agent }: { data: any; s: any; 
         <Pill tone="ok">在线 {fmtNum(s.online)}</Pill>
         <Pill tone="info">执行中 {fmtNum(s.busy)}</Pill>
         <Pill tone="crit">疑似卡住 {fmtNum(s.stuck)}</Pill>
-        <Pill tone="mute">离线 {fmtNum(s.offline)}</Pill>
+        <Pill tone="mute">今日产出 {fmtNum(s.taskDoneAll)}</Pill>
         {agent ? <Pill tone="mute">{t('agentsLive.onlyAgent', { id: agent })}</Pill> : null}
+      </div>
+      <div className={"tiny " + styles.liveNote}>
+        在线/总数按 live 频道口径（agent 级，与 /sessions 的会话在线数不同源）；本页 total={fmtNum(s.total)}
       </div>
       <div className={"tiny " + styles.liveMeta}>
         {t('common.dataTime')} {data?.asOf ? new Date(data.asOf).toLocaleString("zh-CN", { hour12: false }) : "-"}

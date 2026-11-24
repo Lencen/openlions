@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { createRouter, publicProcedure } from "../trpc";
 import { prisma } from "@/lib/prisma";
-// 2026-09-23 agent-x #8: Skills 成功率 (与提取 pipeline 共用同一口径纯函数, 避免两处公式漂移)
+// 2026-09-23 agent-f #8: Skills 成功率 (与提取 pipeline 共用同一口径纯函数, 避免两处公式漂移)
 import { computeSkillSuccessRate } from "../pipeline/skill-success-rate";
 
 export const statsRouter = createRouter({
@@ -67,7 +67,7 @@ export const statsRouter = createRouter({
     return { memories: convert(memories), knowledge: convert(knowledge), practices: convert(practices), outputs: convert(outputs) };
   }),
 
-  // ===== 2026-09-23 agent-x #8 Skills 成功率统计 (轻量版, 按日粒度) =====
+  // ===== 2026-09-23 agent-f #8 Skills 成功率统计 (轻量版, 按日粒度) =====
   // 口径: 生成即成功。窗口内
   //   分子 skillsCreated   = 新建 Skill 行数 (过 SKILL-SPEC, 落 Skill 表)
   //   降级 skillsDowngraded = 新建 Knowledge 行且 tags 含 skill-downgraded (无 steps 的技能候选)

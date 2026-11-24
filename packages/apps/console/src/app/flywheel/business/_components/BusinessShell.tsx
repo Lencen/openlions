@@ -12,7 +12,7 @@ import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import styles from "./BusinessShell.module.css";
 
 const TABS = [
-  // 2026-11-05 商业线裁决 C：/flywheel/business 已 301 -> /market，所以"总览"这个 Tab 直接指向 /market
+  // 2026-11-05 运营团队裁决 C：/flywheel/business 已 301 -> /market，所以"总览"这个 Tab 直接指向 /market
   //   （否则 check-offline-301 第 4 条会把它算成"保留目录里还有指向旧路由的链接"）。
   //   目录保留 60 天指的是**代码不删**，不是内容冻结；维度页仍走 d.href（那两条也已被 301 覆盖）。
   { id: "overview", href: "/market", label: "总览" },

@@ -43,8 +43,9 @@ export default function KnowledgeGovernancePanel() {
 
   const domainFill =
     gov && gov.total ? Math.round((100 * (gov.total - (gov.byDomain?.["(null)"] || 0))) / gov.total) : null;
-  const clusterCount = dedupe?.summary?.clusterCount ?? 0;
-  const totalDrops = dedupe?.summary?.totalDrops ?? 0;
+  const dedupeAvailable = !!dedupe?.ok && dedupe?.available !== false;
+  const clusterCount = dedupeAvailable ? (dedupe.summary?.clusterCount ?? 0) : null;
+  const totalDrops = dedupeAvailable ? (dedupe.summary?.totalDrops ?? 0) : null;
 
   return (
     <>
@@ -64,7 +65,7 @@ export default function KnowledgeGovernancePanel() {
             <KPICard label="无元数据" value={(gov.noMeta || 0).toLocaleString()} />
             <KPICard label="低质量 (score<0.4)" value={(gov.quality?.low || 0).toLocaleString()} />
             <KPICard label="已被取代" value={(gov.superseded || 0).toLocaleString()} />
-            <KPICard label="待合并 cluster" value={clusterCount.toLocaleString()} />
+            <KPICard label="待合并 cluster" value={clusterCount == null ? "n/a" : clusterCount.toLocaleString()} hint={clusterCount == null ? "/api/knowledge-dedupe 不可用（ok:false/available:false）" : undefined} />
           </>
         ) : (
           <div className={"panel " + styles.padPanel + " " + styles.crit}>治理接口不可用</div>
@@ -105,12 +106,12 @@ export default function KnowledgeGovernancePanel() {
               <div className={styles.grow}>
                 <div className={styles.cardTitle}>近似重复合并审核（在待办中心处理）</div>
                 <div className={styles.cardDesc}>
-                  检出 {clusterCount} 个待合并分组（将影响 {totalDrops} 条取代链）。审核项已按「审核项=待办」统一落到待办中心，
+                  {dedupeAvailable ? "检出 " + clusterCount + " 个待合并分组（将影响 " + totalDrops + " 条取代链）。" : "n/a：/api/knowledge-dedupe 不可用（ok:false/available:false），不显示 0。"}审核项已按「审核项=待办」统一落到待办中心，
                   点「通过并执行」即自动执行合并并结单；点「提交我的决定」可写驳回意见。
                 </div>
               </div>
-              <span className={"badge " + styles.waitBadge} data-tone={clusterCount > 0 ? "warn" : "none"}>
-                {clusterCount > 0 ? "去待办中心" : "无待办"}
+              <span className={"badge " + styles.waitBadge} data-tone={clusterCount == null ? "none" : clusterCount > 0 ? "warn" : "none"}>
+                {clusterCount == null ? "n/a" : clusterCount > 0 ? "去待办中心" : "无待办"}
               </span>
             </div>
           </Link>

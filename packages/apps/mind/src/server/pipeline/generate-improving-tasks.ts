@@ -17,12 +17,13 @@
  * 向后兼容: 旧 4 type (FIX_CONFLICT/MIGRATE_DATA/FIX_THEME/RE_RUN) 仍可执行
  */
 
-import { extractLlmText } from "@/server/llm/extract-text";
+// 2026-11-19 [team]: LLM 协议抽象（openai|anthropic，默认 anthropic）
+import { callLlm, hasLlmCredentials, llmErrorType, llmErrorTarget, llmErrorMessage, llmTruncationKind } from "@/server/llm/client";
 import { prisma } from "@/lib/prisma";
 import type { FlywheelReflectionResult, StructuredFinding } from "./reflect";
 import { createHash } from "crypto";
 // P1-A 2026-08-31: 统一 fetch 封装 (原本地重复实现移除)
-import { fetchWithTimeout, withLlmConcurrency } from "./with-retry";
+import { withLlmConcurrency } from "./with-retry";
 import { parseStructuredFindings } from "./findings-parse";
 // P1-C 2026-08-31: LLM 调用观测
 import { recordLlmCall } from "./llm-observability";
@@ -72,9 +73,9 @@ async function callLLMAnalyzeReflection(params: {
   improvements: string[];
   conflicts: any[];
 }): Promise<LLMAnalysisResult | null> {
-  const baseUrl = process.env.ANTHROPIC_BASE_URL || "https://api.minimaxi.com/anthropic";
-  const apiKey = process.env.ANTHROPIC_AUTH_TOKEN || process.env.MINIMAX_API_KEY || "";
-  if (!apiKey) {
+  // 2026-11-19 [team]：协议抽象（LLM_PROTOCOL=openai|anthropic，默认 anthropic 逐字回退）。
+  //   无凭据分支保持旧行为（只打印 SKIP + 返回 null，不抛错、不记账）。
+  if (!hasLlmCredentials()) {
     console.log("[generate-improving-tasks:V2-LLM] SKIP: API key 未配置, fallback 到规则");
     return null;
   }
@@ -130,42 +131,37 @@ ${conflictInfo}
   try {
     const cs = await import("./context-seed");
     const hits = await cs.searchContext({ query: String(prompt).slice(0, 120), limit: 5, source: "improving-tasks-gen" });
-    if (hits.length) ctxText = "\n\n[平台已有记忆/知识(请参考, 不要与既有认知矛盾或重复)]\n" + cs.renderContextSeed(hits, 4000); // 2026-09-23 agent-x #1: 生成器路径 1000 -> 4000 字符(主注入路径走 50K+ 预算)
+    if (hits.length) ctxText = "\n\n[平台已有记忆/知识(请参考, 不要与既有认知矛盾或重复)]\n" + cs.renderContextSeed(hits, 4000); // 2026-09-23 agent-f #1: 生成器路径 1000 -> 4000 字符(主注入路径走 50K+ 预算)
   } catch { /* 增强失败不影响生成 */ }
 
   try {
     const t0 = Date.now();
-    // P0-3 (2026-09-01): 全局并发信号量
-    const resp = await withLlmConcurrency(() => fetchWithTimeout(`${baseUrl}/v1/messages`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
+    let call: Awaited<ReturnType<typeof callLlm>>;
+    try {
+      // P0-3 (2026-09-01): 全局并发信号量
+      call = await withLlmConcurrency(() => callLlm({
+        entry: "improving-tasks",
         model: MODEL,
-        max_tokens: 4096,
+        maxTokens: 4096,
         system: "你是 LIONS 飞轮引擎的问题分析师。分析反思结果, 生成结构化改进任务。严格按 JSON 返回。",
         messages: [{ role: "user", content: prompt + ctxText }],
-      }),
-    }, 60000));
-
-    if (!resp.ok) {
-      recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: `HTTP_${resp.status}`, promptLength: prompt.length });
-      throw new Error(`LLM HTTP ${resp.status}: ${(await resp.text()).slice(0, 200)}`);
+        timeoutMs: 60000,
+      }));
+    } catch (e: any) {
+      // 失败记账保留旧 errorType 口径（HTTP_xxx），并把实际 model/host 记进事件
+      const tgt = llmErrorTarget(e);
+      recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: llmErrorType(e), truncationKind: llmTruncationKind(e), promptLength: prompt.length, model: tgt.model, baseUrlHost: tgt.baseUrlHost });
+      throw new Error(llmErrorMessage(e, "LLM HTTP"));
     }
     // 2026-10-26 精确 token: 必须在解析响应后拿 usage（此前先记账、后解析 -> token 永远缺失）。
-    const data: any = await resp.json().catch(() => null);
-    if (!data) {
-      recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: "PARSE_INVALID_JSON", promptLength: prompt.length, model: MODEL });
-      throw new Error("LLM 返回不是合法 JSON");
+    const _tk = Number(call.tokenUsed ?? 0);
+    const content = call.text;
+    if (!content) {
+      // 2026-11-16（A 记账修复）：同 structure-fragments，空内容记 ok:false
+      recordLlmCall({ entry: "improving-tasks", ok: false, durationMs: Date.now() - t0, errorType: "EMPTY", promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: call.model, baseUrlHost: call.baseUrlHost });
+      throw new Error("LLM 无返回内容");
     }
-    const _u = data.usage || {};
-    const _tk = Number(_u.input_tokens ?? _u.prompt_tokens ?? 0) + Number(_u.output_tokens ?? _u.completion_tokens ?? 0);
-    recordLlmCall({ entry: "improving-tasks", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: MODEL });
-    const content = extractLlmText(data);
-    if (!content) throw new Error("LLM 无返回内容");
+    recordLlmCall({ entry: "improving-tasks", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: _tk > 0 ? _tk : undefined, model: call.model, baseUrlHost: call.baseUrlHost });
 
     // 剥离 Markdown 代码块
     let jsonStr = content.trim();

@@ -1,0 +1,14 @@
+/* 0.6.1 U-39：父页「功能入口」带 —— 承接从侧栏下沉的二级入口（13 个）。
+   判据（设计 确认稿 §2）：图标 + 名称 + 摘要 + 箭头；卡片判据 v1.3 ①（bg-surface + 1px border）。 */
+.wrap { margin-bottom: var(--gap-sect); }
+.title { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: var(--sp-3); }
+.count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--bg-surface2); color: var(--text-muted); font-size: var(--fs-xs); font-weight: 600; letter-spacing: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-3); }
+.entry { display: flex; align-items: center; gap: 10px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); text-decoration: none; color: var(--text); transition: var(--transition); min-width: 0; }
+.entry:hover { border-color: var(--primary); background: var(--bg-surface2); }
+.entry:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.icon { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; flex: 0 0 32px; border-radius: var(--radius-sm); background: var(--bg-surface2); color: var(--primary); }
+.body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.label { font-size: var(--fs-base); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.desc { font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.arrow { color: var(--text-dim); font-size: var(--fs-md); flex: 0 0 auto; }

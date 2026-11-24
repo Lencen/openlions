@@ -20,7 +20,7 @@ const RUNTIME_TABLES = {
   ],
 };
 
-// 2026-10-27 (商业化线, A 方案): PG 版运行期表。PG 未加引号会折成小写，
+// 2026-10-27 (运营团队, A 方案): PG 版运行期表。PG 未加引号会折成小写，
 //   而 Prisma/业务查询用 "sourceRefId" 等 CamelCase，必须带引号；时间列是 BIGINT(epoch ms)。
 const RUNTIME_TABLES_PG = {
   mind: [

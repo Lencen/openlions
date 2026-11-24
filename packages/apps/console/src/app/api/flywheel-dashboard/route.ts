@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import fs from "node:fs";
-import { q, one, openMind } from "@/lib/server/lions-db";
+import { q, qStrict, one, openMind, IS_PG } from "@/lib/server/lions-db";
 
 // 2026-10-15 round-78: 本路由原用 better-sqlite3 只读打开 mind 库, 会被 build 期预渲染成冻结快照。
 // 2026-10-21 Phase 2: 改为 PG 连接池（lions-db），并保留 force-dynamic。
 export const dynamic = "force-dynamic";
+
+// 2026-11-15 P3：PG 方言修复（来源 /api/db-health queryFailures）——
+//   (ts/3600000) 在 PG 报 "operator does not exist: timestamp without time zone / integer"；
+//   CAST(sourceId AS INTEGER) 对毫秒文本报 "out of range for type integer"。
+//   统一走方言安全表达式，保持原有 hb（小时序号）语义。
+const HOUR = (col: string): string =>
+  IS_PG ? "(FLOOR(EXTRACT(EPOCH FROM \"" + col + "\")/3600))::bigint" : "(" + col + "/3600000)";
+const AVGMS = (col: string): string =>
+  IS_PG ? "AVG(CASE WHEN " + col + " ~ '^[0-9]+$' THEN " + col + "::bigint END)" : "AVG(CAST(" + col + " AS INTEGER))";
 
 export async function GET() {
   const db = openMind();
@@ -134,12 +143,12 @@ export async function GET() {
       llmStats.byEntry = await q(db, `
         SELECT sourceType as entry, COUNT(*) as calls,
           SUM(CASE WHEN targetStage='OK' THEN 1 ELSE 0 END) as ok,
-          AVG(CAST(sourceId AS INTEGER)) as avgMs
+          ${AVGMS("sourceId")} as avgMs
         FROM FlywheelEvent WHERE stage='CALL_LLM' AND createdAt > $1
         GROUP BY sourceType ORDER BY calls DESC
       `, h24ago);
       llmStats.trend = await q(db, `
-        SELECT (createdAt/3600000) as hb, COUNT(*) as c FROM FlywheelEvent
+        SELECT ${HOUR("createdAt")} as hb, COUNT(*) as c FROM FlywheelEvent
         WHERE stage='CALL_LLM' AND createdAt > $1 GROUP BY hb ORDER BY hb
       `, h24ago);
     } catch {}
@@ -148,23 +157,25 @@ export async function GET() {
     const trend: any = { events: [], writes: [], errors: [] };
     try {
       trend.events = await q(db, `
-        SELECT (createdAt/3600000) as hb, COUNT(*) as c FROM FlywheelEvent
+        SELECT ${HOUR("createdAt")} as hb, COUNT(*) as c FROM FlywheelEvent
         WHERE createdAt > $1 GROUP BY hb ORDER BY hb
       `, h24ago);
-      trend.writes = await q(db, `
-        SELECT (createdAt/3600000) as hb, COUNT(*) as c FROM (
-          SELECT createdAt FROM Memory WHERE createdAt > $1
-          UNION ALL SELECT createdAt FROM Knowledge WHERE createdAt > $1
-          UNION ALL SELECT createdAt FROM Reflection WHERE createdAt > $1
-          UNION ALL SELECT createdAt FROM Practice WHERE createdAt > $1
-          UNION ALL SELECT createdAt FROM Skill WHERE createdAt > $1
+      trend.writes = await qStrict(db, `
+        SELECT ${HOUR("createdAt")} as hb, COUNT(*) as c FROM (
+          SELECT "createdAt" FROM "Memory" WHERE "createdAt" > to_timestamp($1::double precision / 1000.0)
+          UNION ALL SELECT "createdAt" FROM "Knowledge" WHERE "createdAt" > to_timestamp($1::double precision / 1000.0)
+          UNION ALL SELECT "createdAt" FROM "Reflection" WHERE "createdAt" > to_timestamp($1::double precision / 1000.0)
+          UNION ALL SELECT "createdAt" FROM "Practice" WHERE "createdAt" > to_timestamp($1::double precision / 1000.0)
+          UNION ALL SELECT "createdAt" FROM "Skill" WHERE "createdAt" > to_timestamp($1::double precision / 1000.0)
         ) t GROUP BY hb ORDER BY hb
-      `, h24ago, h24ago, h24ago, h24ago, h24ago);
+      `, h24ago);
       trend.errors = await q(db, `
-        SELECT (occurredAt/3600000) as hb, COUNT(*) as c FROM FlywheelErrorLog
+        SELECT ${HOUR("occurredAt")} as hb, COUNT(*) as c FROM FlywheelErrorLog
         WHERE occurredAt > $1 GROUP BY hb ORDER BY hb
       `, h24ago);
-    } catch {}
+    } catch (e: any) {
+      trend.error = String((e && e.message) || "趋势查询失败");
+    }
 
     return NextResponse.json({
       tableStats,

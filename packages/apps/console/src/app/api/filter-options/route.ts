@@ -65,7 +65,7 @@ export async function GET() {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 2500);
-    // 2026-10-27(macs-backend-2): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
+    // 2026-10-27([team]): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
     // 裸 fetch 会被 401（实测 33 次 MISSING_KEY），页面静默降级成"没有 agent"。
     const res = await fetch("http://localhost:8765/api/agents", {
       cache: "no-store",

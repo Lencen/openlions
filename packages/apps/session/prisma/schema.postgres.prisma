@@ -84,6 +84,7 @@ model Message {
   
   @@index([sessionId])
   @@index([timestamp])
+  @@index([role, sessionId])
 }
 
 model SyncLog {

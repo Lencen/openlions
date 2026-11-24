@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { asOf, num, one, openMind, q, readMindEnv, safeClose, scalar } from "@/lib/server/lions-db";
+import { asOf, num, one, openMind, q, readMindEnv, safeClose, scalar, tsParam } from "@/lib/server/lions-db";
 import { scopeOfType } from "@/config/taskScopes";
 import { macsAdminKey } from "@/lib/server/macs-admin";
 
@@ -98,12 +98,12 @@ export async function GET(req: Request) {
   const doneRows = await q(
     mind,
     "SELECT COALESCE(improvementType,'(未分类)') type, COUNT(*) c FROM Task WHERE status='DONE' AND completedAt > ? GROUP BY improvementType",
-    since
+    tsParam(since)
   );
   const failedRows = await q(
     mind,
     "SELECT COALESCE(improvementType,'(未分类)') type, COUNT(*) c FROM Task WHERE status='FAILED' AND updatedAt > ? GROUP BY improvementType",
-    since
+    tsParam(since)
   );
   const doneByType = doneRows.map((r) => ({ type: r.type, count: num(r.c), scope: scopeOfType(r.type) })).sort((a, b) => b.count - a.count);
   const doneTotal = doneByType.reduce((s, x) => s + x.count, 0);
@@ -119,15 +119,15 @@ export async function GET(req: Request) {
   // ---------- ② 每 agent: 在办 / 完成 / 最近提交 ----------
   const lastSubmitRows = await q(
     mind,
-    "SELECT e.agentId, MAX(COALESCE(e.completedAt, e.startedAt, e.createdAt)) lastAt, COUNT(*) n " +
-      "FROM TaskExecution e WHERE COALESCE(e.completedAt, e.startedAt, e.createdAt) > ? GROUP BY e.agentId",
-    since
+    "SELECT e.agentId, MAX(COALESCE(completedAt, startedAt, createdAt)) lastAt, COUNT(*) n " +
+      "FROM TaskExecution e WHERE COALESCE(completedAt, startedAt, createdAt) > ? GROUP BY e.agentId",
+    tsParam(since)
   );
   const lastSubmit = new Map<string, { at: number; n: number }>();
   for (const r of lastSubmitRows) if (r.agentId) lastSubmit.set(r.agentId, { at: num(r.lastAt), n: num(r.n) });
   const lastSubmitEver = await q(
     mind,
-    "SELECT e.agentId, MAX(COALESCE(e.completedAt, e.startedAt, e.createdAt)) lastAt FROM TaskExecution e GROUP BY e.agentId"
+    "SELECT e.agentId, MAX(COALESCE(completedAt, startedAt, createdAt)) lastAt FROM TaskExecution e GROUP BY e.agentId"
   );
   const lastSubmitAll = new Map<string, number>();
   for (const r of lastSubmitEver) if (r.agentId) lastSubmitAll.set(r.agentId, num(r.lastAt));
@@ -135,7 +135,7 @@ export async function GET(req: Request) {
   const doneByAgentRows = await q(
     mind,
     "SELECT assignedAgent, COUNT(*) c FROM Task WHERE status='DONE' AND completedAt > ? AND assignedAgent IS NOT NULL GROUP BY assignedAgent",
-    since
+    tsParam(since)
   );
   const doneByAgent = new Map<string, number>();
   for (const r of doneByAgentRows) doneByAgent.set(r.assignedAgent, num(r.c));
@@ -144,7 +144,7 @@ export async function GET(req: Request) {
     mind,
     "SELECT assignedAgent, COALESCE(improvementType,'(未分类)') type, COUNT(*) c FROM Task " +
       "WHERE status='DONE' AND completedAt > ? AND assignedAgent IS NOT NULL GROUP BY assignedAgent, improvementType",
-    since
+    tsParam(since)
   );
   const doneScopeByAgent = new Map<string, Record<string, number>>();
   for (const r of doneScopeByAgentRows) {
@@ -176,7 +176,7 @@ export async function GET(req: Request) {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 3000);
-    // 2026-10-27(macs-backend-2): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
+    // 2026-10-27([team]): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
     // 裸 fetch 会被 401（实测 33 次 MISSING_KEY），页面静默降级成"没有 agent"。
     const res = await fetch("http://localhost:8765/api/agents", {
       cache: "no-store",
@@ -318,9 +318,9 @@ export async function GET(req: Request) {
     mind,
     "SELECT id, sourceType, sourceTitle, createdAt FROM FlywheelEvent WHERE stage='AGENT_TASK_GENERATED' ORDER BY createdAt DESC LIMIT 1"
   );
-  const genCount = await scalar(mind, "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='AGENT_TASK_GENERATED' AND createdAt > ?", since);
+  const genCount = await scalar(mind, "SELECT COUNT(*) c FROM FlywheelEvent WHERE stage='AGENT_TASK_GENERATED' AND createdAt > ?", tsParam(since));
   const genCreatedSum = (async () => {
-    const rows = await q(mind, "SELECT sourceTitle FROM FlywheelEvent WHERE stage='AGENT_TASK_GENERATED' AND createdAt > ? LIMIT 200", since);
+    const rows = await q(mind, "SELECT sourceTitle FROM FlywheelEvent WHERE stage='AGENT_TASK_GENERATED' AND createdAt > ? LIMIT 200", tsParam(since));
     let sum = 0;
     for (const r of rows) {
       const m = /created=(\d+)/.exec(String(r.sourceTitle || ""));

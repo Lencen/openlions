@@ -1,0 +1,5 @@
+.wrap { position: relative; display: flex; align-items: center; gap: var(--sp-2); margin: var(--sp-3) 0 var(--sp-4); }
+.label { font-size: 13px; color: var(--text-muted); white-space: nowrap; }
+.input { flex: 0 1 320px; padding: 6px 28px 6px 10px; font-size: 13px; color: var(--text); background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); outline: none; }
+.input:focus { border-color: var(--c-link, #2563eb); }
+.clear { position: absolute; left: calc(var(--sp-2) + 300px); background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); padding: 0 6px; }

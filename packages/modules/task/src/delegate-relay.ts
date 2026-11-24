@@ -1,12 +1,12 @@
 /**
  * delegate-relay.ts — `delegate_task` 原地接力 (失败自动重派) 的平台侧封装
  * =====================================================================
- * 需求来源: agent-x P1 #6 (转发自 operator↔agent-d, conv_bb5d4f7066cf msg 29-30)。
+ * 需求来源: agent-f P1 #6 (转发自 operator↔agent-d, conv_bb5d4f7066cf msg 29-30)。
  * 待办: `todo_uos20fb_1790047372341_6` / 升级任务 `cmudlzwnn02o2oi311cb7nigd`。
  *
  * ## 为什么在平台侧 (packages/) 而不是 hermes-agent 侧
  * `delegate_task` 工具本体位于 hermes-agent brain (`~/.hermes/hermes-agent/tools/delegate_tool.py`)。
- * agent-x #6 的验收硬指标是 `grep -rn delegate_task packages/` 必须命中重派逻辑 + node 单测,
+ * agent-f #6 的验收硬指标是 `grep -rn delegate_task packages/` 必须命中重派逻辑 + node 单测,
  * 因此重派策略必须落在 LIONS 仓 packages/ —— 本模块把 brain 返回的失败结果 (含 partial output)
  * 收敛成一次「原 payload + additional_context 重派」的确定性策略。平台侧只负责**策略与包装**,
  * 不复制 brain 的子代理进程管理。平台记忆 cmudsurz603wtoi31ytiw6z57 已拍板此落点。
@@ -21,7 +21,7 @@
  *
  * ## 边界 (诚实披露)
  *   - 本模块是**策略/包装层**, 不实现真正的子代理 spawn; 调用方注入 `delegate` 回调
- *     (brain 的 delegate_task 调用) 后才产生真实重派。等价于 agent-x #9 的 `compressToolResult`
+ *     (brain 的 delegate_task 调用) 后才产生真实重派。等价于 agent-f #9 的 `compressToolResult`
  *     被 harness 复用: 平台给出可复用、可单测的确定性实现。
  *   - `additional_context` 的字段是本次新定的 schema (平台记忆 cmuc5i9nr005d1hqrdr0kp6sc 记录的
  *     "没有现成 schema 需要新定")。键名固定为 prev_error/prev_partial/retry_round/prev_status,
@@ -31,7 +31,7 @@
 
 import { createHash } from "node:crypto";
 
-/** 工具名字面量。用于 additional_context 标注与验收 grep (agent-x #6 ②)。 */
+/** 工具名字面量。用于 additional_context 标注与验收 grep (agent-f #6 ②)。 */
 export const DELEGATE_TASK_TOOL = "delegate_task";
 
 /** brain `delegate_tool.py` 判定为失败的 status 值 (含 timeout, 见其 status/exit_reason 口径)。 */
@@ -101,7 +101,7 @@ export interface DelegateEscalation {
   prev_status: string;
   prev_error: string;
   prev_partial: string;
-  /** 交中期全量 checkpoint 版本 (agent-x #6 已排期)。 */
+  /** 交中期全量 checkpoint 版本 (agent-f #6 已排期)。 */
   checkpoint_required: true;
 }
 

@@ -48,13 +48,13 @@ export default function GuidePage() {
   };
 
   return (
-    <main className="main" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1100 }}>
+    <main className="main" data-slot="guide-page" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1100 }}>
       <div className="breadcrumb">
         <span style={{ color: "var(--text-dim)" }}>AI 接入层</span>
         <span className="sep">/</span>
         <span className="current">Agent 接入手册</span>
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+      <div data-slot="guide-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 6 }}>Agent 接入手册</h1>
           <p style={{ color: "var(--text-dim)", fontSize: 13 }}>
@@ -71,7 +71,7 @@ export default function GuidePage() {
 
       {data && (
         <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
-          <div style={{ width: 190, flexShrink: 0, position: "sticky", top: 72 }}>
+          <div data-slot="guide-toc" style={{ width: 190, flexShrink: 0, position: "sticky", top: 72 }}>
             <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>目录</div>
             {data.sections.map((s) => (
               <button
@@ -90,7 +90,7 @@ export default function GuidePage() {
             ))}
           </div>
 
-          <div className="panel" style={{ flex: 1, minWidth: 0 }} ref={contentRef}>
+          <div className="panel" data-slot="guide-content" style={{ flex: 1, minWidth: 0 }} ref={contentRef}>
             {cur && (
               <>
                 <h2 style={{ fontSize: 18, fontWeight: 700, margin: "0 0 12px" }}>{cur.title}</h2>
@@ -101,7 +101,7 @@ export default function GuidePage() {
             )}
 
             {data.base && (
-              <div style={{ marginTop: 16, padding: 12, background: "var(--bg-surface2)", borderRadius: 8, fontSize: 12 }}>
+              <div data-slot="guide-reachability" style={{ marginTop: 16, padding: 12, background: "var(--bg-surface2)", borderRadius: 8, fontSize: 12 }}>
                 <strong>你的平台可达地址:</strong>
                 <div style={{ marginTop: 6, fontFamily: "var(--font-mono)", fontSize: 11, lineHeight: 1.8 }}>
                   <div>mind: <span style={{ color: "var(--primary)" }}>{data.base.mind}</span></div>

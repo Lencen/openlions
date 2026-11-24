@@ -1,0 +1,19 @@
+/* 0.6.2 U-52 平台设置可视化中心（聚合入口页） */
+.groups { display: flex; flex-direction: column; gap: var(--sp-6); }
+.group { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); }
+.gHead { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: var(--sp-3); }
+.gTitle { font-size: var(--fs-md); font-weight: 600; margin: 0; }
+.badge { font-size: var(--fs-xs); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+.badgeOk { color: var(--status-ok); border-color: var(--status-ok); }
+.badgeWarn { color: var(--status-warn); border-color: var(--status-warn); }
+.badgeMute { color: var(--text-muted); }
+.kv { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--sp-2) var(--sp-4); margin: 0 0 var(--sp-3); }
+.kv > div { display: flex; flex-direction: column; gap: 2px; }
+.kv dt { font-size: var(--fs-xs); color: var(--text-muted); }
+.kv dd { margin: 0; font-size: var(--fs-base); color: var(--text); font-variant-numeric: tabular-nums; }
+.na { color: var(--text-muted); }
+.na em { font-style: normal; font-size: var(--fs-xs); }
+.actions { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.state { padding: var(--sp-6); text-align: center; color: var(--text-muted); }
+.state b { color: var(--status-crit); display: block; margin-bottom: 6px; }
+.hint { font-size: var(--fs-xs); color: var(--text-muted); margin: var(--sp-2) 0 0; line-height: 1.6; }

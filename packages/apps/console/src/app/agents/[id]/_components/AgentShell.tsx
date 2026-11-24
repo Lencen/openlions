@@ -1,6 +1,6 @@
 // [UI-S6 / 屏06 智能体详情] 页壳: 状态行 + 对象页签 (概览 / 配置 / 运行 / 版本 / 组织)
 // 页签走真链接 -> 每个页签是可深链、可后退、可中键新开的独立路由 (决策 #12 嵌套路由)。
-// 2026-11-05 页头口径（docs/design/uiux-bento-2026-11/PAGE-HEADER-31.md §3 第 1~5 行）：
+// 2026-11-05 页头口径（[internal-doc] §3 第 1~5 行）：
 //   五个页签的标题/一句说明各不相同（智能体详情 · 概览/配置/运行/版本/组织），
 //   所以页头（面包屑 + <PageHeader>）下沉到各页签 page.tsx，用 header 属性传进来；
 //   本壳只留布局、状态行、页签。面包屑 DOM 结构与 /flywheel/findings 一致
@@ -125,11 +125,10 @@ export default function AgentShell({
           <span className={styles.lastSeen}>
             最近露面 {fmtAgo(live?.lastSeenAt || agent?.last_seen_at)}
           </span>
-          <Link
-            href={`/agents/detail?id=${encodeURIComponent(agent?.agent_id || id)}`}
-            className={styles.permLink}
-          >
-            权限调整入口
+          {/* 0.5.1 B4：详情页只读（AUDIT-062 P0#3 / B4 §1），此处不再给"权限调整入口"
+              （写流程迁平台配置，不在本批范围）；保留返回列表的只读跳转。 */}
+          <Link href="/agents" className={styles.permLink}>
+            全部智能体 →
           </Link>
         </div>
 

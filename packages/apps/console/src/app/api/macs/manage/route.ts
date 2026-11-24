@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const db = openMacs();
   const sp = req.nextUrl.searchParams;
-  if (!db) return NextResponse.json({ ok: false, reason: "MACS 库未配置", messages: [], total: 0 });
+  if (!db) return NextResponse.json({ ok: false, reason: "MACS 库未配置", messages: null, total: null });
   const transport = sp.get("transport") || "";
   const brain = sp.get("brain") || "";
   const kw = (sp.get("q") || "").trim();
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
   });
 
   return NextResponse.json({
-    ok: true, total, count: messages.length, hasMore,
+    ok: true, asOf: new Date().toISOString(), total, count: messages.length, hasMore,
     nextBefore: hasMore && messages.length ? messages[messages.length - 1].seq : null,
     filters: { transport, brain, q: kw, since: sinceH },
     messages,

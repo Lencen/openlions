@@ -20,7 +20,9 @@ export type ModelConfigMap = Record<string, string>;
 export function maskValue(value: string): string {
   if (!value) return "";
   if (value.length <= 8) return "****";
-  return value.slice(0, 4) + "…" + value.slice(-4);
+  // 2026-11-16 修：原首4+尾4 会泄露 4 个真实字符（无固定前缀的 key 如 ANTH…9876 首段也属敏感）。
+  //   设计/运营团队口径：**只回尾 4**，前缀一律不露。
+  return "…" + value.slice(-4);
 }
 
 export function parseEnvText(text: string): ModelConfigMap {

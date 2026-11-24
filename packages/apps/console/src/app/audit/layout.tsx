@@ -3,7 +3,7 @@ import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 
 // 2026-10-27（S2 门禁）：/audit 与 /audit/* 属 security.audit。
 //   用 layout 包住整棵子树 —— 比逐页包一层不易漏（新增审计子页自动受门保护）。
-//   **不包 /system/access-log**（另一条安全面，按商业化线要求本轮不动）。
+//   **不包 /system/access-log**（另一条安全面，按运营团队要求本轮不动）。
 //
 // 2026-11-06 D-03：门禁在 loading 时返回骨架，导致整棵 /audit 的 SSR 首屏**连页头都没有**
 //   （实测 0.4.30 的 /audit/daily-summary HTML：无 main、无 page-header，只有 ui-skel）。

@@ -38,6 +38,8 @@ import {
   markLaterDuplicateSupersededWith,
   type StructuredTable,
 } from "./structured-dedup-core";
+// 2026-10-25 撤回流程补漏: 去重候选统一走"活行口径"(未撤回 + 未被取代)
+import { liveRowWhere } from "./stale-aware-dedup";
 
 export type { StructuredTable } from "./structured-dedup-core";
 
@@ -86,7 +88,9 @@ export async function findNearDuplicateActiveId(
     const delegate: any = (prisma as any)[table];
     const contentField = table === "practice" ? "description" : "content";
     const candidates: any[] = await delegate.findMany({
-      where: { title: t, supersededBy: null },
+      // 2026-10-25 撤回流程补漏: 近重复候选必须只取**活行** —— 被撤回(stale=1)的行若被当成
+      //   "同标题近重复", 调用方会对它执行 reinforce, 等于把已撤回的结论**重新强化复活**。
+      where: liveRowWhere(table, { title: t }),
       select: { id: true, [contentField]: true, createdAt: true },
       orderBy: { createdAt: "asc" },
       take: 200,

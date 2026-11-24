@@ -1,0 +1,97 @@
+/* 2026-11-15 dark 主题 + C5 + 表格间距（独立文件，避免被 globals 覆盖） */
+html[data-theme="dark"], html[data-theme="dark"] body {
+  --bg: #0b0f14;
+  /* 2026-11-20：设计稿「表面 1」= #111823（[internal-doc]。
+     原 #121821 被几何判据逐页记为 TOKEN card.background ×3。
+     改的是**令牌本身**而不是给卡片写死色值：--bg-surface 的语义就是「卡片底」（见 design/page.tsx 的令牌表）；
+     若只改某一张卡的 background，其余 49 处 .card 仍会各自漂移（AGENTS：同族多口径必须同源）。 */
+  --bg-surface: #111823;
+  --bg-surface2: #0f151d;
+  --bg-surface3: #1a2430;
+  --bg-hover: #1c2531;
+  --border: rgba(255,255,255,0.10);
+  --border-hi: rgba(255,255,255,0.18);
+  --text: #e5e7eb;
+  --text-dim: #a1a1aa;
+  --text-muted: var(--text-3);
+  background: var(--bg);
+  color: var(--text);
+}
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel-card,
+html[data-theme="dark"] .bento-card { background: var(--bg-surface); color: var(--text); }
+
+/* B1 live C5 */
+.msg-select, a.msg-ghost { min-height: 24px; }
+a.msg-ghost { display: inline-flex; align-items: center; }
+.ui-seg-item { min-height: 24px; display: inline-flex; align-items: center; }
+.dateInput { min-height: 24px; }
+
+/* B5 C5：表格内链接/按钮 */
+.dt a, .dt button { display: inline-flex; align-items: center; min-height: 24px; min-width: 24px; }
+
+/* B5 表列间距（最终 CSS 兜底）——2026-11-16 P0-c 套1 删除：
+   主样式 .dt/.ui-table 已恢复（td padding 10px var(--sp-4)=16px，设计 裁决
+   行高44=10×2+line-height24）。本行是 globals.css 里 .dt 块被 4d8605cd0 删空后
+   留下的"悬空兜底"，会把左右 padding 压回 8px，与裁决 10/16 冲突；
+   且它不带 [data-theme] 前缀、放在 dark.css 却对亮色也生效 —— 直接删除，
+   恢复后的左右 padding 统一 16px（如需暗色专属列距，再加
+   html[data-theme="dark"] .dt ... 显式覆盖）。 */
+/* 0.6.0 shell dark：hover/focus 可见 */
+html[data-theme="dark"] .topnav .gs-trigger:hover { background: var(--bg-surface2); color: var(--text); }
+html[data-theme="dark"] .topnav .gs-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+html[data-theme="dark"] .topnav, html[data-theme="dark"] .sidebar { background: var(--bg-surface); border-color: var(--border); }
+/* 2026-11-16 0.6.0 shell v1（设计 评审通过；独立文件防被 globals 覆盖） */
+/* 2026-11-20：--topbar-h / --topnav-h 不再在本文件声明（与下面 --sidebar-w 是同一教训）。
+   后加载的 :root 会**无条件压掉** globals.css 的同名 token：实测把 globals 的
+   --topnav-h: calc(var(--topbar-h) + var(--filter-h)) 压成写死的 104，表达式等于没写
+   （读 CSS 文本看不出来；判据 check-sidebar-spacing.cjs 的 S1 读运行时值才抓到）。
+   现由 globals.css 唯一声明，本文件只保留 shell 表现。 */
+/* 2026-11-20 修正：此处原有 1280->220 / 1024->64 两行是**死声明**（下面 1199/0 档块后加载覆盖，从未生效）。
+   --sidebar-w 阶梯统一由 globals.css 定义（<=1439 216 / <=1199 64 / <=768 隐藏），本文件只保留 shell 表现、不再重复定义。
+   死声明比写错更坏：grep 两处都在、看着一致，页面却取不到 —— 判据 scripts/check-responsive-tokens.cjs 可复现。 */
+.topnav-logo { min-width: 216px; }
+.topnav-right { gap: 12px; }
+.topnav .gs-trigger { display: inline-flex; align-items: center; gap: 8px; height: 32px; min-height: 32px; width: 240px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface); color: var(--text-dim); text-align: left; }
+.topnav .gs-trigger:hover { background: var(--bg-surface2); color: var(--text); }
+.topnav .gs-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.topnav .gs-trigger .gs-trigger-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* C1（设计 批 2026-11-16）：唯一 <12px 源（每页 Ctrl K 提示），11px -> --fs-xs(12px)，audit C1 26 处可清零 */
+.topnav .gs-kbd { display: inline-flex; align-items: center; height: 20px; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; font-size: var(--fs-xs); color: var(--text-muted); }
+/* 2026-11-20：本行原为 .sidebar-nav .nav-item-label{min-height:36px}，已删 ——
+   它是 globals.css 同一选择器同一属性的**第二份声明**（后加载者赢），与裁定 §1④「行高 34」冲突，
+   并让「34 只出现一处」不成立。单一来源 = globals.css 的 min-height: 34px。 */
+.sidebar-nav .ant-menu-submenu-title { height: 32px !important; line-height: 32px !important; }
+.topnav button, .topnav a, .sidebar-nav a, .sidebar-nav button { min-height: 32px; }
+@media (max-width: 1199px) {
+  .sidebar-nav .nav-item-text, .sidebar-nav .nav-item-tag, .sidebar-nav .nav-group-label { display: none; }
+  .sidebar-nav .nav-item-label { justify-content: center; padding-left: 0; padding-right: 0; }
+  .topnav-logo { min-width: 64px; padding: 0 12px; }
+  .topnav-logo .logo-text { display: none; }
+}
+/* 0.6.0 shell C5：侧栏分组标题 role=button 32px */
+.ui-menu-sub-title { min-height: 32px; display: flex; align-items: center; }
+/* 2026-11-20：原 <=1023 { --sidebar-w: 0; margin-left: 0 } 已删——
+   它让 769~1023 的侧栏塌成 1px 边框残渣（display 仍是 flex），而设计 1199 档是 64px 图标条。
+   0 档与隐藏统一交给 globals.css 的 <=768（含 border-right: none，不留残渣）。 */
+/* 0.6.0 shell rail 64：active 左条 / icon 居中（2026-11-20：断点对齐设计 1199） */
+@media (max-width: 1199px) {
+  .sidebar-nav .ant-menu-item { border-left: 3px solid transparent; }
+  .sidebar-nav .ant-menu-item-selected { border-left-color: var(--brand); }
+  .sidebar-nav .nav-item-label { gap: 0; }
+}
+/* 0.6.0 shell active 左条/高亮 */
+.sidebar-nav a.nav-item-label[data-active="true"] { position: relative; background: var(--bg-surface2); color: var(--text); }
+.sidebar-nav a.nav-item-label[data-active="true"]::before { content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 2px; background: var(--brand); }
+/* 0.6.0 shell 未登记路由：分组标题 active（不改 IA） */
+.sidebar-nav .nav-group-label[data-active="true"] { color: var(--text); position: relative; }
+.sidebar-nav .nav-group-label[data-active="true"]::before { content: ""; position: absolute; left: -8px; top: 4px; bottom: 4px; width: 3px; border-radius: 2px; background: var(--brand); }
+
+/* 2026-11-20 徽章对比度修复（axe serious:color-contrast，dark 主题）
+   根因：globals.css:442-443 的徽章文字是 color-mix(<token> 78~80%, #000) —— 向黑色混合，
+   这个方向只在浅色底上成立；暗色底下文字越混越暗，实测对比度 蓝 2.35 / 绿 4.99（边界），
+   axe 判 serious:color-contrast（命中 .badge-green/.badge-blue）。
+   修法：暗色下改向 #fff 混合（同一 token、同一透明度，只改混合方向），实测 绿 8.96 / 蓝 5.14。 */
+html[data-theme="dark"] .badge-green { color: color-mix(in srgb, var(--status-ok) 75%, #fff); }
+html[data-theme="dark"] .badge-blue  { color: color-mix(in srgb, var(--table-skill) 75%, #fff); }

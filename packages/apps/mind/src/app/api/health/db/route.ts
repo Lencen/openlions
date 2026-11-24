@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * 语义: 200 = 应用侧读+聚合都健康; 503 = 有检查项失败(见 body.checks[].error)。
  */
 export async function GET() {
-  // 2026-10-27（商业化线）: 缺 DB 配置时给出**可读的 503 + 原因**，而不是让查询抛
+  // 2026-10-27（运营团队）: 缺 DB 配置时给出**可读的 503 + 原因**，而不是让查询抛
   //   "connection refused" 那种看不出病因的错。prisma 已改为构造期不抛（见 lib/prisma.ts），
   //   原因记在 DB_CONFIG_ERROR 里；这里优先返回它。绝不静默回退 SQLite。
   const cfgErr = getDbConfigError();

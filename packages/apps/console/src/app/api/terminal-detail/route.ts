@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
     last_seen: (macsAgent?.last_seen ?? reg?.last_seen_at) ?? null,
     // 2026-10-29 修正：`agent_profiles.version` 是**运行包版本**（如 hermes-main-2026.06.02），
     //   不是我们客户端的 CLIENT_VERSION。之前拿它去比最低支持版本，
-    //   实测把 agent-x 判成"低于最低支持版本"——这是错的。
+    //   实测把 agent-c 判成"低于最低支持版本"——这是错的。
     //   现在：客户端版本只认客户端上报（C1/C3，尚未上线）→ null + "尚未上报"；运行包版本单独展示。
     client_version: null,
     client_version_state: versionState(null),
@@ -198,10 +198,13 @@ export async function GET(req: NextRequest) {
                                         MAX(created_at) last_at
                                    FROM delivery_attempts WHERE target_agent_id = $1
                                   AND created_at > now() - interval '24 hours'`, agentId);
-    const last = await one(macs, `SELECT event_type, actor, detail, created_at
+    // RC 前必修（运营团队 2026-11-17 08:10 + 本线实测 08:52）：created_at 在 message_events 与 messages
+    //   两张表都存在 -> 不限定会报 "column reference created_at is ambiguous" -> q() 记 queryFailures
+    //   -> 只要访问 terminal-detail，db-health failures 就 >0（与 :504 同族问题）。
+    const last = await one(macs, `SELECT e.event_type, e.actor, e.detail, e.created_at
                                     FROM message_events e
                                     JOIN messages m ON m.message_id = e.message_id
-                                   WHERE m.target_session_id IN (SELECT session_id FROM sessions WHERE agent_id = $1)
+                                   WHERE m.target_session_id IN (SELECT id FROM sessions WHERE agent_id = $1)
                                    ORDER BY e.created_at DESC LIMIT 1`, agentId).catch(() => null);
     return { agg, last };
   });
@@ -255,7 +258,7 @@ export async function GET(req: NextRequest) {
   // ── 5 权限（服务矩阵）──
   const services = await safe(async () => {
     if (!mind) throw new Error("mind 库未配置");
-    return await q(mind, `SELECT service_name, status, permissions, last_error, updated_at
+    return await q(mind, `SELECT service_name, status, permissions, NULL::text AS last_error, updated_at
                             FROM "AgentServicePermission" WHERE agent_id = $1 ORDER BY updated_at DESC LIMIT 20`, agentId);
   });
   const servicesBlock: Block = services.err
@@ -287,8 +290,8 @@ export async function GET(req: NextRequest) {
       out.source_platforms = (firstSeen as Record<string, unknown> | null)?.n ?? null;
     }
     if (macs) {
-      const appr = await one(macs, `SELECT decided_by, decided_at, decision_note, decision FROM agent_key_requests
-                                      WHERE agent_id = $1 AND decision IS NOT NULL ORDER BY decided_at DESC LIMIT 1`, agentId);
+      const appr = await one(macs, `SELECT decided_by, decided_at, decision_note, status FROM agent_key_requests
+                                      WHERE agent_id = $1 AND decided_at IS NOT NULL ORDER BY decided_at DESC LIMIT 1`, agentId);
       out.approved_by = (appr as Record<string, unknown> | null)?.decided_by ?? null;
       out.approved_at = (appr as Record<string, unknown> | null)?.decided_at ?? null;
       out.approval_note = (appr as Record<string, unknown> | null)?.decision_note ?? null;
@@ -350,7 +353,7 @@ export async function GET(req: NextRequest) {
   const events = await safe(async () => {
     const out: Record<string, unknown[]> = { approvals: [], deliveries: [], sessions: [] };
     if (macs) {
-      out.approvals = await q(macs, `SELECT request_id, decision, decided_by, decided_at, decision_note
+      out.approvals = await q(macs, `SELECT request_id, status, decided_by, decided_at, decision_note
                                        FROM agent_key_requests WHERE agent_id = $1 ORDER BY requested_at DESC LIMIT 20`, agentId).catch(() => []);
       out.deliveries = await q(macs, `SELECT attempt_no, status, error, created_at FROM delivery_attempts
                                         WHERE target_agent_id = $1 ORDER BY created_at DESC LIMIT 20`, agentId).catch(() => []);
@@ -434,8 +437,8 @@ export async function GET(req: NextRequest) {
       const host = (reg?.host ?? macsAgent?.host ?? null) as string | null;
       out.depended_by = await q(macs, `SELECT agent_id, service_name FROM agent_services
                                         WHERE agent_id <> $1
-                                          AND (COALESCE(config::text,'') ILIKE '%' || $1 || '%'
-                                               OR ($2 IS NOT NULL AND COALESCE(config::text,'') ILIKE '%' || $2 || '%'))
+                                          AND (COALESCE(config::text,'') ILIKE '%' || $1::text || '%'
+                                               OR ($2::text IS NOT NULL AND COALESCE(config::text,'') ILIKE '%' || $2::text || '%'))
                                         LIMIT 20`, agentId, host).catch(() => []);
     }
     return out;
@@ -501,7 +504,10 @@ export async function GET(req: NextRequest) {
       push("最近活动", (firstLast as Record<string, unknown> | null)?.l ?? null, "Session.lastMessageAt");
     }
     if (macs) {
-      const appr = await one(macs, `SELECT decided_at FROM agent_key_requests WHERE agent_id = $1 AND decision = 'approve'
+      // PG-7 补漏（platform-data 2026-11-17 08:09 发现）：agent_key_requests **没有 decision 列**（只有 status）。
+      //   原写法会让 q() 抛错 -> 失败被记入 queryFailures -> 只要访问本页，db-health.failures 就 >0，
+      //   导致 D4「failures=0」永远不成立。psql 实测 status 值为 'approved'。
+      const appr = await one(macs, `SELECT decided_at FROM agent_key_requests WHERE agent_id = $1 AND status = 'approved'
                                      ORDER BY decided_at DESC LIMIT 1`, agentId).catch(() => null);
       push("最近一次授权批准", (appr as Record<string, unknown> | null)?.decided_at ?? null, "agent_key_requests");
       const hb = await one(macs, `SELECT MAX(at) m FROM agent_heartbeat_history WHERE agent_id = $1`, agentId).catch(() => null);

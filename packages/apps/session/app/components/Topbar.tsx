@@ -16,14 +16,13 @@ export default function Topbar({ active, crumb, stats }: TopbarProps) {
         Session<span className="dot">·</span>Archive
       </div>
       {crumb ? <div className="crumb">{crumb}</div> : null}
-      <nav>
-        <Link href="/" className={active === "overview" ? "active" : ""}>Overview</Link>
-        <Link href="/sessions" className={active === "sessions" ? "active" : ""}>Sessions</Link>
-        <Link href="/groups" className={active === "groups" ? "active" : ""}>Groups</Link>
-        <Link href="/tasks" className={active === "tasks" ? "active" : ""}>定时任务</Link>
-        <Link href="/logs" className={active === "logs" ? "active" : ""}>日志</Link>
-        <Link href="/search" className={active === "search" ? "active" : ""}>Search</Link>
-      </nav>
+      {/* 0.6.5（设计 07:03 验收发现「双导航」）：U-39x 换侧栏（SessionSidebar）后，本顶栏的 6 个链接
+          与侧栏重复（/groups /tasks /logs /search 四个 href 在两处同时出现），且中英混杂
+          （顶栏 Overview/Sessions/Groups/Search，侧栏 会话/分组/定时任务/日志）。
+          裁定（设计）：**保留侧栏，顶栏降级为无链接品牌条** —— 品牌 + 面包屑 + 右侧统计保留。
+          导航职责唯一归 SessionSidebar；本组件不再输出任何 a[href]。
+          active 参数保留以兼容 9 个调用方（不再用于高亮；高亮由侧栏 data-active 负责）。 */}
+      <div className="topbar-spacer" />
       <div className="right">
         {stats ? <span className="stats">{stats}</span> : null}
         {/* 见文件头注释：切换器已上移到 layout */}

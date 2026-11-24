@@ -6,7 +6,7 @@ import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
 import styles from "./page.module.css";
 
 // 2026-09-07: Agent 配置统一收敛到 Agent 详情页 (真实授权矩阵/业务管理)
-// 此页保留入口, 自动跳转 agents/detail (带 agentId 或默认 agent-x)
+// 此页保留入口, 自动跳转 agents/detail (带 agentId 或默认 agent-e)
 function ConfigRedirect() {
   const router = useRouter();
   const params = useSearchParams();

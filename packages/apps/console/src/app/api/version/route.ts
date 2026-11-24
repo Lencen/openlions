@@ -1,4 +1,4 @@
-// 2026-11-02（前端线 B2）：页面版本号的**唯一出口**。
+// 2026-11-02（前端团队 B2）：页面版本号的**唯一出口**。
 // 页面不再写死版本，而是读这里；这里读仓库根 VERSION + git 提交 + 进程启动时刻。
 // 用法：curl -s localhost:3014/api/version | jq
 import { NextResponse } from "next/server";

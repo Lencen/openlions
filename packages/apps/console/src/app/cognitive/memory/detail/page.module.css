@@ -1,6 +1,80 @@
-/* app/cognitive/memory/detail · P2 批2 呈现层（2026-11-05）
-   面包屑首段（分组名）用弱化色；中间段的链接色由 globals.css 的 .breadcrumb a 统一给。 */
+/* /cognitive/memory/detail · Bento 统一详情模板（2026-11-15）
+   12 列栅格（gutter 16 / panel padding 24）：s8 本体 + s4 元信息 + s12 关联 + s12 相关视图。
+   三档：1440/1280/1024 均保持 12 列；≤900 折叠单列。颜色/字号一律走 tokens。 */
 
-.crumbDim {
-  color: var(--text-dim);
+.crumbNav { display: flex; align-items: center; gap: 6px; margin: 0 0 14px; font-size: var(--fs-xs); color: var(--text-muted); flex-wrap: wrap; }
+.crumbNav a { color: var(--text-muted); text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; }
+.crumbNav a:hover { color: var(--primary); }
+.crumbDim { color: var(--text-dim); }
+.sep { color: var(--text-dim); }
+.current { color: var(--text); }
+
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: var(--fs-xs); color: var(--text-muted); flex-wrap: wrap; }
+.chips span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 24px; display: inline-flex; align-items: center; }
+.chipOn { color: var(--status-ok); }
+
+.metaLine { margin: 0 0 4px; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.6; }
+
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+.s4 { grid-column: span 4; }
+.s8 { grid-column: span 8; }
+.s12 { grid-column: span 12; }
+
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; line-height: 1.4; }
+.cardSub { margin: 2px 0 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.5; }
+.tag { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+
+.prose { font-size: var(--fs-base); line-height: 1.75; color: var(--text); overflow-wrap: anywhere; }
+.prose p { margin: 0 0 8px; white-space: pre-wrap; }
+.cutNote { margin: 8px 0 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.emptyNote { margin: 0; padding: 20px 12px; border: 1px dashed var(--border); border-radius: var(--radius-md); color: var(--text-muted); font-size: var(--fs-sm); }
+.subBlock { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.subTitle { margin: 0 0 6px; font-size: var(--fs-base); font-weight: 600; }
+
+.kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: var(--fs-xs); }
+.kv li { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--border); }
+.kvKey { color: var(--text-muted); flex: 0 0 auto; }
+.kvVal { text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.na { color: var(--text-dim); font-size: var(--fs-xs); }
+.chipTag { display: inline-block; margin: 0 4px 4px 0; padding: 1px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: var(--fs-xs); color: var(--text); }
+
+.tableWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.tbl tbody tr:hover td { background: var(--bg-hover); }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.relList { list-style: none; margin: 4px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 24px; font-size: var(--fs-xs); }
+.relList li { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 6px; border-bottom: 1px dashed var(--border); }
+
+.views { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.viewCard { display: flex; flex-direction: column; gap: 4px; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 14px; text-decoration: none; color: var(--text); min-height: 24px; }
+.viewCard:hover { border-color: var(--primary); background: var(--bg-hover); }
+.viewCard b { font-size: var(--fs-base); font-weight: 600; }
+.viewCard span { font-size: var(--fs-xs); color: var(--text-muted); }
+.foot { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.6; }
+
+.state { border: 1px solid var(--border); border-left: 3px solid var(--status-warn); border-radius: var(--radius-md); padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; align-items: flex-start; background: var(--bg-surface); }
+.stateErr { border-left-color: var(--status-crit); }
+.stateTitle { margin: 0; font-size: var(--fs-lg); font-weight: 600; }
+.stateText { margin: 0; font-size: var(--fs-base); color: var(--text-muted); line-height: 1.6; }
+.stateMeta { margin: 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.stateActions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-sm); padding: 6px 12px; min-height: 24px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.link { color: var(--primary); text-decoration: none; min-height: 24px; display: inline-flex; align-items: center; }
+.link:hover { text-decoration: underline; }
+
+.skel { display: block; width: 100%; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-surface2), var(--bg-surface3), var(--bg-surface2)); }
+.skelShort { width: 60%; }
+
+@media (max-width: 900px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s4, .s8, .s12 { grid-column: span 2; }
+  .views { grid-template-columns: 1fr; }
+  .relList { grid-template-columns: 1fr; }
+  .card { padding: 16px; }
 }

@@ -7,6 +7,7 @@
  *   验签失败/过期/缺 entitlement 一律 fail-closed；open 版无 license。
  */
 import { createPublicKey, verify as cryptoVerify } from "node:crypto";
+import { readFileSync } from "node:fs";
 
 export type LicenseEdition = "internal" | "commercial" | "open";
 
@@ -82,9 +83,32 @@ export function verifyLicenseWithKey(raw: string, publicKeyPem: string, now: Dat
   return { ok: true, license: { ...claims, raw } };
 }
 
-/** 生产入口：公钥从服务端 env 读。 */
+/**
+ * 2026-11-09（方案 A，仅 0.4.43 起启用）：内联 env 或 *_FILE 指向的文件，二选一。
+ * 优先级：内联 > 文件；文件读失败返回空串（**不抛错**），交给调用方按"未配置"处理（fail-closed）。
+ * 为什么要 *_FILE：systemd EnvironmentFile 不支持值里带真实换行，PEM 多行公钥塞不进去。
+ * 兼容：不设 *_FILE 时行为与 0.4.42 完全一致（内联 env 优先，缺配置照旧 fail-closed）。
+ */
+function envOrFile(inlineName: string, fileName: string): string {
+  const inline = String(process.env[inlineName] || "").trim();
+  if (inline) return inline;
+  const filePath = String(process.env[fileName] || "").trim();
+  if (!filePath) return "";
+  try {
+    return readFileSync(filePath, "utf8").trim();
+  } catch {
+    return "";
+  }
+}
+
+/** license 原文：LIONS_LICENSE_JSON > LIONS_LICENSE_JSON_FILE > "" */
+export function licenseRawFromEnv(): string {
+  return envOrFile("LIONS_LICENSE_JSON", "LIONS_LICENSE_JSON_FILE");
+}
+
+/** 生产入口：license 与公钥都支持内联或文件（仅 0.4.43 起启用 *_FILE）。 */
 export function verifyLicense(raw: string, now: Date = new Date()): LicenseResult {
-  return verifyLicenseWithKey(raw, String(process.env.LIONS_LICENSE_PUBLIC_KEY || ""), now);
+  return verifyLicenseWithKey(raw, envOrFile("LIONS_LICENSE_PUBLIC_KEY", "LIONS_LICENSE_PUBLIC_KEY_FILE"), now);
 }
 
 /** selfonline 内部租户：商业全量授权，但只在 internal 版允许直接构造。 */

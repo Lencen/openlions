@@ -1,43 +1,26 @@
-/* /cost 页内样式（P2 呈现层改造：内联 style 清零）
-   本文件同时供 _components/* 使用（仓库既有约定：子控件 import "../page.module.css"）。
-   能复用 .panel / .panel-header / .panel-title / .mono / .tiny / .dt-* 的一律复用。 */
-
-/* 页头面包屑上级段（沿用 .breadcrumb 结构，只补弱化色；与 agents-live / lineage 同口径） */
-.crumbDim { color: var(--text-dim); }
-
-/* 页头下方状态条（2026-11-06 页头口径统一）：原 PageHero 的 tags / meta 左右两栏，
-   页头换成 PageHeader 后单列一行；字段与取值未改。 */
-.heroStrip { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-3); flex-wrap: wrap; margin-bottom: var(--sp-3); }
-.heroMeta { text-align: right; }
-
-/* —— CostTopCallsTable —— */
-
-/* 入口 / 主体单元格（原来是内联 font-size） */
-.entryCell { font-size: var(--fs-base); }
-
-/* 入口名称与前面的类型标签留一点距（原来是内联 margin-left） */
-.entryName { margin-left: var(--sp-1); }
-
-/* 词元数：估算值用告警色，实测值保持正文色（原来是内联三元 color） */
-.tokens[data-estimated="true"] { color: var(--status-warn); }
-
-/* —— CostCaliber（统计口径说明 + 页脚数据时刻；P2 批2 追加） —— */
-
-/* 口径正文：字号/行距/弱化色，原来是一段内联 style */
-.caliberBody {
-  font-size: var(--fs-base);
-  line-height: 1.9;
-  color: var(--text-dim);
-}
-
-/* 页脚"来源 · 数据时刻"右对齐（与全局 .tiny 组合使用） */
-.caliberFoot {
-  text-align: right;
-}
-/* —— 本批（批1）追加 —— */
-
-/* 口径提示条：与下一个区块拉开间距（原来是内联 margin-bottom: var(--sp-4)） */
-.warnAlert { margin-bottom: var(--sp-4); }
-
-/* 按模型归因的口径说明（原来是内联 margin-top + line-height；字号仍由 .tiny 给） */
-.attrNote { margin-top: var(--sp-2); line-height: 1.7; }
+/* B1-4 /cost · Bento P5 */
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.headRow { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.rangeBox { display: flex; gap: 6px; }
+.rangeBtn, .rangeOn { min-height: 24px; padding: 0 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-surface); color: var(--text); font-size: 12px; cursor: pointer; }
+.rangeOn { border-color: var(--c-status-ok); color: var(--c-status-ok); }
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.chips span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
+.crumbOn { color: var(--c-status-ok); }
+.hero { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.heroNum { font-size: 30px; font-weight: 600; line-height: 1.1; }
+.heroUnit { color: var(--text-muted); font-size: 12px; }
+.heroMeta { color: var(--text-muted); font-size: 12px; margin-left: auto; }
+.bars { display: flex; align-items: flex-end; gap: 3px; height: 130px; padding-top: 6px; border-bottom: 1px solid var(--border); }
+.bar { flex: 1; min-width: 2px; background: var(--info); border-radius: 2px 2px 0 0; opacity: .8; }
+.kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12px; }
+.kv li { display: flex; justify-content: space-between; gap: 12px; }
+.kv li span { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stateMini { border: 1px dashed var(--border); border-radius: 10px; padding: 16px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+.tbl th { text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0;  line-height: 24px; }
+.tbl td { border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0;  line-height: 24px; }
+.pager { display: flex; align-items: center; gap: 10px; margin-top: 10px; font-size: 12px; }
+.pager button { min-height: 24px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface); color: var(--text); cursor: pointer; }
+.pager button:disabled { color: var(--text-muted); cursor: not-allowed; }
+.foot { margin: 10px 0 0; font-size: 12px; color: var(--text-muted); }

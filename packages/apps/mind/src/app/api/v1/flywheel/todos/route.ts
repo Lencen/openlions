@@ -43,6 +43,9 @@ async function openDb() {
   return { close() {} } as any;
 }
 
+// 2026-11-13 P0 数据准确：时间字段读侧守卫（非法值明确报错，不静默成 0/空）
+import { toIsoOrThrow } from "@/server/pipeline/todo-time";
+
 /** 台账行 -> 前端友好结构; 缺失时为 PENDING(不是 PASS —— DONE 不等于验收通过) */
 function acceptanceJson(a: any) {
   if (!a) return { state: "PENDING", verdict: null, specType: null, checkedAt: null, fails: [] };
@@ -50,7 +53,7 @@ function acceptanceJson(a: any) {
   return {
     state: a.verdict === "PASS" ? "PASS" : "FAIL",
     verdict: String(a.verdict), specType: a.specType == null ? null : String(a.specType),
-    checkedAt: a.checkedAt == null ? null : new Date(Number(a.checkedAt)).toISOString(),
+    checkedAt: toIsoOrThrow("acceptance", "checkedAt", a.checkedAt),
     fails: Array.isArray(fails) ? fails : [],
   };
 }
@@ -61,12 +64,12 @@ function rowToJson(r: any) {
     source: String(r.source), sourceRefId: r.sourceRefId == null ? null : String(r.sourceRefId),
     ownerType: String(r.ownerType), ownerId: r.ownerId == null ? null : String(r.ownerId),
     status: String(r.status), priority: String(r.priority),
-    dueAt: r.dueAt == null ? null : new Date(Number(r.dueAt)).toISOString(),
+    dueAt: toIsoOrThrow(r.id, "dueAt", r.dueAt),
     evidence: r.evidence == null ? null : String(r.evidence), note: r.note == null ? null : String(r.note),
     createdBy: r.createdBy == null ? null : String(r.createdBy),
-    createdAt: new Date(Number(r.createdAt)).toISOString(),
-    updatedAt: new Date(Number(r.updatedAt)).toISOString(),
-    doneAt: r.doneAt == null ? null : new Date(Number(r.doneAt)).toISOString(),
+    createdAt: toIsoOrThrow(r.id, "createdAt", r.createdAt),
+    updatedAt: toIsoOrThrow(r.id, "updatedAt", r.updatedAt),
+    doneAt: toIsoOrThrow(r.id, "doneAt", r.doneAt),
     doneBy: r.doneBy == null ? null : String(r.doneBy),
     // 2026-09-11 agent协同(待办详情/工作安排视图需要): 负责人与"能否被 agent 认领"直接可见, 而不是让前端再拼。
     ownerLabel: r.ownerId ? (String(r.ownerType) + ":" + String(r.ownerId)) : String(r.ownerType) + ":未指派",
@@ -206,7 +209,7 @@ export async function GET(req: NextRequest) {
           "SELECT id, title, status, priority, COALESCE(assignedAgent, '未指派') assignedAgent, improvementType, updatedAt " +
           "FROM Task WHERE id IN (" + ids.map(() => "?").join(",") + ")"
         ), ...ids);
-        relatedTasks = relatedTasks.map((t) => ({ ...t, updatedAt: t.updatedAt ? new Date(Number(t.updatedAt)).toISOString() : null }));
+        relatedTasks = relatedTasks.map((t) => ({ ...t, updatedAt: toIsoOrThrow(t.id, "updatedAt", t.updatedAt) }));
       }
     } catch { relatedTasks = []; }
     return NextResponse.json({
@@ -220,7 +223,13 @@ export async function GET(req: NextRequest) {
       rows: outRows.map(rowToJson), relatedTasks, asOf: new Date().toISOString(),
     });
   } catch (e: any) {
-    return NextResponse.json({ ok: false, error: (e?.message || String(e)).slice(0, 300) }, { status: 500 });
+    const msg = String(e?.message || e);
+    // 2026-11-13 P0 数据准确：非法时间**明确报错**（不再只给一个 "Invalid time value" 或降级成空列表）
+    if (msg.startsWith("invalid_timestamp:")) {
+      console.error("[todos] 非法时间字段，拒绝返回:", msg);
+      return NextResponse.json({ ok: false, error: "invalid_timestamp", detail: msg.slice(0, 300) }, { status: 500 });
+    }
+    return NextResponse.json({ ok: false, error: msg.slice(0, 300) }, { status: 500 });
   }
 }
 
@@ -252,9 +261,9 @@ export async function POST(req: NextRequest) {
   };
 
   // ===== 2026-09-22 [机制修复] Todo source 白名单(单一入口堵漏) =====
-  // 背景(agent-x-feedback 教训): 本 API 接受调用方自定义 source(rec.source = b.source),
-  //   于是任意 agent 脚本都能造出 source='agent-x-feedback' 并直接灌 Todo —— 而
-  //   agent-x 反馈这类"agent 使用反馈"**不属于** Todo 的合法来源:
+  // 背景(agent-f-feedback 教训): 本 API 接受调用方自定义 source(rec.source = b.source),
+  //   于是任意 agent 脚本都能造出 source='agent-f-feedback' 并直接灌 Todo —— 而
+  //   agent-f 反馈这类"agent 使用反馈"**不属于** Todo 的合法来源:
   //   合法来源只有「飞轮反思遗留与改进任务」+ 系统巡检 + 人类需求 + agent 收件箱。
   //   反馈类内容应先经飞轮反思沉淀(→ Reflection → Task), 再以 goal_gap /
   //   platform:improving-tasks 等来源产生改进任务, 而非被 agent 直接灌成 Todo。
@@ -265,7 +274,7 @@ export async function POST(req: NextRequest) {
       "goal_gap",
       "platform:improving-tasks",
       "platform:integrate-agent-branches",
-      "platform:agent-x-lead-scan",
+      "platform:agent-d-lead-scan",
       "platform:",
       "system:findings",
       "system:probe",
@@ -441,7 +450,7 @@ export async function PATCH(req: NextRequest) {
   //   可复算锚点(file:/cmd:/sql:/commit/仓库路径); 人类(actor.kind=human)不受限; TODO_EVIDENCE_GATE=0 可关。
   // 2026-09-18: 判据抽到 @/server/pipeline/todo-evidence-gate(与 submit 入口共用, 防两处漂移)。
   if (String(b.status) === "DONE") {
-    // 2026-10-27（商业化线批准）: 守门来源的待办只允许守门自身或人类结单。
+    // 2026-10-27（运营团队批准）: 守门来源的待办只允许守门自身或人类结单。
     //   agent 以「旧数据已被最新数据取代」为由结掉红单是真实发生过的事（todo_plautonomy_mvkhv3in，
     //   结单时 autonomy_proxy=0.929 仍低于 0.95）。证据门只管"有没有证据"，挡不住这种结单理由。
     {
@@ -495,11 +504,16 @@ export async function PATCH(req: NextRequest) {
         try {
           await prisma.flywheelEvent.create({ data: {
             stage: "TODO_CLOSE_EVIDENCE_REJECTED", sourceType: "todo", sourceId: id,
-            sourceTitle: ("by=" + actor.actor + " 无证据结单被拒: " + chk.missing.join("; ")).slice(0, 240), targetStage: "OK",
+            sourceTitle: ("by=" + actor.actor + " 无证据结单被拒: " + chk.missing.join("; ")).slice(0, 240),
+            // 2026-11-09 P0：通道错误回执用 targetStage="EXTERNAL_FAULT:"+class 区分（复用本 stage，不新造）。
+            targetStage: chk.externalFault ? "EXTERNAL_FAULT:" + chk.externalFault.class : "OK",
           } });
-        } catch { /* 留痕失败不改变拒绝结果 */ }
+        } catch (e: any) { /* 留痕失败不改变拒绝结果，但不再静默 */
+          console.warn("[todo-close-gate] 拒绝事件写入失败(不改变拒绝结果): " + (e?.message || e));
+        }
         return NextResponse.json({
           ok: false, error: "TODO_CLOSE_EVIDENCE_REJECTED", missing: chk.missing,
+          ...(chk.externalFault ? { externalFault: chk.externalFault } : {}),
           detail: "结单需要可复算证据(>=" + TODO_EVIDENCE_MIN_LEN + " 字 + 至少一个 file:/cmd:/sql:/commit/仓库路径 锚点)。请把命令/查询/提交号与输出写进 evidence 字段后重试; 人类结单不受此限。",
         }, { status: 400 });
       }
@@ -510,7 +524,7 @@ export async function PATCH(req: NextRequest) {
   if (b.status && STATUS.includes(String(b.status))) {
     sets.push("status = ?"); args.push(String(b.status));
     if (String(b.status) === "DONE") { sets.push("doneAt = ?", "doneBy = ?"); args.push(Date.now(), String(b.doneBy || b.by || "unknown")); }
-    // 2026-10-27（商业化线数据卫生）: 状态离开 DONE 时**必须清掉 doneAt/doneBy**。
+    // 2026-10-27（运营团队数据卫生）: 状态离开 DONE 时**必须清掉 doneAt/doneBy**。
     //   否则重开后的行仍带着上一次结单的 doneBy，任何"看 doneBy 判断是否被结"的查询都会误判
     //   （实测：红单 12:40 重开为 OPEN，doneBy 仍显示 11:36:32 的 agent-operator，靠它判断会得出"仍是 DONE"）。
     else { sets.push("doneAt = NULL", "doneBy = NULL"); }

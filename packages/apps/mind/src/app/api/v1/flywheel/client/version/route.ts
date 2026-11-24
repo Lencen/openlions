@@ -46,7 +46,7 @@ function resolveClientDir(): string {
 }
 const CLIENT_DIR = resolveClientDir();
 // 2026-09-16 新增 SOP-MCP-CHAT-SERVER.md: MACS 接入规范正本纳入统一客户端包,
-//   客户端自更新时一并拉取(解决 agent-x 端 sop_version 停在 1.0 的漂移问题)。
+//   客户端自更新时一并拉取(解决 agent-i 端 sop_version 停在 1.0 的漂移问题)。
 const BASE_COMPONENTS = ["macs_responder.py", "todo_worker.py", "lib/platform_context.py", "SOP-MCP-CHAT-SERVER.md"];
 
 /**
@@ -67,7 +67,7 @@ function componentNames(): string[] {
   return [...names];
 }
 
-// 2026-09-16.7 修复(agent-x 巡检差异3): 旧 sha1() 是自定义 31 乘哈希, 客户端无法用标准算法复现对账。
+// 2026-09-16.7 修复(agent-i 巡检差异3): 旧 sha1() 是自定义 31 乘哈希, 客户端无法用标准算法复现对账。
 // 改用真 sha256 前 16 位, 客户端 sha256sum | cut -c1-16 即可核对。 hashAlgo=sha256-16hex
 function fileHash(s: string): string {
   return createHash('sha256').update(s).digest('hex').slice(0, 16);

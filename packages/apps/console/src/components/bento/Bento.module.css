@@ -1,0 +1,28 @@
+/* Bento 12 栅格 + 卡片/指标/状态（三档：12 <=1199→6 <=900→2） */
+.grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+/* 2026-11-19 像素维（运营团队裁定「设计稿是唯一基准」）：圆角 10→14、内边距 12/14→16 */
+/* 2026-11-20 阴影维（几何判据 TOKEN card.shadow ×3）：设计稿卡片有 shadow 0 1px 2px + 0 1px 3px，
+   而这里一个 box-shadow 都没有 —— 同仓 .kpi-card/.metric-card/.entry-card 全都带 var(--shadow-card)，
+   唯独 bento 卡片漏了，于是暗色下 8 页的卡片都像「贴在背景上的色块」而不是浮起的卡。
+   修法用既有令牌（--shadow-card 定义在 globals.css:196），不新写魔数。 */
+.card { grid-column: span 4; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg, 14px); padding: 16px; min-width: 0; box-shadow: var(--shadow-card); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+/* 设计稿：卡片标题 16px / 600 / 1.6（25.6px）；原 14px/700/21px 属整档错位（TIER_DIFF） */
+.cardTitle { font-size: 16px; font-weight: 600; line-height: 1.6; margin: 0; }
+.cardSub { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
+.cardActions { flex: 0 0 auto; }
+.cardBody { min-width: 0; }
+.s1{grid-column:span 1}.s2{grid-column:span 2}.s3{grid-column:span 3}.s4{grid-column:span 4}.s5{grid-column:span 5}.s6{grid-column:span 6}.s7{grid-column:span 7}.s8{grid-column:span 8}.s9{grid-column:span 9}.s10{grid-column:span 10}.s12{grid-column:span 12}
+.kpi { display: flex; flex-direction: column; gap: 2px; }
+.kpiLabel { font-size: 12px; color: var(--text-muted); }
+.kpiValue { font-size: var(--fs-2xl); font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpiUnit { font-style: normal; font-size: 14px; font-weight: 400; margin-left: 2px; color: var(--text-muted); }
+.kpiHint { font-size: 12px; color: var(--text-muted); }
+.kpiAsOf { font-size: 12px; color: var(--text-muted); }
+.kpi[data-tone="ok"] .kpiValue{color:var(--c-status-ok)}.kpi[data-tone="warn"] .kpiValue{color:var(--c-status-warn)}.kpi[data-tone="crit"] .kpiValue{color:var(--c-status-crit)}.kpi[data-tone="mute"] .kpiValue{color:var(--text-muted)}
+.state { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 12px 4px; color: var(--text-muted); font-size: 14px; }
+.state[data-tone="warn"] strong { color: var(--c-status-warn); }
+.state[data-tone="crit"] strong { color: var(--c-status-crit); }
+.skel { display: block; width: 60%; height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-surface2), var(--bg-surface3), var(--bg-surface2)); }
+@media (max-width: 1199px) { .grid { grid-template-columns: repeat(6, minmax(0, 1fr)); } .card { grid-column: span 3; } .s8,.s12 { grid-column: span 6; } }
+@media (max-width: 900px) { .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .card { grid-column: span 2 !important; } }

@@ -1,89 +1,77 @@
-/* 2026-11-05 P2 批10：/terminals/detail 终端详情（客户端页）内联样式下沉。
-   内联 style 72 处 -> 0；手写 tbl 表格 10 张 -> 白名单 @/components/DataTable。
-   页签选中态是唯一动态样式，改由 [data-active] 属性选择器承载（值与原内联三元一一对应）；
-   其余是字段行、分组小标题、提示行的间距与弱化色，以及表格单元格的小字 / 换行。
-   未新增全局类、未改 globals.css；取数、路由、URL 参数、文案、字段名与导出 props 形状未动。 */
+/* /terminals/detail · B3-3 Bento 页面样式（2026-11-15）
+   12 列真实 grid（gutter 16 => 1440 下 s12=1184 / s8=784 / s4=384）、panel padding 24、
+   字号只在 globals 8 档内取；全部限定在本页 module 作用域，不改 globals.css。 */
 
-/* 顶部四灯网格下间距（原内联 marginBottom gap-block） */
-.kpiGrid { margin-bottom: var(--gap-block); }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
-/* KPI 卡标题不换行（原内联 whiteSpace nowrap） */
-.panelTitleNowrap { white-space: nowrap; }
+.crumbDim { color: var(--text-dim); }
+.crumbOn { color: var(--status-ok); }
 
-/* KPI 卡内文（原内联 padding tight / sect） */
-.kpiBody { padding: var(--gap-tight) var(--gap-sect); }
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+.chips > span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
 
-/* KPI 数值（原内联 fontSize 20 + fontWeight 700） */
-.kpiValue { font-size: 20px; font-weight: 700; }
+.momentRow { font-size: 12px; color: var(--text-dim); }
 
-/* KPI 卡底部状态片（原内联 marginTop 4） */
-.kpiBadge { margin-top: 4px; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.toolbarNote { font-size: 12px; color: var(--text-muted); }
 
-/* 独立面板的下间距（原内联 marginBottom gap-block） */
-.panelBlock { margin-bottom: var(--gap-block); }
+.b2grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.b2grid > * { grid-column: 1 / -1; min-width: 0; }
+.b2grid > .slotS4 { grid-column: span 4; }
+.b2grid > .slotS8 { grid-column: span 8; }
+.b2grid > .slotS12 { grid-column: 1 / -1; }
 
-/* 面板内提示段（原内联 padding tight / sect，配合 globals 的 .tiny） */
-.notePad { padding: var(--gap-tight) var(--gap-sect); }
+.panelCard { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); box-shadow: var(--shadow-card); min-width: 0; }
+.panelHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: var(--sp-3); flex-wrap: wrap; }
+.panelTitle { font-size: var(--fs-md); font-weight: 600; }
+.panelSub { font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; line-height: 1.5; }
 
-/* 页签条（原内联 display flex + gap tight + wrap） */
-.tabBar { display: flex; gap: var(--gap-tight); flex-wrap: wrap; }
+/* 摘要键值行 */
+.kv { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); }
+.kv li { display: flex; justify-content: space-between; gap: 16px; line-height: 1.5; }
+.kv li span { color: var(--text-muted); flex: 0 0 96px; }
+.kv li b { font-weight: 500; text-align: right; word-break: break-all; }
 
-/* 页签按钮未选中档（原内联 border 0 / 透明底 / pointer / padding / 字重 400 / 透明下边线） */
-.tabBtn {
-  border: 0;
-  background: none;
-  cursor: pointer;
-  padding: 4px 10px;
-  font-weight: 400;
-  border-bottom: 2px solid transparent;
-}
+.subBlock { margin-top: var(--sp-4); }
+.kvTitle { font-size: var(--fs-xs); font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
 
-/* 页签按钮选中档（原内联 fontWeight 700 + 下边线 accent） */
-.tabBtn[data-active="true"] {
-  font-weight: 700;
-  border-bottom-color: var(--accent, #1f5fbf);
-}
+/* 来源摘要（截断展示） */
+.provList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: var(--fs-sm); }
+.provList li { display: flex; gap: 12px; align-items: baseline; }
+.provKey { flex: 0 0 120px; color: var(--text-muted); font-family: var(--font-mono); }
+.provVal { color: var(--text-dim); overflow-wrap: anywhere; }
 
-/* 页签内容区内边距（原内联 padding gap-sect） */
-.tabBody { padding: var(--gap-sect); }
+/* 警告列表（非空必须显式提示） */
+.warnList { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-sm); color: var(--status-warn); line-height: 1.5; }
+.warnList li { padding-left: 10px; border-left: 2px solid var(--status-warn); overflow-wrap: anywhere; }
 
-/* 字段行 / 字段名 / 字段值（原 Field 组件内联 flex + gap + padding + 宽 140 + 弱化色 + 断词） */
-.fieldRow { display: flex; gap: var(--gap-block); padding: var(--gap-label) 0; }
-.fieldLabel { width: 140px; flex: 0 0 140px; color: var(--text-dim); }
-.fieldValue { flex: 1; word-break: break-all; }
+/* 表格 */
+.tableScroll { overflow-x: auto; }
+.tblWide { min-width: 720px; }
+.clip { display: inline-block; max-width: 480px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
 
-/* 版本升级提示（原内联 marginTop -4 + marginBottom gap-label + paddingLeft 148） */
-.versionHint { margin-top: -4px; margin-bottom: var(--gap-label); padding-left: 148px; }
+/* 状态药丸 */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: var(--fs-xs); line-height: 18px; border: 1px solid var(--border); color: var(--text-muted); background: var(--bg-surface2); white-space: nowrap; }
+.pill[data-tone="ok"] { color: var(--status-ok); border-color: color-mix(in srgb, var(--status-ok) 45%, var(--border)); background: color-mix(in srgb, var(--status-ok) 10%, transparent); }
+.pill[data-tone="warn"] { color: var(--status-warn); border-color: color-mix(in srgb, var(--status-warn) 45%, var(--border)); background: color-mix(in srgb, var(--status-warn) 10%, transparent); }
+.pill[data-tone="mute"] { color: var(--text-muted); }
 
-/* 分组容器（原内联 marginTop gap-block） */
-.section { margin-top: var(--gap-block); }
+/* 状态卡正文 */
+.stateBody { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.stateTitle { font-size: var(--fs-lg); font-weight: 600; color: var(--text); }
+.stateTitle[data-tone="warn"] { color: var(--status-warn); }
+.stateTitle[data-tone="crit"] { color: var(--status-crit); }
+.stateText { font-size: var(--fs-base); color: var(--text-muted); line-height: 1.6; margin: 0; }
+.stateFoot { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.5; margin-top: var(--sp-3); }
 
-/* 分组小标题带弱化色（原内联 marginBottom gap-label + color text-dim） */
-.subheadDim { margin-bottom: var(--gap-label); color: var(--text-dim); }
+.related { display: flex; gap: var(--sp-4); flex-wrap: wrap; }
+.related :global(a) { display: inline-flex; align-items: center; min-height: 24px; }
+.b2main :global(a), .b2main :global(button), .b2main :global(.btn) { min-height: 24px; }
+.b2main :global(a.btn) { display: inline-flex; align-items: center; }
 
-/* 分组小标题不带弱化色（原内联只有 marginBottom gap-label） */
-.subhead { margin-bottom: var(--gap-label); }
-
-/* 大块标题（原内联 marginTop gap-block + marginBottom gap-label + color text-dim） */
-.blockHead { margin-top: var(--gap-block); margin-bottom: var(--gap-label); color: var(--text-dim); }
-
-/* 紧跟字段的脚注（原内联 marginTop gap-label） */
-.noteTop { margin-top: var(--gap-label); }
-
-/* 上提 4px 的脚注（原内联 marginTop -4 + marginBottom gap-label） */
-.noteTight { margin-top: -4px; margin-bottom: var(--gap-label); }
-
-/* 块下间距（原内联 marginTop gap-block） */
-.noteBlock { margin-top: var(--gap-block); }
-
-/* 弱化正文（原内联 color text-dim，配合 globals 的 .tiny） */
-.dimText { color: var(--text-dim); }
-
-/* 表格内长文本单元格换行（原内联 whiteSpace normal） */
-.wrap { white-space: normal; }
-
-/* 待接入表「预计」副行（原内联 color text-dim + marginTop 2；原为 div，改成块级 span 以保持结构合法） */
-.eta { display: block; color: var(--text-dim); margin-top: 2px; }
-
-/* 页脚自证行（原内联 marginTop gap-block + color text-dim） */
-.pageFoot { margin-top: var(--gap-block); color: var(--text-dim); }
+.skelBar { height: 12px; border-radius: 6px; background: linear-gradient(90deg, var(--bg-surface2), var(--bg-surface3), var(--bg-surface2)); }
+.skelBar[data-w="40"] { width: 40%; }
+.skelBar[data-w="45"] { width: 45%; }
+.skelBar[data-w="60"] { width: 60%; }
+.skelBar[data-w="70"] { width: 70%; }
+.skelBar[data-w="88"] { width: 88%; }

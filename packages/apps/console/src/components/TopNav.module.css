@@ -9,3 +9,9 @@
 
 /* 版本号文字（原来是内联 font-size + color） */
 .version { font-size: var(--fs-sm); color: var(--text-muted); }
+/* demo slot：风格/四态下拉 + 头像（2026-11-13 还原） */
+.demoControls { display: flex; align-items: center; gap: 8px; }
+.demoSelect { display: inline-flex; align-items: center; gap: 4px; height: 32px; min-height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-surface); color: var(--text-muted); font-size: 12px; cursor: default; }
+.demoSelect b { color: var(--text); font-weight: 500; }
+.avatar { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: var(--bg-surface2); border: 1px solid var(--border); color: var(--text); font-size: 12px; font-weight: 600; }
+@media (max-width: 900px) { .demoControls { display: none; } }

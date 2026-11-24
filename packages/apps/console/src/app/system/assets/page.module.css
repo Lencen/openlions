@@ -62,7 +62,7 @@
 .dialog {
   width: 560px;
   max-width: 92vw;
-  background: var(--bg-panel, #fff);
+  background: var(--bg-surface);
 }
 .dialogBody { padding: 0 var(--gap-sect) var(--gap-block); }
 .dialogActions {

@@ -1,152 +1,198 @@
 "use client";
-/**
- * 工具注册表 /tools —— ord-20261104-032 试点第 12 页（模板 A 列表）
- *
- * 数据状态（2026-11-04，必须写在页面上，避免读者以为有数）：
- *   工具注册表接口尚未接入（数据卡 12 待补）。本页只做**结构与四态**：
- *   · 指标带 4 张显示「暂无」+ 原因，不写 0（0 会被当成实测值）；
- *   · 表格按模板列定义渲染，行数为 0，空态写清触发条件与补齐路径；
- *   · 四态由对 /api/mcp-proxy 的**可用性探测**驱动（现有端点，只读）：
- *     待返回 -> loading；401/403 -> forbidden；其它失败 -> error；200 -> 结构渲染 + 空态。
- *     探测结果不参与任何指标计算，页面里也不出现代理能力清单。
- *   · 不动任何取数口径：该页原本没有取数，本页也没有新增业务取数。
- */
-import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  PageHeader,
-  PageTitle,
-  KpiCard,
-  DataTable,
-  FilterBar,
-  StateBlock,
-  ErrorBlock,
-  Pill,
-  type DataColumn,
-} from "@/components/ui";
+
+// /tools — 0.5 批次C · demo slot 还原（2026-11-13）
+// 槽位顺序：页头 + 4 chips → 工具栏（全部 / 内置 / 服务 / 异常，计数无源 → n/a）→ 4 KPI（工具数 / 调用总量 / 平均成功率 / P95 延迟）
+//   → s12 工具注册表（编号 / 工具 / 类型 / 调用量 / 成功率 / P95 / 状态）→ s12 说明 → 请求时刻。
+// 数据：工具注册表接口尚未落地（数据卡 card-tools：G-01 无注册表接口、D-01 无调用级埋点，四个指标位全部 n/a）。
+//   本页对「注册表接口」做就绪探测，用来区分 loading / forbidden / error / unavailable（404 等）/ empty（200 且空集）。
+//   探测结果不参与任何指标计算；禁止把不可得写成 0，也不拿代理自述的 6 个工具名当注册表。
+// 四态：loading / empty（接口通了确实无工具）/ error / forbidden(401/403) / unavailable（接口未落地）。
+// 本页只读：无写按钮、无执行通道。
+
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import { PageHeader, PageTitle, KpiCard } from "@/components/ui";
+import PageSearch from "@/components/ui/PageSearch";
+import { fmtNum, fmtTime } from "@/lib/format";
 import styles from "./page.module.css";
 
-interface ToolRow {
-  id: string;
-  name: string;
-  kind: string;
-  calls: number;
-  successRate: number;
-  p95Ms: number;
-  state: "ok" | "warn" | "crit" | "idle";
-}
+type Phase = "loading" | "ok" | "empty" | "error" | "forbidden" | "unavailable";
 
-const COLUMNS: DataColumn<ToolRow>[] = [
-  { key: "name", title: "工具", width: "28%" },
-  { key: "kind", title: "类型", width: "14%" },
-  { key: "calls", title: "调用量", align: "right", width: "14%" },
-  { key: "successRate", title: "成功率", align: "right", width: "14%" },
-  { key: "p95", title: "P95 耗时", align: "right", width: "14%" },
-  { key: "state", title: "状态", width: "16%" },
-];
+interface ToolRow { id: string; name?: string; kind?: string; calls?: number | null; successRate?: number | null; p95Ms?: number | null; state?: string }
 
 const FILTERS = [
-  { key: "all", label: "全部", count: 0 },
-  { key: "ok", label: "正常", count: 0 },
-  { key: "degraded", label: "降级", count: 0 },
+  { key: "all", label: "全部" },
+  { key: "builtin", label: "内置" },
+  { key: "service", label: "服务" },
+  { key: "bad", label: "异常" },
 ];
-
-type Phase = "loading" | "ok" | "error" | "forbidden";
 
 export default function ToolsPage() {
   const [phase, setPhase] = useState<Phase>("loading");
-  const [probe, setProbe] = useState<string | null>(null);
-  const [active, setActive] = useState("all");
-  const [nonce, setNonce] = useState(0);
+  const [err, setErr] = useState("");
+  const [rows, setRows] = useState<ToolRow[]>([]);
+  const [probedAt, setProbedAt] = useState("");
+  const [lastOkAt, setLastOkAt] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  const load = useCallback(async () => {
+    setPhase("loading");
+    setErr("");
+    try {
+      // 2026-11-15 P2-B4：/api/mcp/servers 不存在，原 fetch 造成 404 + networkidle 超时；
+      // 直接进入 unavailable（G-01 接口未落地），不发请求、不写 0。
+      const at = new Date().toISOString();
+      setProbedAt(at);
+      setErr("注册表接口未落地（G-01：/api/mcp/servers 不存在）");
+      setPhase("unavailable");
+      return;
+    } catch {
+      setErr("请求失败（网络或响应解析异常）");
+      setPhase("error");
+    }
+  }, []);
 
   useEffect(() => {
-    let alive = true;
-    setPhase("loading");
-    setProbe(null);
-    (async () => {
-      try {
-        const r = await fetch("/api/mcp-proxy", { cache: "no-store" });
-        if (!alive) return;
-        if (r.status === 401 || r.status === 403) { setPhase("forbidden"); return; }
-        if (!r.ok) { setProbe("代理探测返回 " + r.status); setPhase("error"); return; }
-        setPhase("ok");
-      } catch {
-        if (!alive) return;
-        setProbe("代理探测请求失败");
-        setPhase("error");
-      }
-    })();
-    return () => { alive = false; };
-  }, [nonce]);
+    load();
+  }, [load, reloadKey]);
 
-  const rows = useMemo<ToolRow[]>(() => [], []);
-  const shown = useMemo(() => (active === "all" ? rows : rows.filter((r) => r.state === active)), [rows, active]);
+  const loading = phase === "loading";
+  const total = rows.length;
+  const bad = rows.filter((x) => String(x.state || "").toLowerCase() === "degraded" || String(x.state || "").toLowerCase() === "error").length;
 
-  const table = (
-    <DataTable<ToolRow>
-      columns={COLUMNS}
-      rows={shown}
-      rowKey={(r) => r.id}
-      loading={phase === "loading"}
-      error={phase === "error" ? probe : null}
-      onRetry={reload}
-      empty={{
-        title: "工具注册表尚未接入",
-        desc: "本页结构与四态已就绪；注册表接口（调用量 / 成功率 / P95）随数据卡 12 补齐后自动填充。当前显示为空不是「零调用」。",
-      }}
-    />
-  );
+  const [q, setQ] = useState("");
 
   return (
-    <main className={styles.page}>
+    <main className="page" data-slot="tools-page">
       <PageHeader>
-        <PageTitle>工具箱</PageTitle>
-        <div className="page-subtitle">
-          工具注册表：类型、调用量、成功率与 P95 耗时；数据未接入时如实显示「暂无」，不以 0 冒充。
-        </div>
-        <div className={styles.chips}>
-          <Pill tone="mute">只读</Pill>
-          <Pill tone="info">列表模板</Pill>
-        </div>
+        <PageTitle>工具注册表</PageTitle>
+        <div className="page-subtitle">工具维度的调用质量：调用量、成功率与 P95 延迟；注册表接口未落地时全部 n/a，不以 0 冒充。</div>
       </PageHeader>
+      <PageSearch value={q} onChange={setQ} placeholder="搜索工具…" />
 
-      {phase === "forbidden" ? (
-        <StateBlock
-          title="无权限访问"
-          desc={
-            <>
-              当前账号缺少「工具箱」读权限 <code>tools.read</code>，请联系平台管理员开通后刷新本页。
-            </>
-          }
-          action={<button type="button" className={styles.actionBtn} onClick={reload}>重新检测</button>}
-        />
-      ) : (
-        <>
-          <div className={styles.kpiBand}>
-            <KpiCard label="工具数" value="暂无" hint="注册表接口未接入（数据卡 12）" />
-            <KpiCard label="调用总量" value="暂无" hint="注册表接口未接入（数据卡 12）" />
-            <KpiCard label="平均成功率" value="暂无" hint="注册表接口未接入（数据卡 12）" />
-            <KpiCard label="P95 耗时" value="暂无" hint="注册表接口未接入（数据卡 12）" />
+      <div className={styles.crumbs} aria-label="页面层级">
+        <span className={styles.crumbOn}>#</span>
+        <span>工具箱</span>
+        <span>列表</span>
+        <span className={styles.crumbOn}>只读</span>
+      </div>
+
+      <div className={styles.toolbarRow}>
+        <div className={styles.filters} role="group" aria-label="工具筛选">
+          {FILTERS.map((f) => (
+            <button key={f.key} type="button" className={f.key === "all" ? styles.filterBtnOn : styles.filterBtn} disabled title="注册表接口未落地：无数据可筛">
+              {f.label}
+              <span className={styles.badge}>n/a</span>
+            </button>
+          ))}
+        </div>
+        <span className={styles.hint}>
+          服务维度见 <Link className={styles.inlineLink} href="/tools/mcp">工具服务</Link> · 只读
+        </span>
+      </div>
+
+      <div className={styles.kpis} data-slot="tools-kpis">
+        <KpiCard label="工具数" value="n/a" hint="注册表接口未落地（G-01）：无工具表可计数" />
+        <KpiCard label="调用总量" value="n/a" hint="无调用级表；代理自述清单不能当调用量" />
+        <KpiCard label="平均成功率" value="n/a" hint="D-01：工具调用埋点未上线，无 success 列" />
+        <KpiCard label="P95 延迟" value="n/a" hint="D-01：无 duration 毫秒列，不估算" />
+      </div>
+
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <div>
+            <h2 className={styles.cardTitle}>工具注册表</h2>
+            <p className={styles.sub}>编号 / 工具 / 类型 / 调用量 / 成功率 / P95 / 状态{phase === "ok" ? " · 共 " + fmtNum(total) + " 条" : ""}</p>
           </div>
+          <span className={styles.tagOk}>只读</span>
+        </div>
 
-          <FilterBar
-            items={FILTERS}
-            active={active}
-            onSelect={setActive}
-            right={<span>只读视图 · 数据未接入时不计入统计</span>}
-          />
+        {loading ? (
+          <div aria-hidden="true">
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className={styles.skelRow}>
+                <span className={styles.skel + " " + styles.skelW1} />
+                <span className={styles.skel + " " + styles.skelW2} />
+                <span className={styles.skel + " " + styles.skelW3} />
+                <span className={styles.skel + " " + styles.skelW4} />
+              </div>
+            ))}
+          </div>
+        ) : phase === "forbidden" ? (
+          <div className={styles.state}>
+            <b className={styles.stateTitle}>无权限</b>
+            <p className={styles.stateText}>当前账号缺少「工具箱」读权限（接口返回 401/403）。请联系平台管理员开通后刷新本页。</p>
+          </div>
+        ) : phase === "error" ? (
+          <div className={styles.state + " " + styles.stateErr}>
+            <b className={styles.stateTitle}>加载失败</b>
+            <p className={styles.stateText}>
+              {err}。{lastOkAt ? "上次成功：" + fmtTime(lastOkAt) + "。" : "本次尚无成功记录。"}
+            </p>
+            <button type="button" className={styles.btn} onClick={() => setReloadKey((x) => x + 1)}>重试</button>
+          </div>
+        ) : phase === "unavailable" ? (
+          <div className={styles.tblWrap}>
+            <table className={styles.tbl}>
+              <thead>
+                <tr>
+                  <th>编号</th>
+                  <th>工具</th>
+                  <th>类型</th>
+                  <th className={styles.num}>调用量</th>
+                  <th className={styles.num}>成功率</th>
+                  <th className={styles.num}>P95</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td colSpan={7} className={styles.naCell}>
+                    {'n/a（原因：注册表接口未落地 ' + (err || "404") + '；调用量/成功率/P95 属 D-01 待补，无表无埋点。补齐前本表不显示 0 或示例行。）'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : phase === "empty" ? (
+          <div className={styles.stateMini}>暂无已注册工具（注册表接口已通且返回空集）。</div>
+        ) : (
+          <div className={styles.tblWrap}>
+            <table className={styles.tbl}>
+              <thead>
+                <tr>
+                  <th>编号</th>
+                  <th>工具</th>
+                  <th>类型</th>
+                  <th className={styles.num}>调用量</th>
+                  <th className={styles.num}>成功率</th>
+                  <th className={styles.num}>P95</th>
+                  <th>状态</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((t) => (
+                  <tr key={t.id}>
+                    <td className={styles.monoCell}>{t.id}</td>
+                    <td>{t.name || "n/a"}</td>
+                    <td>{t.kind || "n/a"}</td>
+                    <td className={styles.num}>{typeof t.calls === "number" ? fmtNum(t.calls) : "n/a"}</td>
+                    <td className={styles.num}>{typeof t.successRate === "number" ? t.successRate + "%" : "n/a"}</td>
+                    <td className={styles.num}>{typeof t.p95Ms === "number" ? t.p95Ms + " ms" : "n/a"}</td>
+                    <td>{t.state || "n/a"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-          {phase === "error" ? <ErrorBlock message={probe ?? undefined} onRetry={reload} /> : null}
+        <p className={styles.foot}>
+          请求时刻：{probedAt ? fmtTime(probedAt) : "n/a"} · 来源：注册表就绪探测（只读）
+          {phase === "ok" ? " · 异常 " + fmtNum(bad) + " 个" : ""}
+        </p>
+      </section>
 
-          {table}
-
-          <p className={styles.foot}>
-            口径：调用量 / 成功率 / P95 以注册表接口返回为准，本页不做自算；接口未接入期间四列均显示「暂无」，
-            与「零调用」区分。补齐后可筛「正常 / 降级」，默认按调用量降序。
-          </p>
-        </>
-      )}
     </main>
   );
 }

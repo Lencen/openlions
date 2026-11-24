@@ -5,7 +5,7 @@ import { asOf, openSession, q, one } from "@/lib/server/lions-db";
 /**
  * /api/session-list —— 会话中心列表
  *
- * 2026-10-26 修复（前端线报「默认排序不可用 / 第 1 页全是两三个月前」）：
+ * 2026-10-26 修复（前端团队报「默认排序不可用 / 第 1 页全是两三个月前」）：
  *   真因不是排序，是**数据源过期**。原实现透传 mind `sessionRegistry.list`，读的是
  *   `lions_mind."SessionRegistry"`；这张表在全仓已**没有任何 create 写入点**
  *   （只有 session-source-loader 的 update，注释明写"本地无该镜像行则静默跳过"），

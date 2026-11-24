@@ -34,6 +34,10 @@ export const TODO_STATUS: Record<string, { label: string; color: string; tone: s
   BLOCKED: { label: "受阻", color: "var(--status-crit)", tone: "crit" },
   DONE: { label: "已完成", color: "var(--status-ok)", tone: "ok" },
   DROPPED: { label: "已放弃", color: "var(--text-muted)", tone: "mute" },
+  // 2026-11-20：CANCELLED 在 /api/todos 的 STATUS_ENUM 里、库里真实有 6 行，
+  // 但这里缺键 -> todoColumns.tsx:127 的兜底把**裸英文 CANCELLED** 渲染到状态列（验收项④）。
+  // 判据 scripts/check-status-vocabulary.cjs 的静态枚举检查钉的就是这件事（先跑出红，再修这里）。
+  CANCELLED: { label: "已取消", color: "var(--text-muted)", tone: "mute" },
 };
 
 export const OPEN_STATUSES = ["OPEN", "DOING", "BLOCKED"];

@@ -1,13 +1,10 @@
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepo } from "@/server/lib/todo-repo";
-import path from "path";
 
 /**
  * 2026-09-10 TODO 独立实体存储层 (被 todos 路由 / tasks.submit 自动生成 共用)
  * 表结构改动只在这里改一处。
  */
 const TABLE = "Todo";
-export const DB_PATH = process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
 
 export const TODO_DDL =
   "CREATE TABLE IF NOT EXISTS " + TABLE + " (" +
@@ -16,20 +13,9 @@ export const TODO_DDL =
   "dueAt INTEGER, evidence TEXT, note TEXT, createdBy TEXT, createdAt INTEGER NOT NULL, " +
   "updatedAt INTEGER NOT NULL, doneAt INTEGER, doneBy TEXT, meta TEXT)";
 
+/** 2026-10-26 SQLite 退役(P3): Todo 表已在 PG，DDL/句柄不再是运行时职责。 */
 export async function openTodoDb() {
-
-  const db = openMindDb({ role: "direct-rw", dbPath: DB_PATH, caller: "todo-store" });
-
-  db.exec(TODO_DDL);
-  // 2026-09-15: meta 列是 09-14 由 scripts/restructure-todos.cjs 一次性加上去的, 建表 DDL 里一直没有 ——
-  //   在"表已存在但没有该列"的库上, CREATE TABLE IF NOT EXISTS 不会补列, 之后任何写 meta 的程序化入口
-  //   都会抛 "no such column: meta"。这里显式检测并补齐, 让"结构化入口"在任何环境都能落库。
-  try {
-    const cols: any[] = db.prepare("PRAGMA table_info(" + TABLE + ")").all() as any[];
-    if (cols.length && !cols.some((c) => String(c.name) === "meta")) db.exec("ALTER TABLE " + TABLE + " ADD COLUMN meta TEXT");
-  } catch { /* 补列失败不阻断(老库可能只读) */ }
-  db.exec("CREATE INDEX IF NOT EXISTS idx_todo_status ON " + TABLE + "(status, priority, dueAt)");
-  return db;
+  return null;
 }
 
 export type TodoInput = {

@@ -187,7 +187,9 @@ export async function resolveCandidate(
     });
   } else if (type === "practice") {
     hashHit = await prisma.practice.findFirst({
-      where: { contentHash: hash, agentSource: agentSource ?? undefined, supersededBy: null },
+      // 2026-10-25 撤回流程补漏: Practice 也有 stale 列(同 Knowledge) —— 原实现漏了 stale:false,
+      //   被撤回的实践行仍会被当成"强化"目标, 撤回等于没撤。
+      where: { contentHash: hash, agentSource: agentSource ?? undefined, supersededBy: null, stale: false },
       select: { id: true },
     });
   }
@@ -255,10 +257,13 @@ export async function resolveCandidate(
         });
       }
     } else if (type === "practice") {
-      themeCount = await prisma.practice.count({ where: themeWhere });
+      // 2026-10-25 撤回流程补漏: Practice 也有 stale 列 —— 容量统计与"reinforce 最高质量行"
+      //   都必须只认活行, 否则被撤回的实践既占容量又会被 reinforce(撤回等于没撤)。
+      const prActive = { ...themeWhere, stale: false };
+      themeCount = await prisma.practice.count({ where: prActive });
       if (themeCount >= THEME_CAPACITY) {
         themeHit = await prisma.practice.findFirst({
-          where: themeWhere, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, description: true },
+          where: prActive, orderBy: { createdAt: "desc" }, select: { id: true, createdAt: true, description: true },
         });
       }
     }

@@ -367,7 +367,7 @@ function safeJsonParse<T = unknown>(text: string): T {
 }
 
 /**
- * 2026-08-21 agent-x: 错误分类
+ * 2026-08-21 agent-e: 错误分类
  * - RATE_LIMIT (429): 退避后重试, 不计入永久失败
  * - SERVER_ERROR (5xx): 退避后重试
  * - AUTH_ERROR (401/403): 不重试, 配置问题
@@ -532,10 +532,12 @@ export async function extractCognitiveData(
     recordLlmCall({ entry: "main-extract", ok: false, durationMs: Date.now() - t0, errorType: e?.errorType || "UNKNOWN", promptLength: prompt.length });
     throw e;
   }
-  recordLlmCall({ entry: "main-extract", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
   if (!output) {
+    // 2026-11-16（A 记账修复）：空输出记 ok:false（原先先记 ok:true）
+    recordLlmCall({ entry: "main-extract", ok: false, durationMs: Date.now() - t0, errorType: "EMPTY", promptLength: prompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
     throw new Error("Minimax API returned empty output");
   }
+  recordLlmCall({ entry: "main-extract", ok: true, durationMs: Date.now() - t0, promptLength: prompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
 
   const cleaned = cleanJsonResponse(output);
   const data = safeJsonParse<ExtractedCognitiveData>(cleaned);
@@ -612,10 +614,12 @@ export async function extractCognitiveDataBatch(
     recordLlmCall({ entry: "main-extract-batch", ok: false, durationMs: Date.now() - t0, errorType: e?.errorType || "UNKNOWN", promptLength: fullPrompt.length });
     throw e;
   }
-  recordLlmCall({ entry: "main-extract-batch", ok: true, durationMs: Date.now() - t0, promptLength: fullPrompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
   if (!output) {
+    // 2026-11-16（A 记账修复）：空输出记 ok:false（原先先记 ok:true）
+    recordLlmCall({ entry: "main-extract-batch", ok: false, durationMs: Date.now() - t0, errorType: "EMPTY", promptLength: fullPrompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
     throw new Error("Minimax API returned empty output for batch extraction");
   }
+  recordLlmCall({ entry: "main-extract-batch", ok: true, durationMs: Date.now() - t0, promptLength: fullPrompt.length, tokenUsed: (globalThis as any).__lastLlmUsage });
 
   // 3. 解析结果
   const cleaned = cleanJsonResponse(output);

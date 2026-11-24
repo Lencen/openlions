@@ -1,129 +1,172 @@
 "use client";
-// agents/onboard 页 · 页面瘦身: 分节控件抽到 ./_components/*, 本文件只负责取数、状态与拼装 (<200 行)。
-import { useState } from "react";
+
+// /agents/onboard — 0.5 批E · demo slot 还原（2026-11-13）
+// 槽位顺序：页头 + 4 chips → s8 接入向导（4 步，当前步骤与可选业务服务数）→ s4 当前填写（键值）→ 请求时刻。
+// 数据：/api/services-list（可选业务服务，真实）；当前填写字段没有可展示的输入值（本页只读，写入口未开放）→ n/a + 原因。
+// 四态：loading / empty（服务清单返回空集）/ error / forbidden(401/403) / unavailable（响应缺数据区）。
+// 本页只读：注册提交在当前写闸门下需要二次确认（数据卡 G-2），本批不提供提交入口。
+
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useApi } from "@/lib/api";
-import { Alert } from "@/components/primitives";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import StepIndicator from "./_components/StepIndicator";
-import StepInfoForm from "./_components/StepInfoForm";
-import StepSelectServices from "./_components/StepSelectServices";
-import StepConfirm from "./_components/StepConfirm";
-import StepResult from "./_components/StepResult";
-import type { OnboardForm } from "./_components/types";
+import { PageHeader, PageTitle } from "@/components/ui";
+import DataMoment from "@/components/DataMoment";
+import { fmtNum, fmtTime } from "@/lib/format";
 import styles from "./page.module.css";
 
+interface Service { id?: string; name: string; display_name?: string | null; status?: string | null }
+
+type Phase = "loading" | "ok" | "empty" | "error" | "forbidden" | "unavailable";
+
+const STEPS = [
+  { title: "① 选择宿主与运行时", note: "宿主与运行时由接入方提供" },
+  { title: "② 填写执行体元信息", note: "名称 / 类型 / 宿主 / 负责人" },
+  { title: "③ 绑定能力与钥匙", note: "选择可选业务服务并签发凭证" },
+  { title: "④ 试运行与接入审批", note: "试运行通过后进入接入审批" },
+];
+
 export default function OnboardPage() {
-  const { data: services, loading: servicesLoading, error: servicesError } = useApi<any[]>("/api/services-list");
-  const [step, setStep] = useState(0);
-  const [form, setForm] = useState<OnboardForm>({ agent_id: "", display_name: "", channel: "hermes", host: "" });
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [result, setResult] = useState<any>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [err, setErr] = useState("");
+  const [lastOkAt, setLastOkAt] = useState("");
+  const [services, setServices] = useState<Service[] | null>(null);
+  const [requestedAt, setRequestedAt] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const toggle = (name: string) => {
-    const n = new Set(selected);
-    n.has(name) ? n.delete(name) : n.add(name);
-    setSelected(n);
-  };
-
-  const submit = async () => {
-    setLoading(true); setError("");
+  const load = useCallback(async () => {
+    setPhase("loading");
+    setErr("");
     try {
-      const res = await fetch("/api/agent-register", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...form, channel: form.channel,
-          services: Array.from(selected).map(n => ({ name: n })),
-          long_term: true, sop_accepted: true,
-        }),
-      });
-      const d = await res.json();
-      const data = d?.result?.data?.json || d?.result?.data || d;
-      if (d?.error) throw new Error(d.error.message);
-      setResult(data); setStep(3);
-    } catch (e: any) { setError(e.message); }
-    finally { setLoading(false); }
-  };
-
-  const copyEnv = () => {
-    const lines = [];
-    // 2026-10-15 钥匙治理(item 1): register 只发一次性领取券 -> 复制出来的第一行是领取券本身
-    //   (装机脚本接受 sk-claim-… 作为 MCP_API_KEY, 会自己换取全部业务钥匙)。
-    const ticket = (result as any)?.claim_ticket?.value;
-    if (ticket) lines.push(`MCP_API_KEY=${ticket}  # 一次性领取券(默认 15 分钟): 调 /api/v1/agent/claim-service-key 换业务钥匙`);
-    for (const [name, s] of Object.entries(result?.services || {})) {
-      const sk = (s as any)?.api_key;
-      if (sk) lines.push(`${name.toUpperCase()}_API_KEY=${sk}`);
+      const r = await fetch("/api/services-list", { cache: "no-store" });
+      setRequestedAt(new Date().toISOString());
+      if (r.status === 401 || r.status === 403) {
+        setPhase("forbidden");
+        return;
+      }
+      if (!r.ok) {
+        setErr("服务清单接口返回状态码 " + r.status);
+        setPhase("error");
+        return;
+      }
+      const j = await r.json();
+      const list = Array.isArray(j) ? j : Array.isArray(j.services) ? j.services : null;
+      if (!Array.isArray(list)) {
+        setErr("服务清单响应里没有可用的数据行");
+        setPhase("unavailable");
+        return;
+      }
+      setServices(list);
+      setLastOkAt(new Date().toISOString());
+      setPhase(list.length ? "ok" : "empty");
+    } catch {
+      setErr("请求失败（网络或响应解析异常）");
+      setPhase("error");
     }
-    navigator.clipboard.writeText(lines.join("\n"));
-  };
+  }, []);
 
-  const restart = () => {
-    setStep(0); setResult(null);
-    setForm({ agent_id: "", display_name: "", channel: "hermes", host: "" });
-    setSelected(new Set());
-  };
+  useEffect(() => {
+    load();
+  }, [load, reloadKey]);
+
+  const loading = phase === "loading";
+  const rows = services || [];
+  const active = rows.filter((s) => String(s.status || "").toUpperCase() === "ACTIVE").length;
 
   return (
-    <div className="layout-with-sidebar">
-      
-      <main className="main">
-        {/* 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #9）：面包屑 + 标题 + 一句说明。
-            文案逐字取自口径表；说明按 §1 规则 5（业务语言，过 test-ui-copy-business-terms）
-            把表里的 "agent" 写成语义等价的「智能体」，层级/语义不变。 */}
-        <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className="current">接入向导</span></div>
-        <PageHeader>
-          <PageTitle>接入向导</PageTitle>
-          <div className="page-subtitle">分步接入新智能体并验收</div>
-        </PageHeader>
-
-        {servicesError && <div className={styles.alertRow}><Alert type="error" message="业务服务列表加载失败" description="接入向导第 2 步的勾选项来自 /api/services-list, 当前取数失败, 请刷新重试。" /></div>}
-
-        {/* 步骤指示器 */}
-        <StepIndicator step={step} />
-
-        {/* Step 0: 填写信息 */}
-        {step === 0 && (
-          <StepInfoForm form={form} setForm={setForm} onNext={() => setStep(1)} />
-        )}
-
-        {/* Step 1: 选择服务 */}
-        {step === 1 && (
-          <StepSelectServices
-            services={services}
-            loading={servicesLoading}
-            selected={selected}
-            onToggle={toggle}
-            onPrev={() => setStep(0)}
-            onNext={() => setStep(2)}
-          />
-        )}
-
-        {/* Step 2: 确认提交 */}
-        {step === 2 && (
-          <StepConfirm
-            form={form}
-            selectedList={Array.from(selected).join(", ")}
-            error={error}
-            loading={loading}
-            onPrev={() => setStep(1)}
-            onSubmit={submit}
-          />
-        )}
-
-        {/* Step 3: 获取密钥 */}
-        {step === 3 && result && (
-          <StepResult result={result} form={form} onCopyEnv={copyEnv} onRestart={restart} />
-        )}
-        {/* 2026-10-19 B5(收尾): 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-        <div className={"tiny " + styles.relatedLinks}>
-          <span>相关视图：</span>
-          <Link href="/agents">接入管理 →</Link>
-          <Link href="/agents/approvals">审批进度 →</Link>
+    <main className="page">
+      <PageHeader>
+        <PageTitle>接入向导</PageTitle>
+        <div className="page-subtitle">
+          4 步接入流程；可选业务服务 {loading ? "…" : fmtNum(active)} 项（清单 {loading ? "…" : fmtNum(rows.length)} 项）
         </div>
-      </main>
-    </div>
+      </PageHeader>
+
+      <div className={styles.crumbs} aria-label="页面层级">
+        <span className={styles.crumbOn}>#</span>
+        <span>成员</span>
+        <span>向导</span>
+        <span className={styles.crumbOn}>只读</span>
+      </div>
+
+      <div className={styles.grid}>
+        <section className={styles.card + " " + styles.s8}>
+          <div className={styles.cardHead}>
+            <div>
+              <h2 className={styles.cardTitle}>接入向导</h2>
+              <p className={styles.sub}>4 步 · 当前只读视图（提交入口未开放）</p>
+            </div>
+            <span className={styles.tagOk}>只读</span>
+          </div>
+
+          {loading ? (
+            <div aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className={styles.skelRow}><span className={styles.skel + " " + styles.skelW1} /><span className={styles.skel + " " + styles.skelW2} /></div>
+              ))}
+            </div>
+          ) : phase === "forbidden" ? (
+            <div className={styles.state}>
+              <b className={styles.stateTitle}>无权限</b>
+              <p className={styles.stateText}>当前账号缺少「成员」读权限（接口返回 401/403）。请联系平台管理员开通后刷新本页。</p>
+            </div>
+          ) : phase === "error" ? (
+            <div className={styles.state + " " + styles.stateErr}>
+              <b className={styles.stateTitle}>加载失败</b>
+              <p className={styles.stateText}>
+                {err}。{lastOkAt ? "上次成功：" + fmtTime(lastOkAt) + "。" : "本次尚无成功记录。"}
+              </p>
+              <button type="button" className={styles.btn} onClick={() => setReloadKey((x) => x + 1)}>重试</button>
+            </div>
+          ) : phase === "unavailable" ? (
+            <div className={styles.state}>
+              <b className={styles.stateTitle}>服务数据不可得</b>
+              <p className={styles.stateText}>{err || "接口可用，但响应里没有服务数据区。"}</p>
+              <button type="button" className={styles.btn} onClick={() => setReloadKey((x) => x + 1)}>重试</button>
+            </div>
+          ) : (
+            <>
+              <div className={styles.stepList}>
+                {STEPS.map((s, i) => (
+                  <div key={s.title} className={i === 0 ? styles.stepOn : styles.step}>
+                    <span className={i === 0 ? styles.stepTagOn : styles.stepTag}>{i === 0 ? "当前" : "待办"}</span>
+                    <span className={styles.stepMain}>
+                      <span className={styles.stepTitle}>{s.title}</span>
+                      <span className={styles.stepNote}>{s.note}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className={styles.noteText}>
+                可选业务服务 {phase === "empty" ? "0 项（清单返回空集，请到工具服务页排查）" : fmtNum(active) + " 项"}：
+                {rows.length ? rows.map((s) => s.display_name || s.name).join("、") : "n/a"}
+              </p>
+              <p className={styles.foot}>
+                <DataMoment items={[{ label: "服务清单", at: null }]} />
+                {" · 请求时刻 " + (requestedAt ? fmtTime(requestedAt) : "n/a") + " · 清单接口无数据时刻，显示「未知」不借其它源"}
+              </p>
+            </>
+          )}
+        </section>
+
+        <section className={styles.card + " " + styles.s4}>
+          <div className={styles.cardHead}>
+            <div>
+              <h2 className={styles.cardTitle}>当前填写</h2>
+              <p className={styles.sub}>键值 · 本页只读</p>
+            </div>
+          </div>
+          <dl className={styles.kv}>
+            <dt>名称</dt><dd className={styles.naCell}>n/a（未开始填写）</dd>
+            <dt>类型</dt><dd className={styles.naCell}>n/a（未开始填写）</dd>
+            <dt>宿主</dt><dd className={styles.naCell}>n/a（未开始填写）</dd>
+            <dt>负责人</dt><dd className={styles.naCell}>n/a（未开始填写）</dd>
+            <dt>下一步</dt><dd className={styles.naCell}>n/a（提交入口未开放：注册写操作需二次确认与审计，见数据卡 G-2）</dd>
+          </dl>
+          <p className={styles.foot}>
+            相关信息：<Link className={styles.inlineLink} href="/agents">接入管理</Link>
+            <Link className={styles.inlineLink} href="/agents/approvals">审批进度</Link>
+          </p>
+        </section>
+      </div>
+    </main>
   );
 }

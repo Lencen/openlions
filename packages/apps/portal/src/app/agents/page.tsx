@@ -32,13 +32,13 @@ export default function AgentsPage() {
   }, []);
 
   return (
-    <main className="main" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
-      <div style={{ marginBottom: 20 }}>
+    <main className="main" data-slot="agents-page" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
+      <div style={{ marginBottom: 20 }} data-slot="agents-header">
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>Agent 生态</h1>
         <p style={{ color: "var(--text-dim)", fontSize: 13 }}>已接入平台的 Agent 及其运行状态</p>
       </div>
 
-      <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 160px))" }}>
+      <div className="kpi-grid" data-slot="kpi" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 160px))" }}>
         <div className="kpi-card">
           <span className="kpi-label">注册总数</span>
           <span className="kpi-value">{data?.total ?? "–"}</span>
@@ -56,7 +56,7 @@ export default function AgentsPage() {
         </div>
       </div>
 
-      <div className="panel">
+      <div className="panel" data-slot="agent-table">
         <table className="tbl">
           <thead>
             <tr>

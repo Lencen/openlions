@@ -132,12 +132,13 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
   return (
     <>
       <Topbar active="sessions" stats={`${session.messageCount} messages`} />
-      <main className="page page--detail">
-        <div className="detail-head">
+      {/* 0.6.5 U-39b §2.7：详情页不套 bento 格位（信息卡 + 纵向分块）；但统一暴露 data-phase 供判据条件等待 */}
+      <main className="page page--detail" data-phase="ok">
+        <div className="detail-head" data-slot="session-head">
           <div className="eyebrow"><a href="/sessions" className="muted-link">← Sessions</a></div>
           <h1 className="title-sm">{session.title || "Untitled Session"}</h1>
 
-          <div className="detail-head__tags">
+          <div className="detail-head__tags" data-slot="session-tags">
             {session.agentId && (
               <span className={`tag tag--agent tag--${session.agentId}`}>
                 {session.agentId.replace("agent-","")} · {session.agentName || ""}
@@ -175,7 +176,7 @@ export default async function SessionDetailPage({ params }: { params: { id: stri
             <div className="muted">{session.extractStatus ? "Awaiting mind sync or remote agent push" : ""}</div>
           </div>
         ) : (
-          <div className="detail-thread">
+          <div className="detail-thread" data-slot="message-thread">
             {session.messages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg as unknown as MsgRow} />
             ))}

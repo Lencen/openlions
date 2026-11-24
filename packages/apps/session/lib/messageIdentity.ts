@@ -4,7 +4,7 @@
  * 根因：不同 agent 的 hermes DB 各自用 INTEGER AUTOINCREMENT 生成 message id，
  * id 空间重叠（agent-h 和 agent-e 都有 id=1..36670）。
  * upload 端点用 `where: { id: String(m.id) }` upsert 时，
- * agent-x 的 message 会命中 ut 的已有记录，update 分支覆盖 content 但不改 sessionId，
+ * agent-e 的 message 会命中 ut 的已有记录，update 分支覆盖 content 但不改 sessionId，
  * 导致数据污染。
  *
  * 修复：Message.id 统一使用 `${agentId}:${source}:${originalId}` 复合 ID，

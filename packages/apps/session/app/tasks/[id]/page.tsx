@@ -63,15 +63,16 @@ export default async function TaskDetailPage({ params }: { params: { id: string 
         crumb={<><Link href="/tasks">定时任务</Link> · {task.name}</>}
         stats={`${totalRuns} 次执行记录 · 成功率 ${successRate}%`}
       />
-      <main className="page page-wide">
-        <h1 style={{ marginBottom: 12 }}>{task.name}</h1>
+      {/* 0.6.5 U-39b §2.7：详情页不套格位；统一 data-phase 供判据条件等待 */}
+      <main className="page page-wide" data-phase="ok">
+        <h1 style={{ marginBottom: 12 }} data-slot="task-title">{task.name}</h1>
         <div style={{ marginBottom: 24, display: "flex", gap: 8, alignItems: "center" }}>
           <span className="badge" style={{ background: "var(--primary-dim)", color: "var(--primary)", fontWeight: 500 }}>{task.business}</span>
           <span className="badge" style={{ background: "var(--surface-2)" }}>{TRIGGER_LABELS[task.trigger] || task.trigger}</span>
           <span className="uid" style={{ color: "var(--ink-muted)" }}>{task.schedule}</span>
         </div>
 
-        <section className="panel" style={{ marginBottom: 32 }}>
+        <section className="panel" style={{ marginBottom: 32 }} data-slot="task-basic-info">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid var(--border)" }}>
             <span style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 4, height: 16, background: "var(--primary)", borderRadius: 2 }} />
@@ -139,7 +140,7 @@ export default async function TaskDetailPage({ params }: { params: { id: string 
           </table>
         </section>
 
-        <section className="panel" style={{ marginBottom: 32 }}>
+        <section className="panel" style={{ marginBottom: 32 }} data-slot="task-runs">
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 12, borderBottom: "2px solid var(--border)" }}>
             <span style={{ fontSize: 16, fontWeight: 600, display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 4, height: 16, background: "var(--primary)", borderRadius: 2 }} />

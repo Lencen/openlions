@@ -16,7 +16,7 @@
  *
  * 判据二(2026-10-09 第三轮, 路径引用; 补判据一漏掉的一整类):
  *   事故: 实践 cmv0yh8eg00o124zjx7 的遗留项
- *     「docs/agent-x-verifies/f001-reverify-2026-09-15/ 未跟踪(上一 session 报告),本任务未提交」
+ *     「docs/agent-e-verifies/f001-reverify-2026-09-15/ 未跟踪(上一 session 报告),本任务未提交」
  *   没有任何 todo_<id> 引用(全是路径), 判据一直接返回 stale=false("无 todo 引用, 不判陈旧"),
  *   于是同一条遗留被 session-extract **连续开了 3 次**(37a898d8 / 89113446 / 本单),
  *   每次都只需回一句"该目录 2026-09-16 已被 093f7cf4 提交进 main"。

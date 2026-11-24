@@ -38,7 +38,7 @@ cd "$APP_DIR"
 #   最强假设: **next dev 会为编译反复 fork 短命 worker**, 每个 worker 加载应用 -> 初始化 Prisma ->
 #   打开活库 -> 退出; 这种"短命进程开库后退出"若被 SQLite 判为最后一个连接, 关闭时会 checkpoint +
 #   unlink 掉 -wal。生产模式没有 per-compile worker, 正好用来检验该假设。
-# 2026-10-26（前端线约束）：发布面服务绝不允许开"缺构建快速失败"——
+# 2026-10-26（前端团队约束）：发布面服务绝不允许开"缺构建快速失败"——
 #   console / portal / session 由发布脚本保证产物；若这里也 strict，一次发布失败就会变成服务起不来，更难救。
 #   这里做成硬约束：即使单元里误设 LIONS_STRICT_BUILD=1，也会被忽略并记 WARN。
 APP_NAME="$(basename "$APP_DIR")"

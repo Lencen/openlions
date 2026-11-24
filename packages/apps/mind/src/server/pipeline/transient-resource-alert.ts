@@ -2,7 +2,7 @@
  * transient-resource-alert.ts — 上游额度/限流告警「5h 自愈的瞬态资源事件」分类闸门 (2026-09-24)
  *
  * 事故与人类决定(平台库只读复算, sqlite3 -readonly …/dev.db):
- *   待办 todo_token429_1790055363894 「[需您拍板][P1] MiniMax Token Plan 用量上限 (agent-x 429)」
+ *   待办 todo_token429_1790055363894 「[需您拍板][P1] MiniMax Token Plan 用量上限 (agent-d 429)」
  *     · source=token-plan, createdBy=agent-operator, ownerType=human ownerId=operator, detail 不以【开头(**旧格式**),
  *       meta=NULL(没有 kind/cueKind, 因此绕过了 human-card-dedup 与 todo-writeback-guard 的结构化判据);
  *     · detail 原文: "[平台级告警 2026-09-22] agent-d 执行体 HTTP 429: Token Plan 用量上限. … 选项: A) 升级 …"

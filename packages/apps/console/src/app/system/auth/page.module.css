@@ -1,24 +1,35 @@
-/* /system/auth 页内样式（2026-11-05 P2 批8 呈现层：内联 style 清零）
-   窄面板 / 面包屑暗色 / 表下脚注都下沉到类；表格本体已换成白名单 DataTable（样式复用 globals 的 .dt）。 */
+/* /system/auth 只读 + 写鉴权模式切换（设计槽位 s8 table / s4 list / s12 note） */
+.notes { margin: 0; padding-left: 18px; color: var(--text-muted, #6b7280); font-size: 13px; line-height: 1.7; }
+.notes li + li { margin-top: 4px; }
 
-.bcDim { color: var(--text-dim); }
+/* s8：矩阵本体 n/a 说明 + 同类数据表容器（裸表拦截：类名含 tblWrap） */
+.na { margin: 0 0 10px; padding: 8px 10px; border: 1px solid var(--border); border-left: 3px solid var(--c-status-warn, #d97706); border-radius: var(--radius-md, 8px); background: var(--bg-surface2, var(--bg-soft)); font-size: 13px; line-height: 1.7; color: var(--text-muted); }
+.na code { font-family: var(--font-mono); background: var(--bg-base); padding: 1px 5px; border-radius: 4px; }
+.subHead { margin: 4px 0 8px; font-size: 13px; font-weight: 600; color: var(--text); }
+.tblWrap { overflow-x: auto; }
 
-/* 错误条的留白（原来是内联 marginBottom） */
-.errorWrap { margin-bottom: var(--sp-3); }
+/* s4：待审批 list */
+.report { margin: 0 0 10px; font-size: 12px; line-height: 1.6; color: var(--text-muted); }
+.list { margin: 0; padding: 0; list-style: none; }
+.listItem { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.listItem:last-child { border-bottom: 0; }
+.listRow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.listMeta { margin-top: 2px; font-size: 12px; color: var(--text-muted); }
+.more { font-size: 12px; color: var(--text-muted); text-decoration: none; }
+.more:hover { text-decoration: underline; }
 
-/* 面板底部「Key 由接入审批签发…」脚注（原来是内联 fontSize + color + marginTop） */
-.footNote { font-size: var(--fs-sm); color: var(--text-dim); margin-top: var(--sp-1-5); }
+/* s12：note(info) 读写分离 */
+.note { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-md, 8px); background: var(--bg-surface2, var(--bg-soft)); }
+.noteText { margin: 0 0 8px; font-size: 13px; line-height: 1.7; color: var(--text-muted); }
+.noteText:last-child { margin-bottom: 0; }
+.noteText b { color: var(--text); }
 
-/* 脚注里的行内链接（原来是内联 color） */
-.link { color: var(--primary); }
-
-/* 2026-11-09 · 0.4.40-04：唯一写入口（批量取消授权）的按钮与成功提示 */
-.revokeBtn { min-height: 26px; padding: 0 var(--sp-2); font-size: var(--fs-xs); border-radius: var(--radius-sm);
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text-dim); cursor: pointer; }
-.revokeBtn:hover:not(:disabled) { border-color: var(--status-crit); color: var(--status-crit); }
-.revokeBtn:disabled { opacity: 0.45; cursor: not-allowed; }
-.revokeBtn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.toast { position: fixed; right: var(--sp-5); bottom: var(--sp-5); z-index: 130; display: inline-flex; align-items: center; gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3); border-radius: var(--radius-md); background: var(--surface-1); color: var(--text);
-  border: 1px solid color-mix(in srgb, var(--status-ok) 45%, var(--border)); box-shadow: var(--elev-2); font-size: var(--fs-sm); }
-.toastX { background: transparent; border: 0; color: var(--text-muted); cursor: pointer; font-size: var(--fs-md); line-height: 1; }
+/* 0.6.4 U-56a：写鉴权模式卡 */
+.modeRow { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.confirm { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-top: 8px; background: var(--bg-surface2, var(--bg-soft)); }
+.confirm p { margin: 0 0 8px; font-size: 13px; }
+.confirm code { font-family: var(--font-mono); background: var(--bg-base); padding: 1px 6px; border-radius: 4px; }
+.reasonLabel { display: block; font-size: 13px; color: var(--text-muted); margin: 8px 0; }
+.reasonInput { display: block; width: 100%; max-width: 420px; margin-top: 4px; padding: 6px 10px; font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); color: var(--text); }
+.warn { color: var(--c-status-warn); }
+.err { color: var(--c-status-crit); font-size: 13px; margin-top: 8px; }

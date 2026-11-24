@@ -4,7 +4,7 @@ import { safeFetchJson } from "@/lib/server/proxy-fetch";
 export const dynamic = "force-dynamic";
 
 // 2026-09-24 [可见性缺口] todo_bdce470195d94307abff: console 代理「按来源的改进结果」视图
-//   GET /api/improvement-results?source=agent-x-feedback&limit=100
+//   GET /api/improvement-results?source=agent-f-feedback&limit=100
 // 上游: mind /api/v1/flywheel/improvement-results。上游不可达时返回 ok:false(不抛 500)。
 const MIND = "http://localhost:3000/api/v1/flywheel/improvement-results";
 

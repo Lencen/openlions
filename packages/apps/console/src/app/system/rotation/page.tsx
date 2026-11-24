@@ -1,142 +1,102 @@
 "use client";
-// 2026-10-13 round 76-BM: 从 mind 的 /rotation 搬来(用户决策: console 是唯一管理后台, mind 前端退休)。
-//   数据与动作走 console 的 BFF /api/rotation(-> mind 的 autoRotation.*); 界面用 console 原子件与主题令牌。
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 手写 .tbl 表换成白名单 DataTable。
-//   列/字段/文案/动作与接口（/api/rotation）一字未改；输入框宽度改为 .w200 / .w100 档位类。
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { statusLabel } from "@/config/systemLabels";
-import KPICard from "@/components/KPICard";
-import { useApi } from "@/lib/api";
-import { Alert, Button, Empty, Input, Skeleton, Tag } from "@/components/primitives";
-import TableCopyButton from "@/components/TableCopyButton";
+// 0.5.1 B5-10 /system/rotation · Bento P5 看板（2026-11-15）
+// 数据：GET /api/rotation（status 运行态/定时/累计 + timeline 轮转记录 1207 行）。
+// 口径：0.5.1 只读 —— 原页启停/立即执行/保存配置（POST /api/rotation）写控件不渲染；
+//       累计处理记录=status.totalRecords（接口汇总字段）；时间线仅展示最近记录，二者不混。
+import { useState, useEffect } from "react";
+import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import BentoGrid from "@/components/bento/BentoGrid";
+import BentoCard from "@/components/bento/BentoCard";
 import DataTable from "@/components/DataTable";
 import type { DataColumn } from "@/components/DataTable";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import styles from "./page.module.css";
+import type { Metric } from "@/components/bento/types";
+import { Chips, KpiTile, Note, Pager, States, Toolbar, Tone, usePhaseOverride, useResource } from "../_components/bento-kit";
+import kit from "../_components/bento-kit.module.css";
+import { fmtNum, fmtTime } from "@/lib/format";
 
 interface Status {
   enabled?: boolean; status?: string; cronExpression?: string; cronHumanReadable?: string;
   maxPerRun?: number; projectFilter?: string | null; lastRunAt?: string | null; lastError?: string | null;
   totalRuns?: number; totalRecords?: number; nextRunAt?: string | null; isCurrentlyRunning?: boolean;
 }
-interface TL { date: string; recordsSynced: number; status: string; duration: number; sourceType: string }
+interface TL { date: string; recordsSynced: number; status: string; duration?: number; sourceType: string }
 interface Resp { ok?: boolean; status?: Status | null; timeline?: TL[] | null; error?: string | null }
 
-const fmt = (t?: string | null) => {
-  if (!t) return "—";
-  const d = new Date(t);
-  if (isNaN(d.getTime())) return t;
-  const p = (n: number) => String(n).padStart(2, "0");
-  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
-};
-
-const SUCCESS_LABEL: Record<string, string> = {
-  start: "自动任务已启动",
-  stop: "自动任务已停止",
-  runNow: "已触发立即运行（几分钟后刷新查看结果）",
-  updateConfig: "配置已保存",
-};
-
-/** 轮转记录列（与改前 <thead> 时间/来源/处理记录/状态 逐列对应） */
-const columns: DataColumn<TL>[] = [
-  { key: "date", title: "时间", render: (x) => <span className={"nowrap mono " + styles.cellSm}>{fmt(x.date)}</span> },
-  { key: "sourceType", title: "来源", render: (x) => <span className="nowrap">{x.sourceType || "-"}</span> },
-  { key: "recordsSynced", title: "处理记录", align: "right", render: (x) => <>{x.recordsSynced ?? 0}</> },
-  {
-    key: "status",
-    title: "状态",
-    render: (x) => (
-      <Tag color={x.status === "COMPLETED" ? "green" : x.status === "FAILED" ? "red" : "orange"}>{statusLabel(x.status) || "-"}</Tag>
-    ),
-  },
-];
+const PAGE_SIZE = 20;
 
 export default function RotationPage() {
-  const { data, loading, error, mutate } = useApi<Resp>("/api/rotation");
-  const st = data?.status ?? null;
-  const tl = data?.timeline ?? [];
-  const [expr, setExpr] = useState("*/30 * * * *");
-  const [maxPerRun, setMaxPerRun] = useState(3);
-  const [projectFilter, setProjectFilter] = useState("");
-  const [seeded, setSeeded] = useState(false);
-  const [busy, setBusy] = useState<string | null>(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const res = useResource<Resp>("/api/rotation", { pollMs: 60000 });
+  const [reqAt, setReqAt] = useState<string | null>(null);
+  useEffect(() => { setReqAt(new Date().toISOString()); }, []);
+  const forced = usePhaseOverride();
+  const base = forced && forced !== "ok" ? forced : res.phase;
+  const phase = base === "ok" && !res.data?.status && !res.data?.timeline?.length ? "empty" : base;
+  const st = res.data?.status ?? null;
+  const tl = res.data?.timeline ?? [];
+  const [page, setPage] = useState(0);
+  const pages = Math.max(1, Math.ceil(tl.length / PAGE_SIZE));
+  const cur = Math.min(page, pages - 1);
 
-  // 首次拿到状态后回填表单(其后不再覆盖用户正在编辑的值)
-  useEffect(() => {
-    if (seeded || !st) return;
-    setExpr(st.cronExpression || "*/30 * * * *");
-    setMaxPerRun(st.maxPerRun ?? 3);
-    setProjectFilter(st.projectFilter || "");
-    setSeeded(true);
-  }, [st, seeded]);
+  const k = (v: number | null | undefined, hint: string, tone?: "info" | "ok" | "warn" | "crit"): Metric =>
+    v == null ? { kind: "na", reason: "接口未返回该字段" } : { kind: "value", value: fmtNum(v), hint, tone: tone || "info" };
+  const running = st?.isCurrentlyRunning === true || st?.status === "RUNNING";
 
-  const payload = () => ({ cronExpression: expr, maxPerRun, projectFilter: projectFilter || undefined });
+  const cols: DataColumn<TL>[] = [
+    { key: "time", title: "时间", width: 180, render: (x) => <span className={kit.mono}>{x.date ? fmtTime(x.date) : "n/a"}</span> },
+    { key: "source", title: "来源", width: 200, render: (x) => <span className={kit.mono}>{x.sourceType || "n/a"}</span> },
+    { key: "status", title: "状态", width: 100, render: (x) => <Tone tone={x.status === "COMPLETED" ? "ok" : x.status === "FAILED" ? "crit" : "warn"}>{x.status === "COMPLETED" ? "完成" : x.status === "FAILED" ? "失败" : x.status || "n/a"}</Tone> },
+    { key: "records", title: "处理记录", align: "right", width: 110, render: (x) => <span className={kit.num}>{fmtNum(x.recordsSynced)}</span> },
+  ];
 
-  const act = async (action: string) => {
-    setBusy(action); setMsg(null);
-    try {
-      const r = await fetch("/api/rotation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action, payload: payload() }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j?.ok === false) throw new Error(String(j?.error || ("请求失败（状态码 " + r.status + "）")));
-      setMsg({ ok: true, text: SUCCESS_LABEL[action] || "已完成" });
-      mutate();
-    } catch (e) {
-      setMsg({ ok: false, text: String((e as Error)?.message || e) });
-    } finally { setBusy(null); }
-  };
+  return (
+    <main className="page">
+      <h1 className={kit.srOnly}>飞轮自动轮转</h1>
+      <PageHeader>
+        <PageTitle>飞轮自动轮转</PageTitle>
+        <div className="page-subtitle">定时把会话轮转成认知资产 · 0.5.1 只读（不渲染启停/立即执行等写控件）· 数据时刻 {reqAt ? fmtTime(reqAt) : "n/a"}（请求时刻）</div>
+        <Chips group="系统" page="轮转" />
+      </PageHeader>
 
-  const running = st?.status === "RUNNING" || st?.isCurrentlyRunning === true;
-  return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span className={styles.crumbDim}>平台管理</span><span className="sep">/</span><span className="current">飞轮轮转</span></div>
-    <PageHeader><PageTitle>飞轮自动轮转</PageTitle><div className="page-subtitle">定时把会话轮转成认知资产；此处可启停、立即执行一次、并调整定时与单次上限。</div></PageHeader>
-    {error && <div className={styles.alertRow}><Alert type="error" message="轮转状态加载失败" description={String((error as Error)?.message || error).slice(0, 200)} /></div>}
-    {!error && <div className="kpi-grid">
-      <KPICard label="运行状态" value={loading && !st ? "..." : (st?.isCurrentlyRunning ? "执行中" : (running ? "运行中" : "已停止"))} />
-      <KPICard label="定时" value={st?.cronHumanReadable || "..."} />
-      <KPICard label="总运行次数" value={st?.totalRuns != null ? String(st.totalRuns) : "..."} />
-      <KPICard label="累计处理记录" value={st?.totalRecords != null ? String(st.totalRecords) : "..."} />
-    </div>}
-    {!error && <div className="panel"><div className="panel-header"><span className="panel-title">控制</span>
-      <span className={"tiny " + styles.dimText}>上次运行 {fmt(st?.lastRunAt)} · 下次 {fmt(st?.nextRunAt)}</span></div>
-      <div className={styles.controlBody}>
-        <label className={styles.fieldLabel}>定时表达式
-          <Input className={styles.w200} value={expr} onChange={(e: any) => setExpr(e.target.value)} placeholder="*/30 * * * *" /></label>
-        <label className={styles.fieldLabel}>单次上限
-          <Input className={styles.w100} type="number" value={maxPerRun} onChange={(e: any) => setMaxPerRun(Math.max(1, Number(e.target.value) || 1))} /></label>
-        <label className={styles.fieldLabel}>项目过滤（留空 = 全部）
-          <Input className={styles.w200} value={projectFilter} onChange={(e: any) => setProjectFilter(e.target.value)} placeholder="全部" allowClear /></label>
-        <div className={styles.btnRow}>
-          <Button type="primary" disabled={busy !== null || running} onClick={() => act("start")}>{busy === "start" ? "启动中…" : "启动"}</Button>
-          <Button disabled={busy !== null || !running} onClick={() => act("stop")}>{busy === "stop" ? "停止中…" : "停止"}</Button>
-          <Button disabled={busy !== null} onClick={() => act("runNow")}>{busy === "runNow" ? "触发中…" : "立即执行一次"}</Button>
-          <Button disabled={busy !== null} onClick={() => act("updateConfig")}>{busy === "updateConfig" ? "保存中…" : "保存配置"}</Button>
-        </div>
-      </div>
-      {msg && <div className={styles.alertPad}><Alert type={msg.ok ? "success" : "error"} message={msg.text} /></div>}
-      {st?.lastError && <div className={styles.alertPad}><Alert type="warning" message="上次运行有错误" description={String(st.lastError).slice(0, 200)} /></div>}
-    </div>}
-    {!error && <div className="panel"><div className="panel-header"><span className="panel-title">最近轮转记录 {loading && <span className="tiny">（加载中…）</span>}</span></div>
-      {loading && !tl.length && <div className={styles.pad35}><Skeleton active title={false} paragraph={{ rows: 3 }} /></div>}
-      {!loading && !tl.length && <Empty description="暂无轮转记录" />}
-        {tl.length > 0 && <>
-        <TableCopyButton />
-        <DataTable
-          columns={columns}
-          rows={tl.slice(0, 30)}
-          rowKey={(_x, i) => i}
-        />
-        </>}</div>}
-    {/* 2026-10-19 B5(方案 L3-2): 修前正文 0 出链 ✗; 轮转产物最终进入流水线/访问日志, 给出后续去向 ✓ */}
-    <div className={"tiny " + styles.related}>
-      <span>相关视图：</span>
-      <Link href="/system/pipeline">流水线监控 →</Link>
-      <Link href="/system/access-log">访问日志 →</Link>
-    </div>
-  </main></div>);
+      <States phase={phase} endpoint="GET /api/rotation" error={res.error} status={res.status} onRetry={res.reload}
+        emptyTitle="无轮转任务" emptyDetail="轮转接口正常返回但没有状态与时间线（空集，不是不可得）。"
+        unavailableTitle="轮转数据不可得" unavailableDetail="rotation 未返回 status/timeline；补齐路径：BFF 输出 status 与 timeline。" />
+
+      {phase === "ok" && (
+        <BentoGrid>
+          <KpiTile span={3} label="运行状态" metric={st ? { kind: "value", value: running ? (st.status === "RUNNING" ? "运行中" : "执行中") : (st.status === "STOPPED" ? "已停止" : (st.status || "n/a")), hint: "status=" + (st.status || "n/a") + " · enabled=" + String(st.enabled), tone: running ? "ok" : "warn" } : { kind: "na", reason: "status 未下发" }} />
+          <KpiTile span={3} label="定时" metric={st?.cronHumanReadable ? { kind: "value", value: st.cronHumanReadable, hint: st.cronExpression || "", } : { kind: "na", reason: "cron 未下发" }} />
+          <KpiTile span={3} label="总运行次数" metric={k(st?.totalRuns, "status.totalRuns（接口汇总）")} />
+          <KpiTile span={3} label="累计处理记录" metric={k(st?.totalRecords, "status.totalRecords（接口汇总，非时间线求和）")} />
+
+          <BentoCard span={8} title="最近轮转记录" sub={"时间线共 " + fmtNum(tl.length) + " 行 · 每页 " + PAGE_SIZE + " 条（接口最多返回 1207 行）"}>
+            <Toolbar right="只读 · GET /api/rotation" />
+            <DataTable<TL> columns={cols} rows={tl.slice(cur * PAGE_SIZE, cur * PAGE_SIZE + PAGE_SIZE)} rowKey={(_x, i) => cur * PAGE_SIZE + i}
+              empty={{ title: "无轮转记录", desc: "时间线为空（空集，不是不可得）。" }} />
+            <Pager page={cur} pages={pages} onPage={setPage} totalText={"共 " + fmtNum(tl.length) + " 条 · 第 " + (cur + 1) + " / " + pages + " 页" + (cur === pages - 1 ? " · 已到最后一页" : "")} />
+          </BentoCard>
+
+          <BentoCard span={4} title="轮转摘要" sub="运行态与配置（只读）">
+            <ul className={kit.kv}>
+              <li><span>上次运行</span><b>{st?.lastRunAt ? fmtTime(st.lastRunAt) : "n/a（无记录）"}</b></li>
+              <li><span>下次运行</span><b>{st?.nextRunAt ? fmtTime(st.nextRunAt) : "n/a（未启用/未排期）"}</b></li>
+              <li><span>单次上限</span><b>{st?.maxPerRun != null ? fmtNum(st.maxPerRun) + " 条" : "n/a"}</b></li>
+              <li><span>项目过滤</span><b>{st?.projectFilter || "全部"}</b></li>
+              <li><span>当前执行中</span><b>{st?.isCurrentlyRunning == null ? "n/a" : st.isCurrentlyRunning ? "是" : "否"}</b></li>
+              <li><span>最后错误</span><b>{st?.lastError ? String(st.lastError).slice(0, 60) : "无（null）"}</b></li>
+            </ul>
+            <Note>累计处理记录取接口 status.totalRecords；时间线行数 {fmtNum(tl.length)} 是接口返回窗口，不用来重算累计。</Note>
+          </BentoCard>
+
+          <BentoCard span={12} title="只读说明与口径">
+            <ul className={kit.kv}>
+              <li><span>写操作</span><b>0.5.1 只读：启动/停止/立即执行/保存配置（POST /api/rotation）不渲染，待写通路契约开放。</b></li>
+              <li><span>累计口径</span><b>总运行次数与累计处理记录来自 status 汇总字段；不与时间线行数混用。</b></li>
+              <li><span>下次运行</span><b>nextRunAt=null 表示未启用（enabled=false）或未排期 → 显示 n/a 并注明，不写日期。</b></li>
+            </ul>
+            <Note>相关视图：<a className={kit.link} href="/system/access-log">访问日志</a> · <a className={kit.link} href="/flywheel/tasks">改进任务</a></Note>
+          </BentoCard>
+        </BentoGrid>
+      )}
+    </main>
+  );
 }

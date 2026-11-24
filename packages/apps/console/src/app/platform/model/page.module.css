@@ -1,28 +1,49 @@
-/* /platform/model 页内样式（2026-11-05 页头口径批次）
-   只放本页真正需要、globals.css 里没有的东西：面包屑上级段的弱化色（.crumbDim），
-   以及 2026-11-05 P2 批8 追加的表单区/出链行（见文件末尾）。
-   面包屑/页头/表单宽度档位一律复用 globals 既有类，不新增全局样式。 */
-
-.crumbDim { color: var(--text-dim); }
-/* ── 2026-11-05 P2 批8：表单区与底部出链的内联样式下沉 ── */
-
-/* 表单整体：大字号 + 行距（原内联 fontSize: var(--fs-lg) / lineHeight: 2） */
-.formList { font-size: var(--fs-lg); line-height: 2; }
-
-/* 单个字段行：label + input 一行（原内联 display/gap/alignItems/marginBottom） */
-.fieldRow { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-2-5); }
-
-/* 字段名：固定 200px + 弱化色（原内联 width: 200 / color: var(--text-dim)） */
-.fieldLabel { width: 200px; color: var(--text-dim); }
-
-/* 输入框占满剩余宽度（原内联 flex: 1）；与 globals 的 .ui-input 叠加使用 */
-.fieldInput { flex: 1; }
-
-/* 保存按钮：与上方字段行留一点间距（原内联 marginTop: var(--sp-1-5)） */
-.saveBtn { margin-top: var(--sp-1-5); }
-
-/* 保存结果提示（原内联 marginTop: var(--sp-2-5)） */
-.saveMsg { margin-top: var(--sp-2-5); }
-
-/* 底部「相关视图」行（原内联 flex/gap/flexWrap/marginTop） */
-.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+/* /platform/model · 0.5 批E demo slot 还原（2026-11-13）
+   cfg-layout（左配置项 300px / 右详情 + 变更预览 + 写约束）+ s12 变更记录；颜色字号走 tokens。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
+.noteWarn { border: 1px solid var(--border); border-left: 3px solid var(--status-warn); border-radius: var(--radius-md); padding: var(--sp-3); font-size: var(--fs-sm); color: var(--status-warn); background: var(--bg-surface); line-height: 1.7; margin-bottom: var(--gap-sect); }
+.cfgLayout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: var(--gap-block); align-items: start; margin-bottom: var(--gap-sect); }
+.cfgAside { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-2); display: flex; flex-direction: column; gap: var(--sp-1); max-height: 620px; overflow: auto; }
+.cfgGroup { font-size: var(--fs-xs); color: var(--text-muted); padding: var(--sp-2) var(--sp-2) var(--sp-1); }
+.cfgItem, .cfgItemOn { display: flex; flex-direction: column; gap: 2px; text-align: left; width: 100%; border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; padding: var(--sp-1) var(--sp-2); cursor: pointer; }
+.cfgItem:hover { background: var(--bg-hover); }
+.cfgItemOn { border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); background: var(--primary-dim); }
+.cfgK { font-size: var(--fs-sm); color: var(--text); }
+.cfgV { font-size: var(--fs-xs); color: var(--text-muted); font-family: var(--font-mono); word-break: break-all; }
+.cfgMain { display: flex; flex-direction: column; gap: var(--gap-block); min-width: 0; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagNa { font-size: var(--fs-xs); color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.mono { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-dim); word-break: break-all; }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.6; }
+.meta { display: grid; grid-template-columns: 96px 1fr; gap: var(--sp-2); margin: 0; font-size: var(--fs-sm); }
+.meta dt { color: var(--text-muted); }
+.meta dd { margin: 0; color: var(--text-dim); line-height: 1.6; word-break: break-all; }
+.diff { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.diffOld, .diffNew { display: flex; align-items: baseline; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); }
+.diffOld { background: var(--bg-surface2); }
+.diffNew { border-top: 1px solid var(--border); }
+.diffK { min-width: 56px; color: var(--text-muted); font-size: var(--fs-xs); }
+.auditLine { border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.6; }
+.constraintList { display: flex; flex-direction: column; gap: var(--sp-1); }
+.constraintRow { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.7; }
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border);  line-height: 24px; }
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateErr { border-left: 3px solid var(--status-crit); }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.stateMini { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: var(--fs-xs); }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+.inlineLink { color: var(--primary); text-decoration: none; margin: 0 2px; }
+.inlineLink:hover { text-decoration: underline; }
+@media (max-width: 1280px) { .cfgLayout { grid-template-columns: 240px minmax(0, 1fr); } }
+@media (max-width: 900px) { .cfgLayout { grid-template-columns: 1fr; } }

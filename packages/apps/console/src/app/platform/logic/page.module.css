@@ -22,7 +22,7 @@
 @media (max-width: 1023px) { .cfgGrid { grid-template-columns: 1fr; --cfg-h: 52vh; } }
 
 /* 左栏：限高 + 内部滚动（354 个域的列表在这里滚，不再把页面撑到 3.8 万像素） */
-.cfgLeft { height: var(--cfg-h); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); overflow: hidden auto; }
+.cfgLeft { height: var(--cfg-h); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-surface); overflow: hidden auto; }
 /* 右栏：与左栏同高，文档正文在面板内部滚动（栅格行高恒定 -> 下方面板不位移） */
 .cfgRight > :global(.panel) { height: 100%; overflow-y: auto; }
 .cfgLeftHead { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); color: var(--text-dim); background: var(--bg-surface2); border-bottom: 1px solid var(--border); }
@@ -54,3 +54,73 @@
 
 .panelNote { font-size: var(--fs-sm); color: var(--text-dim); }
 .linkList { font-size: var(--fs-base); line-height: 1.9; }
+
+/* 0.6.4 U-56a：平台配置可写区 */
+.cfgWarn { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--c-status-warn); padding: 8px 0; }
+/* 注意：这里原先是 .cfgGrid（与上方两栏栅格同名）——同名后者生效，会把「左列表 + 右详情」的
+   300px 两栏压成单栏（Q1 判据「cfg 记号 = 0 / 未见两栏」的成因之一）。改名 .cfgFields。 */
+.cfgFields { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 10px; }
+.cfgRow { display: grid; grid-template-columns: minmax(140px, 1.2fr) minmax(90px, 0.8fr) minmax(120px, 1fr); gap: 10px; align-items: center; padding: 6px 8px; border-radius: var(--radius-sm); font-size: 13px; }
+.cfgRowChanged { background: var(--c-primary-dim, var(--bg-surface2)); }
+.cfgLabel { color: var(--text); }
+.cfgCur { color: var(--text-muted); font-family: var(--font-mono); }
+.cfgNew select, .cfgNew input { width: 100%; max-width: 200px; padding: 3px 6px; font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); }
+.cfgDiff { border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px; margin-top: 8px; background: var(--bg-surface2, var(--bg-soft)); }
+.cfgDiffHead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 13px; }
+.cfgDiffList { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.cfgDiffList li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cfgDiffKey { min-width: 140px; color: var(--text); }
+.cfgBefore { color: var(--text-muted); font-family: var(--font-mono); text-decoration: line-through; }
+.cfgArrow { color: var(--text-muted); }
+.cfgAfter { color: var(--c-status-ok); font-family: var(--font-mono); font-weight: 600; }
+.cfgAck, .cfgReason { display: block; font-size: 13px; color: var(--text-muted); margin: 8px 0; }
+.cfgAck input { margin-right: 6px; }
+.cfgReason input { display: block; width: 100%; max-width: 460px; margin-top: 4px; padding: 6px 10px; font-size: 13px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); }
+.cfgActions { display: flex; gap: 8px; margin-top: 10px; }
+.cfgErr { color: var(--c-status-crit); font-size: 13px; margin-top: 8px; }
+.cfgOk { color: var(--c-status-ok); font-size: 13px; margin-top: 8px; }
+
+/* ── Q1 差异补齐（2026-11-19）──────────────────────────────────────────────
+   ① 工具栏：设计没给本页筛选/排序交互，只放刷新 + 只读说明（类名含 toolbar，判据按此计数）。
+   ② 卡指标四格：设计数据卡 ①②③④（逻辑域数 / 平台配置项数 / 文档清单篇数 / 变更记录条数）。
+      第四格无统计口径 -> 显示「不可得」+ 原因，不写 0。
+   ③ tblWrap：变更记录表格的包裹层（本页禁裸表）。 */
+.toolbar { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; padding: var(--sp-2) 0; margin-bottom: var(--sp-2); border-bottom: 1px solid var(--border); }
+.toolLeft { flex: 1 1 320px; min-width: 0; }
+.toolNote { font-size: var(--fs-sm); color: var(--text-dim); }
+
+.kpiStrip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap-block); margin-bottom: var(--gap-sect); }
+@media (max-width: 1023px) { .kpiStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .kpiStrip { grid-template-columns: 1fr; } }
+.kpi { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); } /* 2026-11-19 像素维：12→16、radius 10→14（对齐设计稿卡片） */
+.kpiLabel { font-size: var(--fs-sm); color: var(--text-dim); }
+.kpiValue { font-size: 22px; font-weight: 700; line-height: 1.3; color: var(--text); }
+.kpiNa { font-size: var(--fs-md); color: var(--text-muted); }
+.kpiNote { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.5; }
+
+.tblWrap { width: 100%; overflow-x: auto; }
+
+/* ── 设计 s12 邻卡补齐（2026-11-19）────────────────────────────────────────
+   ① 覆盖率告警阈值：设计原型给的是假数据（0.72 / 0.70），本页只用平台配置读取结果里的真值，
+      没有该项就写「平台未设该项」+ 业务原因，不写 0、不抄示例数字。
+   ② 写操作约束：三道闸门逐条标「已生效 / 未生效 / 不可得」，每条都带判据来源；
+      设计原型的「已生效」是 mock，不能照抄。
+   两卡都必须落在 <section> + <h3> 上（判据按 section/article/[class*=card] 内 h1-h4 抽标题）。 */
+.bentoRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap-block); margin-bottom: var(--gap-sect); }
+@media (max-width: 1023px) { .bentoRow { grid-template-columns: 1fr; } }
+.card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--bg-surface); overflow: hidden; box-shadow: var(--shadow-card); } /* 2026-11-19 像素维：radius 10→14；外层 padding 仍为 0（分段式卡片，内部 section 自带 padding，视觉间距与设计 16 等效，见报告「已知不修」） */
+.cardHead { display: flex; align-items: baseline; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-3); border-bottom: 1px solid var(--border); background: var(--bg-surface2); }
+.cardH3 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.6; color: var(--text); } /* 2026-11-19 像素维：字重 700→600、行高→1.6（25.6px）、字号对齐设计 16px */
+.cardSub { font-size: var(--fs-sm); color: var(--text-dim); }
+.cardBody { display: flex; flex-direction: column; gap: 10px; padding: var(--sp-3); }
+.kv { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 6px 12px; margin: 0; font-size: var(--fs-sm); }
+.kv dt { color: var(--text-dim); }
+.kv dd { margin: 0; color: var(--text); line-height: 1.6; word-break: break-word; }
+.kvNa { color: var(--text-muted); }
+.kvVal { font-family: var(--font-mono); font-size: var(--fs-base); font-weight: 600; }
+.gateList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gateItem { display: flex; flex-direction: column; gap: 3px; padding: 9px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface2); }
+.gateTop { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
+.gateSrc { font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.6; }
+.cardFoot { padding: 8px var(--sp-3) var(--sp-3); font-size: var(--fs-sm); color: var(--text-dim); line-height: 1.6; border-top: 1px dashed var(--border); }
+

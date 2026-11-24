@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const r = await macsAdminFetch("/api/dlq/replay/" + encodeURIComponent(id), { method: "POST", body: JSON.stringify({}) });
   auditMacsWrite({ action: "dlq-replay", id, messageId: row.message_id, target: row.target_agent_id, httpStatus: r.status, result: r.status < 300 ? "ok" : "failed", response: r.body });
 
-  // 0.4.40-03 批3：平台审计（uiux 契约）。ops 类操作无法回滚，故审计失败时如实返回 500，
+  // 0.4.40-03 批3：平台审计（设计 契约）。ops 类操作无法回滚，故审计失败时如实返回 500，
   //   并说明"操作已执行"——不假装没发生（与 model-config 的文件可回滚场景不同）。
   try {
     await writeAudit({

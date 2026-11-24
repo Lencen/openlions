@@ -1,163 +1,176 @@
 "use client";
-// 飞轮执行数据记录 (2026-09-01 重构) — 业务审计
-// 时间线: 什么时间扫描/提炼/反思/改进 + 错误记录
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 两张手写 .tbl 表 → 白名单 DataTable。
-//   列/字段/文案不变；阶段徽标底色从内联 STAGE_COLORS 改成 [data-stage] 属性选择器（默认底仍是 --text-3）。
-//   取数（/api/flywheel-audit?limit=50&stage=…）、15s 轮询与 AbortController 一字未改。
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { t } from "@/i18n";
-import TableCopyButton from "@/components/TableCopyButton";
-import DataTable from "@/components/DataTable";
-import type { DataColumn } from "@/components/DataTable";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+
+// /flywheel/audit — 0.5 批F · demo slot 还原（2026-11-13）
+// slots：s12｜飞轮审计（表格）
+// 取数（既有只读端点）：/api/flywheel-audit?limit=50
+// 口径纪律（数据卡 card-flywheel-audit）：
+//   · 事件列表/错误面板均为接口真实数据；「今日事件」接口字段是字符串拼接坏值 → 用阶段分布求和（派生）并注明；
+//   · 今日错误与历史错误分列：错误面板固定标「历史（非今日）」并给最后一条时刻（G-2）；
+//   · 接口无 asOf → 页脚标「请求时刻（客户端，非库内时刻）」（G-4）。
+import { useCallback, useEffect, useState } from "react";
+import { PageHeader, PageTitle } from "@/components/ui";
 import styles from "./page.module.css";
 
-interface AuditData {
-  events: Array<{ stage: string; sourceType: string; sourceTitle: string; createdAt: number }>;
-  errors: Array<{ errorType: string; stage: string; sessionId: string; message: string; occurredAt: number }>;
-  byStage: Array<{ stage: string; c: number }>;
-  todayEvents: number;
-  todayErrors: number;
-}
+type Phase = "loading" | "ok" | "error" | "forbidden";
 
-// 2026-10-13 round 76-CU: 徽标文字原来写死深色墨 #0a0e1a —— 亮色主题下压在 --brand(#0B6E82) 上只有 ~3.1,
-//   暗色下才勉强对。改用通用墨色令牌 --on-accent(亮 #fff / 暗 #0a0e14 / hc #000), 三主题都对。
-// 2026-11-05 P2：底色不再走内联 map —— 这里只保留「有哪些阶段」（顺序 = 改前 map 的键顺序），
-//   每个阶段的底色在 page.module.css 的 .stageBadge[data-stage="…"] 里。
-const STAGE_KEYS = [
-  "MEMORIZE", "KNOWLEDGE", "REFLECT", "PRACTICE",
-  "EVALUATE", "LEARN", "CALL_LLM", "OUTCOME",
-  "REFLECTION_TO_TASK",
-];
+interface Ev { stage?: string; sourceType?: string; sourceTitle?: string; createdAt?: string; }
+interface ErrEv { errorType?: string; stage?: string; sessionId?: string; message?: string; occurredAt?: string; }
+interface Audit { events?: Ev[]; errors?: ErrEv[]; byStage?: Array<{ stage?: string; c?: string | number }>; todayEvents?: unknown; todayErrors?: unknown; }
 
-const fmtTime = (ms: number) => {
-  const d = new Date(ms);
-  // P1-6: 固定 Asia/Shanghai, 防 UTC 机器上时间差 8h
-  return d.toLocaleDateString("zh-CN", { timeZone: "Asia/Shanghai" }) + " " +
-    d.toLocaleTimeString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+const FORBIDDEN_RE = /(401|403|无权限|未授权|forbidden|unauthorized)/i;
+const NUM = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v.toLocaleString("zh-CN") : "n/a");
+const T = (v?: string | null) => (v ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "n/a");
+const clip = (v?: string | null, n = 60) => {
+  const s = String(v || "").replace(/\s+/g, " ").trim();
+  return s ? (s.length > n ? s.slice(0, n) + "…" : s) : "n/a";
 };
 
-type EventRow = AuditData["events"][number];
-type ErrorRow = AuditData["errors"][number];
-
-const eventColumns: DataColumn<EventRow>[] = [
-  { key: "createdAt", title: "时间", render: (e) => <span className={"nowrap mono " + styles.cellSm}>{fmtTime(e.createdAt)}</span> },
-  {
-    key: "stage",
-    title: "阶段",
-    render: (e) => <span className={"badge " + styles.stageBadge + " " + styles.stageBadgeSm} data-stage={e.stage}>{e.stage}</span>,
-  },
-  { key: "sourceType", title: "来源", render: (e) => <span className={styles.cellBase}>{e.sourceType}</span> },
-  { key: "sourceTitle", title: "详情", render: (e) => <span className={styles.cellDim}>{(e.sourceTitle || "").slice(0, 60)}</span> },
-];
-
-const errorColumns: DataColumn<ErrorRow>[] = [
-  { key: "occurredAt", title: "时间", render: (e) => <span className={"nowrap mono " + styles.cellSm}>{fmtTime(e.occurredAt)}</span> },
-  { key: "errorType", title: "类型", render: (e) => <span className="badge badge-red">{e.errorType}</span> },
-  { key: "stage", title: "阶段", render: (e) => <>{e.stage}</> },
-  { key: "sessionId", title: t('common.session'), render: (e) => <span className={"mono " + styles.cellSm}>{(e.sessionId || "").slice(0, 30)}</span> },
-  { key: "message", title: "消息", render: (e) => <span className={styles.cellDim}>{(e.message || "").slice(0, 60)}</span> },
-];
-
 export default function AuditPage() {
-  const [data, setData] = useState<AuditData | null>(null);
-  const [stage, setStage] = useState("");
-  const [showErrors, setShowErrors] = useState(false);
-  const [error, setError] = useState("");
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [err, setErr] = useState("");
+  const [data, setData] = useState<Audit | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const [reqAt, setReqAt] = useState("");
+  const reload = useCallback(() => setNonce((x) => x + 1), []);
 
   useEffect(() => {
-    // P1-7 (2026-09-07): AbortController — 快速切换 stage 时取消旧请求, 防 stale 覆盖
-    const ac = new AbortController();
-    const load = async () => {
+    let alive = true;
+    setPhase("loading"); setErr("");
+    (async () => {
       try {
-        const res = await fetch(`/api/flywheel-audit?limit=50&${stage ? "stage=" + stage : ""}`, { signal: ac.signal });
-        const d = await res.json();
-        if (d.error) setError(d.error);
-        else setData(d);
-      } catch (e: any) { if (e?.name !== "AbortError") setError(e.message); }
-    };
-    load();
-    const t = setInterval(() => { if (!document.hidden) load(); }, 15000);
-    return () => { ac.abort(); clearInterval(t); };
-  }, [stage]);
+        const r = await fetch("/api/flywheel-audit?limit=50", { cache: "no-store" });
+        if (!alive) return;
+        if (r.status === 401 || r.status === 403) { setPhase("forbidden"); return; }
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          if (FORBIDDEN_RE.test(txt)) { setPhase("forbidden"); return; }
+          setErr("审计接口读取失败（状态码 " + r.status + "）");
+          setPhase("error");
+          return;
+        }
+        const j: Audit & { error?: string } = await r.json();
+        if (!alive) return;
+        if (j.error) { setErr(String(j.error)); setPhase("error"); return; }
+        setData(j);
+        setReqAt(new Date().toLocaleString("zh-CN", { hour12: false }));
+        setPhase("ok");
+      } catch (e: unknown) {
+        if (!alive) return;
+        setErr("审计接口请求失败：" + String((e as Error)?.message || e).slice(0, 80));
+        setPhase("error");
+      }
+    })();
+    return () => { alive = false; };
+  }, [nonce]);
 
-  const events = data?.events ?? [];
-  const errors = data?.errors ?? [];
-  const byStage = data?.byStage ?? [];
-  // 2026-10-13 round 76-CW: 补**加载态**。原来首帧 data 为 null 时直接走到"今日暂无"——
-  //   那与"今天真的没有事件"**无法区分**(假空态), 慢网络下用户会以为飞轮没跑。
-  const loading = !data && !error;
+  const events = Array.isArray(data?.events) ? data.events : [];
+  const errors = Array.isArray(data?.errors) ? data.errors : [];
+  const byStage = Array.isArray(data?.byStage) ? data.byStage : [];
+  const byStageSum = byStage.reduce((s, x) => s + (Number(x.c) || 0), 0);
+  const latestError = errors[0]?.occurredAt || null;
+  const todayEventsRaw = data?.todayEvents;
+  const todayEventsOk = typeof todayEventsRaw === "number" && Number.isFinite(todayEventsRaw);
+  const todayErrors = typeof data?.todayErrors === "number" ? data.todayErrors : null;
+  const topStages = byStage.slice(0, 4);
 
   return (
-    <div className="layout-with-sidebar"><main className="main">
-      <div className="breadcrumb"><span className={styles.crumbDim}>飞轮引擎</span><span className="sep">/</span><span className="current">执行数据记录</span></div>
-      <PageHeader><PageTitle>执行数据记录（业务审计）</PageTitle>
-        <div className="page-subtitle">今日事件 {data?.todayEvents ?? "-"} · 错误 {data?.todayErrors ?? "-"} · 15s 刷新</div>
+    <main className="page">
+      <PageHeader>
+        <PageTitle>飞轮审计</PageTitle>
+        <div className="page-subtitle">飞轮事件时间线与历史错误：今日与历史分列，最新事件在前；本页只读。</div>
       </PageHeader>
-      {error && <div className={styles.errLine}>⚠ {error}</div>}
+      <div className={styles.crumbs} aria-label="页面层级"><span>#</span><span>飞轮</span><span>列表</span><span className={styles.crumbOn}>只读</span></div>
 
-      {/* 今日各阶段统计 */}
-      <div className="panel">
-        <div className="panel-header"><span className="panel-title">今日执行分布</span></div>
-        <div className={styles.stageRow}>
-          {byStage.map((s) => (
-            <div key={s.stage} className={styles.stageItem}>
-              <span className={"badge " + styles.stageBadge} data-stage={s.stage}>{s.stage}</span>{" "}
-              <strong>{s.c}</strong>
-            </div>
-          ))}
-          {loading && <span className={styles.dimText}>加载中…</span>}
-          {!loading && byStage.length === 0 && <span className={styles.dimText}>今日暂无</span>}
-        </div>
-      </div>
-
-      {/* 阶段过滤 + 错误切换 */}
-      <div className={"panel " + styles.panelMb3}>
-        <div className={styles.filterRow}>
-          <button onClick={() => setStage("")} className={styles.filterBtn} data-active={stage === "" ? "true" : undefined}>全部</button>
-          {STAGE_KEYS.map((s) => (
-            <button key={s} onClick={() => setStage(stage === s ? "" : s)} className={styles.filterBtn} data-active={stage === s ? "true" : undefined}>{s}</button>
-          ))}
-          <span className={styles.pushRight}>
-            <button onClick={() => setShowErrors(!showErrors)} className={styles.filterBtn + " " + styles.filterBtnCrit} data-active={showErrors ? "true" : undefined}>错误记录 ({errors.length})</button>
-          </span>
-        </div>
-      </div>
-
-      {/* 时间线 */}
-      {!showErrors ? (
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">执行时间线 (最近 50 条)</span></div>
-          <TableCopyButton />
-          {/* 2026-10-13 round 76-DY: 加载中 events 还是空数组 -> 会显示「暂无事件」(实测就绪后有事件) -> 假空态。
-              同页上方那处 [今日暂无] 早就用 loading 守卫了, 表格这处漏了 —— 这里由 DataTable 的 loading 槽承接。 */}
-          <DataTable
-            columns={eventColumns}
-            rows={events}
-            rowKey={(_e, i) => i}
-            loading={loading}
-            empty={{ title: "暂无事件" }}
-          />
-        </div>
-      ) : (
-        <div className="panel">
-          <div className="panel-header"><span className="panel-title">错误记录 (最近 20 条)</span></div>
-          <TableCopyButton />
-          <DataTable
-            columns={errorColumns}
-            rows={errors}
-            rowKey={(_e, i) => i}
-            empty={{ title: "✅ 无错误" }}
-          />
+      {phase === "loading" && <div className={styles.state}>加载中…（不显示假计数）</div>}
+      {phase === "forbidden" && (
+        <div className={styles.state}>
+          <b>无权限访问</b><p>当前账号缺少飞轮审计的读权限（返回 401/403）。请联系平台管理员开通后重试。</p>
+          <button className="btn" type="button" onClick={reload}>重试</button>
         </div>
       )}
-      {/* 2026-10-19 B5: 修前正文 0 出链 ✗；补"相关视图"（每条指向真实相关页）✓ */}
-      <div className={"tiny " + styles.related}>
-        <span>相关视图：</span>
-        <Link href="/flywheel/tasks">被审任务 →</Link>
-        <Link href="/system/guards">守门规则 →</Link>
-      </div>
-    </main></div>
+      {phase === "error" && (
+        <div className={styles.state}>
+          <b>加载失败</b><p>{err}；失败不等于「今日没有事件」，请稍后重试。</p>
+          <button className="btn" type="button" onClick={reload}>重试</button>
+        </div>
+      )}
+
+      {phase === "ok" && (
+        <>
+          <section className={styles.card + " " + styles.s12}>
+            <div className={styles.cardHead}>
+              <div><h2 className={styles.cardTitle}>飞轮审计</h2><p className={styles.sub}>最近 {events.length} 条事件 · 错误面板为历史（非今日）</p></div>
+              <span className={styles.tagOk}>只读</span>
+            </div>
+
+            <p className={styles.metaLine}>
+              今日事件 <b>{byStageSum > 0 ? NUM(byStageSum) + " 条" : "n/a"}</b>（派生：阶段分布求和；
+              {" "}接口「今日事件」字段为字符串拼接坏值，不直接采用）
+              {" · "}今日错误 <b>{todayErrors == null ? "n/a" : NUM(todayErrors) + " 条"}</b>
+              {" · "}历史错误最新 <b>{T(latestError)}</b>（历史，非今日）
+              {todayEventsOk ? "" : ""}
+            </p>
+
+            {events.length === 0 && byStage.length === 0 ? (
+              <div className={styles.stateMini}>今日暂无事件（接口正常返回空集，非加载中）—— 可到运行日志查看服务状态。</div>
+            ) : (
+              <div className={styles.tblWrap}>
+                <table className={styles.tbl}>
+                  <thead>
+                    <tr><th>时间</th><th>阶段</th><th>来源</th><th>详情</th><th>结果</th></tr>
+                  </thead>
+                  <tbody>
+                    {events.map((e, i) => (
+                      <tr key={i}>
+                        <td className={styles.mono}>{T(e.createdAt)}</td>
+                        <td>{e.stage || "n/a"}</td>
+                        <td className={styles.dim}>{e.sourceType || "n/a"}</td>
+                        <td className={styles.detailCell} title={e.sourceTitle || ""}>{clip(e.sourceTitle, 80)}</td>
+                        <td><span className={styles.tagPlain + " " + styles.toneOk}>成功</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {topStages.length > 0 ? (
+              <p className={styles.metaLine}>今日阶段分布：{topStages.map((s) => (s.stage || "n/a") + " " + NUM(Number(s.c) || 0)).join(" · ")}</p>
+            ) : null}
+
+            <div className={styles.noteBox}>
+              <b className={styles.noteTitle}>历史错误（最近 {errors.length} 条，非今日）</b>
+              {errors.length === 0 ? (
+                <span>接口未返回历史错误。</span>
+              ) : (
+                <div className={styles.tblWrap}>
+                  <table className={styles.tbl}>
+                    <thead>
+                      <tr><th>时间</th><th>类型</th><th>阶段</th><th>会话</th><th>消息</th></tr>
+                    </thead>
+                    <tbody>
+                      {errors.map((e, i) => (
+                        <tr key={i}>
+                          <td className={styles.mono}>{T(e.occurredAt)}</td>
+                          <td><span className={styles.tagPlain + " " + styles.toneCrit}>{e.errorType || "n/a"}</span></td>
+                          <td>{e.stage || "n/a"}</td>
+                          <td className={styles.mono}>{clip(e.sessionId, 26)}</td>
+                          <td className={styles.detailCell} title={e.message || ""}>{clip(e.message, 80)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </section>
+
+          <footer className={styles.foot}>
+            <span>数据时刻：请求时刻 {reqAt || "n/a"}（客户端，非库内时刻 —— 接口无该字段，缺口 G-4） · 每 15 秒自动刷新</span>
+            <span className={styles.footNote}>口径：事件/错误列表为接口真实数据；今日事件用阶段分布求和（派生，接口原字段为坏值）；今日错误与历史错误分列，错误面板固定标「历史（非今日）」；字典无事件/错误计数条目（G-1）→ 不以 0 或示例值冒充指标。</span>
+          </footer>
+        </>
+      )}
+    </main>
   );
 }

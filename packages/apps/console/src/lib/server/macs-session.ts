@@ -4,12 +4,12 @@ import path from "node:path";
 /**
  * 2026-10-22 MACS Session Principal 的服务端通道（console BFF 专用）。
  *
- * 铁律：session token 只在服务端（~/.config/macs/frontend-line-2.token，600），**绝不下发浏览器**。
+ * 铁律：session token 只在服务端（~/.config/macs/[team].token，600），**绝不下发浏览器**。
  * 三查询（conversations / sync / overview）都经这里转发；失败时返回明确的 ok:false + reason，
  * 不允许静默 0/空数组（契约 §3 要求）。
  */
 const REPO = path.resolve(process.cwd(), "../..");
-const TOKEN_FILE = process.env.MACS_SESSION_TOKEN_FILE || path.join(process.env.HOME || "~", ".config/macs/frontend-line-2.token");
+const TOKEN_FILE = process.env.MACS_SESSION_TOKEN_FILE || path.join(process.env.HOME || "~", ".config/macs/[team].token");
 export const MACS_SESSION_ID = process.env.MACS_SESSION_ID || "sess_bcf382dd99b5421d";
 export const MACS_AGENT_ID = process.env.MACS_AGENT_ID || "agent-d";
 const BASE = process.env.MACS_BASE_URL || "http://127.0.0.1:8765";

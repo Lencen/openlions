@@ -20,6 +20,9 @@
  *     [--systemd-dir=DIR] [--edition=open|sales] [--dry-run] [--json] [--force-units] [--force-release]
  *     [--skip-deps] [--skip-generate] [--skip-db] [--skip-units] [--skip-start]
  *     [--port-<app>=N]...
+ *   node scripts/lions-install.cjs --repair --home=<dir> [--systemd-dir=DIR] [--unit-prefix=lions-<env>-] [--dry-run] [--json]
+ *     —— 只按现场修正 unit 与 install record（不 stage / 不 build / 不碰库）。用于 --skip-units 安装后
+ *        记录丢 systemdDir/pgUnit、或老版本漏写单元（如 portal）的**回填**；禁手写 install.json。
  *   node scripts/lions-install.cjs --selftest
  *
  * 安全:
@@ -66,9 +69,23 @@ function parseArgv(argv) {
   return out;
 }
 
+/** 现取：谁在监听 <port>、绑在哪个地址（ss -ltnp + /proc/<pid>/cgroup；取不到返回 null，不猜）。 */
+function macsListener(port) {
+  const empty = { unit: null, bind: null, pid: null };
+  let out;
+  try { out = execFileSync("bash", ["-lc", "ss -ltnp 2>/dev/null"], { encoding: "utf8", timeout: 8000 }); } catch (_e) { return empty; }
+  const line = String(out).split("\n").find((l) => new RegExp(":" + port + "\\s").test(l) && /LISTEN/.test(l));
+  if (!line) return empty;
+  const a = /(\S+):(\d+)\s+\S+\s+users:/.exec(line);
+  const p = /pid=(\d+)/.exec(line);
+  let unit = null;
+  if (p) { try { const segs = String(fs.readFileSync("/proc/" + p[1] + "/cgroup", "utf8")).split("/").filter(Boolean); const hits = segs.filter((s) => /\.service$/.test(s.trim())); if (hits.length) unit = hits[hits.length - 1].trim(); } catch (_e) { unit = null; } }
+  return { unit, bind: a ? a[1] + ":" + a[2] : null, pid: p ? Number(p[1]) : null };
+}
 function run(cmd, args, opts) {
   opts = opts || {};
-  const r = spawnSync(cmd, args, { cwd: opts.cwd, env: opts.env || process.env, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  // 2026-11-17 U-54b：支持 opts.timeout —— pnpm install 可能因 node-pre-gyp 联网挂起（AGENTS 2026-11-14 已记录）。
+  const r = spawnSync(cmd, args, { cwd: opts.cwd, env: opts.env || process.env, encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: opts.timeout });
   const res = { status: r.status, stdout: r.stdout || "", stderr: r.stderr || "", error: r.error };
   if (r.status !== 0 && !opts.allowFail) {
     const e = new Error(cmd + " " + args.join(" ") + " 失败(status=" + r.status + "): " + (r.stderr || r.stdout || r.error));
@@ -128,9 +145,50 @@ function readJsonIfExists(p) {
 
 function readVersion(dir) {
   const vf = path.join(dir, "VERSION");
-  if (fs.existsSync(vf)) return fs.readFileSync(vf, "utf8").trim();
+  // 2026-11-09（0.4.42-01 商业版 v0.1.0）：VERSION 允许首行=版本、次行=元数据（COMMERCIAL_VERSION=...）；
+  // 原实现取整串，实测 dry-run 的版本号变成 0.0.0（安装路径/版本都对不上）。
+  if (fs.existsSync(vf)) return fs.readFileSync(vf, "utf8").split(/\r?\n/)[0].trim();
   const pj = readJsonIfExists(path.join(dir, "package.json"));
   return (pj && pj.version) || "0.0.0";
+}
+
+/**
+ * 2026-11-23（运营团队 10:10 派单 §三b）：安装记录必须能回溯「这次装的是哪个 commit」。
+ *   0.6.6-pg 的 install.json 里 version 之外的 installTime/gitSha 全为空（实测），事后无法确认装的哪一版 ——
+ *   这不是「记录不全」，是「不可回溯」：同一个 version 号可以被不同 commit 的包复用。
+ * 两源（彼此不可推导，AGENTS 34）：
+ *   ① 包内 manifest.json 的 gitSha（lions-pack 生成、随包走，安装后仍可读）——首选
+ *   ② 从目录安装时 git -C <src> rev-parse HEAD（tar 解包后没有 .git，只对源码目录成立）
+ * 都取不到时必须显式写 source=unavailable + 原因，不得留空：空值会被读成「没记录」，等于又回到不可回溯。
+ */
+/**
+ * 2026-11-23（运营团队 P0 门禁②：install.json 四字段 version/edition/gitSha/builtAt）：
+ *   installedAt = 「装到这台机的时刻」，builtAt = 「包被构建的时刻」——**两件事**。
+ *   用 installedAt 冒充 builtAt 会让「同一个包在两台机器上 builtAt 不同」，门禁②就失去意义（变成又一条 installedAt）。
+ *   唯一可信来源是包内 manifest.json 的 builtAt（lions-pack 构建时用 git commit 时间/构建时刻写的）；
+ *   取不到时显式写 source=unavailable + 原因，**不留空**（空值会被读成「没记录」= 又回到不可回溯，同 b25ccc39a 的口径）。
+ */
+function resolveBuiltAt(releaseDir) {
+  const mf = readJsonIfExists(path.join(releaseDir, "manifest.json"));
+  const v = mf && typeof mf.builtAt === "string" ? mf.builtAt.trim() : "";
+  if (v) return { builtAt: v, source: "manifest.json", reason: "" };
+  return {
+    builtAt: null,
+    source: "unavailable",
+    reason: mf ? "包内 manifest.json 无 builtAt 字段（清单版本过旧）" : "包内无 manifest.json（tar 未带清单，或从目录安装且未 emit-manifest）",
+  };
+}
+
+function resolveGitInfo(srcDir, releaseDir) {
+  const mf = readJsonIfExists(path.join(releaseDir, "manifest.json"));
+  if (mf && mf.gitSha && mf.gitSha !== "UNKNOWN") return { sha: String(mf.gitSha), source: "manifest.json", dirty: mf.gitDirty === true };
+  try {
+    const sha = execFileSync("git", ["-C", String(srcDir), "rev-parse", "HEAD"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    let dirty = false;
+    try { dirty = execFileSync("git", ["-C", String(srcDir), "status", "--porcelain", "--untracked-files=no"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim().length > 0; } catch (_e) {}
+    if (/^[0-9a-f]{40}$/.test(sha)) return { sha, source: "git-worktree", dirty };
+  } catch (_e) { /* 落到 unavailable */ }
+  return { sha: null, source: "unavailable", dirty: null, reason: "包内无 manifest.json 且源目录不是 git 工作树（tar 解包）" };
 }
 
 // 2026-11-04：portal 公共页已加入开源；edition 只按 MACS / mcp-server / doc-portal 判定。
@@ -174,7 +232,7 @@ function buildAppEnv(app, ctx) {
   Object.assign(base, example);
   const isPg = ctx && ctx.dbMode === "pg";
   if (isPg) {
-    // 2026-10-27 (商业化线): A 方案。三个 app 各连自己的 PG 库；
+    // 2026-10-27 (运营团队): A 方案。三个 app 各连自己的 PG 库；
     //   mind 用 MIND_DATABASE_URL（prisma.ts 的 fail-closed 依据），
     //   session/selfimproving 用各自 URL；所有 app 都能看到 mind URL（console/portal 只读）。
     const m = pgUrlFor(ctx, "mind");
@@ -204,7 +262,7 @@ function buildAppEnv(app, ctx) {
   base.LIONS_GOALS_FILE = path.join(ctx.home, "current", "docs", "platform-logic", "goals.md");
   base.LIONS_ADR_DIR = path.join(ctx.home, "current", "docs", "architecture", "adr");
   base.LIONS_LOGIC_DOCS = path.join(ctx.home, "current", "docs", "platform-logic");
-  // 2026-11-02（前端线，开源清理配套）：console 的 agent-permissions 曾把 11 个 agent 的
+  // 2026-11-02（前端团队，开源清理配套）：console 的 agent-permissions 曾把 11 个 agent 的
   //   user@内网地址与 root@内网段 硬编码在源码里；现在改为两条配置，代码里只留安全默认。
   //   默认必须是**无害值**：环回前缀 + 空 target 表（解析不到就明确报错，不静默连内网）。
   //   实际值走 answers 或环境变量注入（部署方自己知道内网拓扑）。
@@ -281,7 +339,7 @@ async function preflight(args, ctx) {
     const dryRunBootstrap = args["dry-run"] && ctx.pgBoot && ctx.pgBoot !== "off" && hasMediaPg;
     if (miss.length && !dryRunBootstrap) problems.push("PG 模式缺 URL: " + miss.map((a) => a + " (MIND_DATABASE_URL/SESSION_DATABASE_URL/SELFIMPROVING_DATABASE_URL)").join(", ") +
       " —— 开源版默认要求 PostgreSQL 14+（见 OPEN-EDITION-DB-DECISION-2026-10-27.md 方案 A）；仅遗留/测试可 --db=sqlite");
-    if (!miss.length) {
+    if (!miss.length && !args["skip-db"]) {
       let PgMod = null;
       try { PgMod = pgClient(); } catch (_e) { notes.push("PG 连通性预检跳过（pg 模块未装，装后由 initDb 实测）"); }
       const Client = PgMod ? PgMod.Client : null;
@@ -292,6 +350,8 @@ async function preflight(args, ctx) {
         catch (e) { problems.push("PG " + app + " 连接失败: " + String(e && e.message || e).slice(0, 160)); }
         finally { try { await c.end(); } catch (_e) {} }
       }
+    } else if (!miss.length) {
+      notes.push("--skip-db: 跳过 PG 连通性预检（URL 齐即放行，连库由真实安装验证）");
     }
   }
   if (String(args.from).endsWith(".tar.gz") || String(args.from).endsWith(".tgz")) {
@@ -314,6 +374,101 @@ async function preflight(args, ctx) {
   return { problems, notes };
 }
 
+/** 备份目录名的时间戳后缀（YYYYMMDDTHHMMSS；同秒重复时由调用方加 -N）。 */
+function backupStamp() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, "0");
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + "T" + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds());
+}
+
+/**
+ * 把「已解包内容」放成 releaseDir（stage 与 selftest 共用同一入口，AGENTS 34②）。
+ *
+ * 2026-11-24 事故（运营团队 Lead 令修）：旧实现是
+ *     try { rename(staging, releaseDir) } catch { cpSync(staging, releaseDir) }
+ * releaseDir 非空时 rename 必然 ENOTEMPTY -> 落到 cpSync -> 合并进旧树：
+ *   旧 edition 的闭源目录（mcp-server/doc-portal）、.next、node_modules 全留下 ->
+ *   detectEdition 判 sales -> 与 --edition=open 冲突（实测 10:24 那一跑）；即使不冲突也是混合树。
+ *   缺陷不在 cpSync 本身，而在「往已存在的目录里拷」这个动作 = 合并。
+ *
+ * 新语义：
+ *   ① force 且旧树存在 -> 先把旧树 rename 成 <ver>.old-<ts>（同 fs 原子），再放新内容；
+ *   ② 放新内容时目标必须不存在；只有跨设备（EXDEV）才允许 cpSync，且拷完删 staging；
+ *   ③ 任一步失败 -> 删半成品 + 把 .old rename 回来（回滚），然后把原始错误抛出去；
+ *   ④ 返回 { existed, backup }；backup 非空表示旧树被保留在盘上（供人工确认后删）。
+ */
+function placeRelease(o) {
+  const { staging, srcDir, releaseDir, force, isTar } = o;
+  const existed = fs.existsSync(releaseDir);
+  if (existed && !force) throw new Error("release 已存在: " + releaseDir + "（--force-release 覆盖）");
+  let backup = null;
+  if (existed) {
+    const base = releaseDir + ".old-" + backupStamp();
+    backup = base;
+    for (let i = 2; fs.existsSync(backup); i++) backup = base + "-" + i;
+    fs.renameSync(releaseDir, backup);
+  }
+  const copyIn = () => {
+    if (isTar) {
+      try { fs.renameSync(staging, releaseDir); return; } catch (e) { if (!e || e.code !== "EXDEV") throw e; }
+      if (fs.existsSync(releaseDir)) throw new Error("目标已存在，拒绝 cpSync 合并（会产出混合树）: " + releaseDir);
+      fs.cpSync(staging, releaseDir, { recursive: true });
+      fs.rmSync(staging, { recursive: true, force: true });
+      return;
+    }
+    const srcAbs = path.resolve(srcDir);
+    if ((releaseDir + path.sep).startsWith(srcAbs + path.sep)) throw new Error("产物目录不能位于安装目标内（会自我递归）: " + srcAbs);
+    if (fs.existsSync(releaseDir)) throw new Error("目标已存在，拒绝 cpSync 合并（会产出混合树）: " + releaseDir);
+    fs.cpSync(srcDir, releaseDir, {
+      recursive: true,
+      dereference: false,
+      filter: (p) => { const b = path.basename(p); return b !== ".git" && b !== "node_modules"; },
+    });
+  };
+  try {
+    copyIn();
+  } catch (e) {
+    try { if (fs.existsSync(releaseDir)) fs.rmSync(releaseDir, { recursive: true, force: true }); } catch (_e2) {}
+    if (backup && fs.existsSync(backup)) {
+      try { fs.renameSync(backup, releaseDir); } catch (_e3) {
+        throw new Error("回滚失败：旧树仍在 " + backup + "，请手工 rename 回 " + releaseDir + "；原始错误: " + (e && e.message || e));
+      }
+    }
+    throw e;
+  }
+  return { existed, backup };
+}
+
+/**
+ * 装完树的硬判据（install 在切 current / 重启之前调用；AGENTS 88「约束住进被约束的东西里」）。
+ *   ① 许可隔离：edition=open 时树内不得出现任何闭源前缀目录；edition=sales 反向必须至少有一个；
+ *   ② 完整性：树内 manifest.json 列出的每个文件都必须在树里（缺 = 解包不完整）；
+ *   ③ 不拿「文件数相等」当判据：install 的构建步骤会新增 dist/ 产物、.next、.env，
+ *      故用「manifest 集合 ⊆ 树」而不是「树 == manifest」。
+ * 纯读，不改任何文件；返回 { ok, checked, missing, closedPresent, edition, reason }。
+ */
+function verifyInstalledTree(releaseDir, edition) {
+  const out = { ok: true, edition, checked: 0, missing: [], closedPresent: [] };
+  out.closedPresent = CLOSED_PACKAGES.filter((p) => fs.existsSync(path.join(releaseDir, p)));
+  if (edition === "open" && out.closedPresent.length) {
+    out.ok = false;
+    out.reason = "edition=open 但树内仍有闭源目录（许可隔离失败）: " + out.closedPresent.join(",");
+  }
+  if (edition === "sales" && out.closedPresent.length === 0) {
+    out.ok = false;
+    out.reason = "edition=sales 但树内没有任何闭源目录（产物不是 sales）";
+  }
+  const mf = path.join(releaseDir, "manifest.json");
+  if (!fs.existsSync(mf)) { out.note = "树内无 manifest.json（旧包），完整性判据跳过"; return out; }
+  let manifest = null;
+  try { manifest = JSON.parse(fs.readFileSync(mf, "utf8")); } catch (_e) { out.ok = false; out.reason = "树内 manifest.json 不是合法 JSON"; return out; }
+  const files = Array.isArray(manifest.files) ? manifest.files : [];
+  out.checked = files.length;
+  for (const f of files) if (!fs.existsSync(path.join(releaseDir, f.path))) out.missing.push(f.path);
+  if (out.missing.length) { out.ok = false; out.reason = "包内 manifest 声明了 " + out.missing.length + " 个文件但树里没有（解包不完整）: " + out.missing.slice(0, 5).join(","); }
+  return out;
+}
+
 function stage(args, ctx) {
   const fromAbs = path.resolve(String(args.from));
   if (!fs.existsSync(fromAbs)) throw new Error("产物不存在: " + fromAbs);
@@ -327,22 +482,12 @@ function stage(args, ctx) {
   }
   const version = readVersion(srcDir);
   const releaseDir = path.join(H.releasesDir(ctx.home), version);
-  const result = { version, releaseDir, staging, srcDir };
+  const result = { version, releaseDir, staging, srcDir, backup: null };
   if (args["dry-run"]) return result;
-  if (fs.existsSync(releaseDir) && !args["force-release"]) throw new Error("release 已存在: " + releaseDir + "（--force-release 覆盖）");
-  const srcAbs = path.resolve(srcDir);
-  if (!isTar && (releaseDir + path.sep).startsWith(srcAbs + path.sep)) throw new Error("产物目录不能位于安装目标内（会自我递归）: " + srcAbs);
   fs.mkdirSync(path.dirname(releaseDir), { recursive: true });
-  if (isTar) {
-    try { fs.renameSync(staging, releaseDir); }
-    catch (_e) { fs.cpSync(staging, releaseDir, { recursive: true }); fs.rmSync(staging, { recursive: true, force: true }); }
-  } else {
-    fs.cpSync(srcDir, releaseDir, {
-      recursive: true,
-      dereference: false,
-      filter: (s) => { const b = path.basename(s); return b !== ".git" && b !== "node_modules"; },
-    });
-  }
+  const placed = placeRelease({ staging, srcDir, releaseDir, force: !!args["force-release"], isTar });
+  result.backup = placed.backup;
+  if (placed.backup) console.log("  [stage] 旧树已备份 -> " + placed.backup + "（--force-release = 替换，不合并）");
   return result;
 }
 
@@ -425,7 +570,7 @@ function writeConfig(ctx, args, releaseDir) {
   const written = [];
   for (const app of START_ORDER) {
     const appDir = path.join(releaseDir, APPS[app].dir);
-    // 2026-10-27 开源安装实测(商业化线): open 版不含 portal/macs 等闭源包；
+    // 2026-10-27 开源安装实测(运营团队): open 版不含 portal/macs 等闭源包；
     //   旧实现仍按 START_ORDER 给 portal 写 .env -> ENOENT，open 版装不上。
     //   目录不存在 = 该版本不含此 app，跳过而不是失败。
     if (!fs.existsSync(appDir)) { written.push({ app, skipped: true, reason: "not in release" }); continue; }
@@ -476,7 +621,7 @@ function pgClient(releaseDir) {
   throw new Error("找不到 pg 模块（PG 模式需要 pg）：请先在安装源根 pnpm install");
 }
 function prismaBin(releaseDir, app) {
-  // 2026-10-27 开源安装实测(商业化线): pnpm workspace 把 prisma 装在**各 app** 的 node_modules/.bin，
+  // 2026-10-27 开源安装实测(运营团队): pnpm workspace 把 prisma 装在**各 app** 的 node_modules/.bin，
   //   根 node_modules/.bin 只有 tsc/eslint/prettier。旧实现只查根 -> open 版 generate/db 必失败。
   const root = path.join(releaseDir, "node_modules", ".bin", "prisma");
   if (fs.existsSync(root)) return root;
@@ -555,7 +700,7 @@ async function initDb(app, ctx, args, releaseDir) {
     for (const sql of RUNTIME_TABLES[app] || []) {
       const tmpSql = path.join(os.tmpdir(), "lions-runtime-" + app + "-" + process.pid + ".sql");
       fs.writeFileSync(tmpSql, sql + ";\n");
-      // 2026-10-27 开源安装实测(商业化线): 运行期表不需要 better-sqlite3（pnpm 不保证根/app 都有），
+      // 2026-10-27 开源安装实测(运营团队): 运行期表不需要 better-sqlite3（pnpm 不保证根/app 都有），
       //   Node 22 自带 node:sqlite 可直接打开 Prisma 建的 SQLite 库；用它消除原生依赖。
       const script = "const fs=require('fs');const {DatabaseSync}=require('node:sqlite');try{const db=new DatabaseSync(process.argv[1]);db.exec(fs.readFileSync(process.argv[2],'utf8'));db.close();}catch(e){console.error(e.message);process.exit(3);}";
       const rr = run(process.execPath, ["--no-warnings", "-e", script, dbFile, tmpSql], { cwd: releaseDir, allowFail: true });
@@ -646,6 +791,53 @@ function buildWorkspace(ctx, args, releaseDir) {
     env.SESSION_DATABASE_URL = pgUrlFor(ctx, "session");
     env.SELFIMPROVING_DATABASE_URL = pgUrlFor(ctx, "selfimproving");
   }
+  // U-54（2026-11-17 运营团队 19:30 令，installer 层面）：
+  //   同版本 repair 的 stageRelease 只覆盖包内容（不含 .next/node_modules）-> build 读旧 routes-manifest
+  //   -> PageNotFoundError/ENOENT（实测 /api/agent-approvals、/api/agent-permissions）。
+  //   修法：① build 前清各 app .next 残留；② 校验各 app node_modules，缺则跑全 workspace pnpm install。
+  const appsDir = path.join(releaseDir, "packages", "apps");
+  const appNames = fs.existsSync(appsDir) ? fs.readdirSync(appsDir).filter((n) => fs.existsSync(path.join(appsDir, n, "package.json"))) : [];
+  let cleanedNext = 0;
+  for (const n of appNames) {
+    const nextDir = path.join(appsDir, n, ".next");
+    if (fs.existsSync(nextDir)) { fs.rmSync(nextDir, { recursive: true, force: true }); cleanedNext++; }
+  }
+  if (cleanedNext) console.log("  [build] U-54 清理 .next 残留: " + cleanedNext + " 个 app");
+  // U-55（2026-11-18 运营团队 01:19 立项）：open 树 packages/apps/portal 保留 package.json 但不装依赖
+  //   -> appNames 含 portal -> missingNm 永真 -> 每轮都触发 install（+5 分钟）。
+  //   修法：missingNm 只判「本版应有依赖」的 app —— APPS[n].hasDatabase 或 console（构建必需）；
+  //         portal 是只读聚合页（open 版裁掉），不参与依赖判定。
+  const needsNm = (n) => !!(APPS[n] && (APPS[n].hasDatabase || n === "console"));
+  const missingNm = appNames.filter((n) => needsNm(n) && !fs.existsSync(path.join(appsDir, n, "node_modules")));
+  if (missingNm.length) {
+    const hasLock = fs.existsSync(path.join(releaseDir, "pnpm-lock.yaml"));
+    // U-54b（2026-11-17 19:59 devops 卡点）：install 可能因 node-pre-gyp 联网挂起（8+ 分钟无 I/O，AGENTS 2026-11-14 已记录）。
+    //   策略：① 优先从同版本完整树复用 node_modules（cp -a，秒级）；② 退化 --ignore-scripts + 300s 超时（防挂死）。
+    let reused = false;
+    try {
+      const releaseName = path.basename(releaseDir);
+      const relRoot = path.dirname(releaseDir);
+      if (fs.existsSync(relRoot)) {
+        const cands = fs.readdirSync(relRoot).filter((n) => n !== releaseName && n.startsWith(releaseName));
+        for (const c of cands) {
+          const srcNm = path.join(relRoot, c, "node_modules");
+          if (!fs.existsSync(srcNm)) continue;
+          console.log("  [build] U-54b 复用旧树 node_modules: " + c + " -> " + releaseDir);
+          run("cp", ["-a", srcNm, path.join(releaseDir, "node_modules")], { allowFail: true, timeout: 180000 });
+          const okNm = appNames.filter((n) => fs.existsSync(path.join(appsDir, n, "node_modules")));
+          if (okNm.length === appNames.length) { reused = true; break; }
+        }
+      }
+    } catch (_e) {}
+    if (!reused) {
+      console.log("  [build] U-54b 无旧树可复用 -> pnpm install --ignore-scripts（防 node-pre-gyp 联网挂起）+ 300s 超时");
+      try {
+        run(pnpm.cmd, pnpmArgs(pnpm, ["install", hasLock ? "--frozen-lockfile" : "--no-frozen-lockfile", "--ignore-scripts"]), { cwd: releaseDir, env, timeout: 300000 });
+      } catch (e) {
+        console.log("  [build] U-54b install 失败/超时（" + String(e.message).slice(0, 140) + "）—— 依赖可能不全，继续尝试 build");
+      }
+    }
+  }
   const base = ["-r", "--workspace-concurrency=1"];
   run(pnpm.cmd, pnpmArgs(pnpm, base.concat(["--filter", "./packages/**", "--filter", "!./packages/apps/**", "build"])), { cwd: releaseDir, env });
   run(pnpm.cmd, pnpmArgs(pnpm, base.concat(["build"])), { cwd: releaseDir, env });
@@ -677,18 +869,25 @@ function buildApp(app, ctx, args, releaseDir) {
 async function waitHealth(app, port, timeoutMs) {
   const paths = APPS[app].healthPaths || ["/"];
   const deadline = Date.now() + timeoutMs;
+  // 2026-11-16（终裁 A · P2b）：失败可观测性——带最后一次探测的 path/status/失败形态(conn/timeout)。
+  //   只做加法：{ok, path} 旧字段全保留，通过语义 >=200 && <500 不变（install/upgrade 调用方都不受影响）。
+  let last = { path: paths[0], status: 0, how: "no-attempt" };
   while (Date.now() < deadline) {
     for (const p of paths) {
-      const ok = await new Promise((resolve) => {
-        const req = require("http").get({ host: "127.0.0.1", port, path: p, timeout: 2000 }, (res) => { res.resume(); resolve(res.statusCode >= 200 && res.statusCode < 500); });
-        req.on("error", () => resolve(false));
-        req.on("timeout", () => { req.destroy(); resolve(false); });
+      const r = await new Promise((resolve) => {
+        const req = require("http").get({ host: "127.0.0.1", port, path: p, timeout: 2000 }, (res) => {
+          res.resume();
+          resolve({ ok: res.statusCode >= 200 && res.statusCode < 500, path: p, status: res.statusCode, how: "http=" + res.statusCode });
+        });
+        req.on("error", (e) => resolve({ ok: false, path: p, status: 0, how: "conn=" + String((e && e.code) || "ERR") }));
+        req.on("timeout", () => { req.destroy(); resolve({ ok: false, path: p, status: 0, how: "timeout" }); });
       });
-      if (ok) return { ok: true, path: p };
+      if (r.ok) return { ok: true, path: r.path, status: r.status, how: r.how };
+      last = { path: r.path, status: r.status, how: r.how };
     }
     await new Promise((r) => setTimeout(r, 2000));
   }
-  return { ok: false, path: paths.join(",") };
+  return { ok: false, path: last.path || paths.join(","), status: last.status, how: last.how };
 }
 
 async function install(args) {
@@ -762,6 +961,24 @@ async function install(args) {
   step("stage", staged.version + " -> " + staged.releaseDir);
   staged.edition = resolveEdition(staged.releaseDir, args.edition);
   step("edition", staged.edition);
+  // 2026-11-24（事故后加，fail-closed）：树校验不过就不许切 current —— 否则会把混合树/缺文件的树
+  //   挂成 current，等重启才发现，且此时「看起来装成功了」。失败即回滚到旧树。
+  {
+    const vt = verifyInstalledTree(staged.releaseDir, staged.edition);
+    if (!vt.ok) {
+      let rollbackErr = null;
+      try {
+        if (staged.backup && fs.existsSync(staged.backup)) {
+          fs.rmSync(staged.releaseDir, { recursive: true, force: true });
+          fs.renameSync(staged.backup, staged.releaseDir);
+        } else if (fs.existsSync(staged.releaseDir)) {
+          fs.rmSync(staged.releaseDir, { recursive: true, force: true });
+        }
+      } catch (e2) { rollbackErr = e2; }
+      throw new Error("装完树校验失败：" + vt.reason + (rollbackErr ? "；回滚也失败：" + rollbackErr.message : (staged.backup ? "；已回滚到 " + staged.backup : "；已删除半成品树")));
+    }
+    step("verify-tree", "闭源前缀 " + vt.closedPresent.length + " 个（edition=" + staged.edition + "）；manifest 文件 " + vt.checked + " 个全在" + (vt.note ? "；" + vt.note : ""));
+  }
   ensureDirs(home);
   linkCurrent(home, staged.releaseDir);
   // 2026-11-02（devops 线，四环境实测）：应用把 LIONS_HOME 当**仓库根**用，
@@ -779,14 +996,14 @@ async function install(args) {
   step("secrets", "接入/发布密钥就绪（bootstrap/admin/签名；签名 key_id=" + String(ctx.secrets.LIONS_SIGNING_KEY_ID || "existing") + "）");
   const cfg = writeConfig(ctx, args, staged.releaseDir);
   step("config", cfg.length + " 个 .env（0600）");
-  // 2026-10-29 (商业化线): 导出/打包可能丢可执行位；systemd 直接执行 wrapper，664 会 203/EXEC。
+  // 2026-10-29 (运营团队): 导出/打包可能丢可执行位；systemd 直接执行 wrapper，664 会 203/EXEC。
   try { fs.chmodSync(path.join(staged.releaseDir, "scripts", "lions-service-wrapper.sh"), 0o755); } catch (_e) {}
   const macsEnv = ensureMacsEnv(staged.releaseDir, args);
   if (macsEnv) step("macs-secrets", macsEnv.generated ? "已生成本部署专属密钥（0600）" : "沿用既有 .macs.env");
   if (!args["skip-deps"]) {
     const pnpm = ctx.pnpm || resolvePnpm();
     if (!pnpm) throw new Error("缺 pnpm：请先 corepack enable，或安装 pnpm");
-    // 2026-10-27 开源安装实测(商业化线): open 导出有意删掉 pnpm-lock.yaml（避免闭源包进入锁文件），
+    // 2026-10-27 开源安装实测(运营团队): open 导出有意删掉 pnpm-lock.yaml（避免闭源包进入锁文件），
     //   旧实现无条件 --frozen-lockfile -> 必然 ERR_PNPM_LOCKFILE_CONFIG_MISMATCH。
     //   有锁才 frozen（可复现），无锁用 no-frozen（能装上）；两者都在日志里显式说明。
     const hasLock = fs.existsSync(path.join(staged.releaseDir, "pnpm-lock.yaml"));
@@ -869,16 +1086,21 @@ async function install(args) {
   }
   let unitsResult = null;
   let hasMacs = false;
+  // 2026-11-24（P1-5 回退修复）：systemdDir / unitPrefix 是**现场事实**，先算出，记录不依赖"本次是否写单元"。
+  //   实测：三环境 0.6.7-pg 升级安装用了 --skip-units --skip-start，install.json 于是丢了 systemdDir 与 pgUnit，
+  //   apps.unit 还写成无前缀名；而 lions-uninstall 只按 systemdDir+pgUnit+apps.unit 清单元 -> 回滚清不掉。
+  const systemdDir = typeof args["systemd-dir"] === "string" ? path.resolve(args["systemd-dir"]) : path.join(os.homedir(), ".config", "systemd", "user");
+  const unitPrefix = typeof args["unit-prefix"] === "string" ? args["unit-prefix"] : "";
+  report.systemdDir = systemdDir;
   if (!args["skip-units"]) {
-    const systemdDir = typeof args["systemd-dir"] === "string" ? path.resolve(args["systemd-dir"]) : path.join(os.homedir(), ".config", "systemd", "user");
-    const plan = U.planUnits(home, { systemdDir, portOverrides: ports, modeOverrides: null, unitPrefix: args["unit-prefix"] });
+    const plan = U.planUnits(home, { systemdDir, portOverrides: ports, modeOverrides: null, unitPrefix });
     unitsResult = U.writeUnits(plan, { force: !!args["force-units"] });
     report.units = { written: unitsResult.written.map((u) => u.unit), skipped: unitsResult.skipped.map((u) => u.unit), systemdDir };
     // 2026-10-30（devops 三环境 P1-5）：PG 模式生成/接管 PG unit 并写进 install record。
     //   --pg-data-dir 给出时才生成（集群已存在）；否则只接管已存在的 unit，不覆盖。
     if (ctx.dbMode === "pg") {
       const pgDir = typeof args["pg-data-dir"] === "string" ? path.resolve(args["pg-data-dir"]) : null;
-      const pgPlan = U.planPgUnit(home, { systemdDir, unitPrefix: args["unit-prefix"], dataDir: pgDir || undefined, port: Number(args["pg-port"]) || 5432 });
+      const pgPlan = U.planPgUnit(home, { systemdDir, unitPrefix, dataDir: pgDir || undefined, port: Number(args["pg-port"]) || 5432 });
       if (pgDir) {
         U.writeUnits([pgPlan], { force: !!args["force-units"] });
         report.units.pgUnit = pgPlan.unit;
@@ -897,7 +1119,7 @@ async function install(args) {
     }
     step("units", unitsResult.written.length + " 写入 / " + unitsResult.skipped.length + " 跳过（" + systemdDir + "）");
 
-    // 2026-10-27（商业化线 P0，fail-closed）：MACS 安全加固必须由**主安装器**自动套用，
+    // 2026-10-27（运营团队 P0，fail-closed）：MACS 安全加固必须由**主安装器**自动套用，
     //   否则设计伙伴跑 lions-install 之后 MACS 仍是裸的（"文件在、没人调用"）。
     //   仅当本平台的 macs 应用存在时执行；失败即整体失败，不允许"安装成功但 MACS 裸奔"。
     const macsPort = ports && ports.macs ? ports.macs : 8765;
@@ -913,14 +1135,44 @@ async function install(args) {
       if (args["dry-run"]) argv.push("--dry-run");
       try {
         run("bash", argv, { allowFail: false });
-        report.macsSecurity = { dropin: macsDropin, applied: true };
-        step("macs-security", (args["dry-run"] ? "dry-run " : "") + "90/91 已套用到 " + macsDropin);
+        // 2026-11-24 01:54 运营团队裁定：安装器**不许**输出「加固已应用」。
+        //   实测 101：安装器写 lions-macs.service，而真正跑 MACS 的是 macs-platform.service
+        //   -> 加固写在一个没人跑的单元上 = 空转；此时说「已应用」是假的。
+        //   目标单元 == 实跑单元 才叫 APPLIED；否则只能是 DEFERRED-TO-CUTOVER（绑定收敛由切流 [1b] 的 R 做）。
+        const targetUnit = "lions-macs.service";
+        const running = macsListener(macsPort);
+        const sameUnit = running.unit === targetUnit;
+        report.macsSecurity = {
+          dropin: macsDropin,
+          applied: sameUnit,
+          hardening: args["dry-run"] ? "DRY-RUN" : (sameUnit ? "APPLIED" : "DEFERRED-TO-CUTOVER"),
+          target_unit: targetUnit,
+          running_unit: running.unit || null,
+          bind: running.bind || null,
+        };
+        step("macs-security", (args["dry-run"] ? "dry-run " : "") + "90/91 已写入 " + macsDropin
+          + "；目标单元=" + targetUnit + " 实跑=" + (running.unit || "n/a") + " 绑定=" + (running.bind || "n/a")
+          + " => HARDENING=" + report.macsSecurity.hardening);
       } catch (e) {
         report.ok = false;
         report.macsSecurity = { dropin: macsDropin, applied: false, error: String(e && e.message || e).slice(0, 300) };
         step("macs-security", "失败（fail-closed）：" + (report.macsSecurity.error));
         throw new Error("MACS 安全加固未套用，安装中止（fail-closed）");
       }
+    }
+  }
+  // 2026-11-24（P1-5 回退修复）：--skip-units 也要留下现场事实；pgUnit 按**磁盘上真实存在的单元文件**认，不按参数猜。
+  if (!report.units) report.units = { written: [], skipped: [], systemdDir, unitPrefix: unitPrefix || null, skippedWrite: true };
+  if (ctx.dbMode === "pg" && !report.units.pgUnit) {
+    const pgPlanned = U.planPgUnit(home, { systemdDir, unitPrefix, port: Number(args["pg-port"]) || 5432 });
+    if (fs.existsSync(pgPlanned.path)) {
+      report.units.pgUnit = pgPlanned.unit;
+      step("pg-unit", "接管已存在 " + pgPlanned.unit + "（本次未写单元；按现场记录）");
+    } else if (fs.existsSync(path.join(systemdDir, U.pgUnitName("")))) {
+      report.units.pgUnit = U.pgUnitName("");
+      step("pg-unit", "接管已存在 " + report.units.pgUnit + "（无前缀名；按现场记录）");
+    } else {
+      step("pg-unit", "未找到 PG unit（systemdDir=" + systemdDir + " prefix=" + (unitPrefix || "(无)") + "）-> 记录不写 pgUnit（宁可缺，不写不存在的单元名）");
     }
   }
   if (!args["skip-start"] && !args["skip-units"] && !args["no-systemctl"]) {
@@ -934,7 +1186,7 @@ async function install(args) {
     report.ok = Object.values(health).every((h) => h.ok);
     step("health", report.ok ? "全部通过" : "存在未通过");
 
-    // 2026-10-27（商业化线 P0）：安装后必须证明"不可匿名访问 + 只绑回环"，
+    // 2026-10-27（运营团队 P0）：安装后必须证明"不可匿名访问 + 只绑回环"，
     //   否则 P0 仍是"文件在，没验证"。fail-closed：任一探针不符即安装失败。
     // 2026-11-04：开源版产物**不含 MACS**，探针必须按 hasMacs 门控；否则干净机装到最后一步必失败。
     if (!hasMacs) {
@@ -950,22 +1202,42 @@ async function install(args) {
       }
       const port = ports && ports.macs ? ports.macs : 8765;
       const probe = (cmd) => execFileSync("bash", ["-lc", cmd], { encoding: "utf8", timeout: 15000 }).trim();
-      const bind = probe("ss -ltn 2>/dev/null | awk '$4 ~ /:" + port + "$/{print $4}' | head -1");
+      // 2026-11-24 01:54 运营团队裁定：探针断言的对象错了。
+      //   旧写只取「谁绑在 <port>」= 「端口活着」，而 0.0.0.0 绑定时也活着、加固没生效时也活着
+      //   -> 探针与「加固已应用」这个结论**永远无关**。
+      //   改成三档：断言「监听者是不是我们的目标单元」+「绑定是不是回环」；单元不符 -> DEFERRED，不许报 PASS。
+      const L = macsListener(port);
+      const bind = L.bind || "";
+      const listenerIsTarget = L.unit === "lions-macs.service";
       const dash = probe("curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:" + port + "/dashboard/v2/overview || true");
       const api = probe("curl -sS -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:" + port + "/api/agents || true");
       const checks = {
+        listener_is_target_unit: listenerIsTarget,
         bind_loopback: /^127\.0\.0\.1:/.test(bind || ""),
         dashboard_401: dash === "401",
         api_requires_key_401: api === "401",
       };
-      report.macsSecurity = Object.assign({}, report.macsSecurity, { bind, dashboard_http: dash, api_http: api, checks });
-      const okAll = Object.values(checks).every(Boolean);
+      report.macsSecurity = Object.assign({}, report.macsSecurity, { bind, listener_unit: L.unit || null, dashboard_http: dash, api_http: api, checks });
+      // 【运营团队 2026-11-24 02:40 裁定 ①】探针必须断言**绑定地址 == 期望值**，0.0.0.0 != 127.0.0.1 -> 红。
+      //   所以这一档不再叫「DEFERRED 跳过」，它就是**红的读数**：judge 输出 FAIL，写进 install.json，
+      //   但不中止安装 —— 因为「让 8765 真绑 loopback」= 暴露面变更，已裁归 0.6.7.1，本窗口只修判据说谎。
+      //   （中止安装的代价是 0.6.7 在本机装不上，直到 0.6.7.1 —— 这条要另裁，不自行采用。）
+      if (!listenerIsTarget || !/^127\.0\.0\.1:/.test(bind || "")) {
+        const verdict = !listenerIsTarget ? "FAIL-UNIT-MISMATCH" : "FAIL-BIND-OTHER";
+        report.macsSecurity.hardening = "NOT-APPLIED";
+        report.macsProbe = { verdict, bind: bind || null, listener_unit: L.unit || null, expected: "127.0.0.1:" + port, checked_at: new Date().toISOString() };
+        step("macs-security-probe", "判定=FAIL(" + verdict + ") 期望=127.0.0.1:" + port + " 实测=" + (bind || "n/a")
+          + " 目标单元=lions-macs.service 实跑单元=" + (L.unit || "n/a") + " -> 加固未生效（归 0.6.7.1，本窗口不改运行形态，但读数不得为绿）");
+        throw { __skip: true };
+      }
+      const okAll = checks.bind_loopback && checks.dashboard_401 && checks.api_requires_key_401;
       if (!okAll) {
         report.ok = false;
-        step("macs-security-probe", "未通过 bind=" + bind + " dashboard=" + dash + " api=" + api);
+        step("macs-security-probe", "未通过 unit=" + (L.unit || "n/a") + " bind=" + bind + " dashboard=" + dash + " api=" + api);
         throw new Error("MACS 安全探针未通过（bind/dashboard/api），安装中止（fail-closed）");
       }
-      step("macs-security-probe", "bind=" + bind + " dashboard=401 api=401");
+      report.macsSecurity.hardening = "APPLIED";
+      step("macs-security-probe", "HARDENING=APPLIED unit=" + (L.unit || "n/a") + " bind=" + bind + " dashboard=401 api=401");
     } catch (e) {
       if (e && e.__skip) {
         // 已 step 记录；不算失败
@@ -988,10 +1260,23 @@ async function install(args) {
     installedAt: new Date().toISOString(),
     dbMode: ctx.dbMode,
     ports,
-    systemdDir: report.units ? report.units.systemdDir : null,
+    // 2026-11-24：现场值优先。旧写 report.units ? ... : null，--skip-units 时直接丢字段（三环境实测踩到）。
+    systemdDir: report.systemdDir || systemdDir || null,
+    unitPrefix: report.units ? (report.units.unitPrefix || null) : null,
     apps: Object.fromEntries(START_ORDER.map((a) => [a, { port: ports[a], unit: U.unitName(a, args["unit-prefix"]) }])),
   };
   if (report.units && report.units.pgUnit) record.pgUnit = report.units.pgUnit;
+  // 2026-11-23：把「装的是哪个 commit」写进记录（缺失也显式写 unavailable，不留空）
+  const gitInfo = resolveGitInfo(staged.srcDir, staged.releaseDir);
+  record.gitSha = gitInfo.sha;
+  record.gitShaSource = gitInfo.source;
+  if (gitInfo.dirty !== null) record.gitDirty = gitInfo.dirty;
+  if (gitInfo.reason) record.gitShaUnavailableReason = gitInfo.reason;
+  // 2026-11-23：门禁② 的第四字段 builtAt（来源=包内 manifest，取不到写 unavailable+原因）
+  const buildInfo = resolveBuiltAt(staged.releaseDir);
+  record.builtAt = buildInfo.builtAt;
+  record.builtAtSource = buildInfo.source;
+  if (buildInfo.reason) record.builtAtUnavailableReason = buildInfo.reason;
   if (!args["skip-record"]) fs.writeFileSync(H.installRecordPath(home), JSON.stringify(record, null, 2) + "\n");
   report.record = record;
   step("record", H.installRecordPath(home));
@@ -1039,7 +1324,7 @@ function runSelftest() {
   assert("缺省不写模型 key", loadAnswers({}).ANTHROPIC_AUTH_TOKEN === undefined);
   assert("console 端口覆盖", defaultPorts({ console: 3104 }).console === 3104);
   assert("selfimproving 无库不写 DATABASE_URL", buildAppEnv("console", { home: "/tmp/h", ports: defaultPorts(), answers: {}, exampleEnv: {} }).DATABASE_URL === undefined);
-  // 2026-11-02（前端线）：agent-permissions 的机器地址走配置；默认必须无害（环回 + 空表）。
+  // 2026-11-02（前端团队）：agent-permissions 的机器地址走配置；默认必须无害（环回 + 空表）。
   {
     const c = buildAppEnv("console", { home: "/tmp/h", ports: defaultPorts(), answers: {}, exampleEnv: {} });
     assert("console 默认 AGENT_HOST_PREFIX=127.0.0.1（无害默认）", c.AGENT_HOST_PREFIX === "127.0.0.1");
@@ -1059,15 +1344,194 @@ function runSelftest() {
   }
   assert("renderEnv 可解析", parseEnvFile(renderEnv({ A: "1" })).A === "1");
   assert("parsePortOverrides", parsePortOverrides({ "port-mind": "3099" }).mind === 3099);
+  // 2026-11-23 新增：安装记录必须能回溯 commit（含反向用例：取不到时不得留空）
+  {
+    const tmpd = fs.mkdtempSync(path.join(os.tmpdir(), "lions-install-git-"));
+    const none = resolveGitInfo(path.join(tmpd, "no-such-dir"), tmpd);
+    assert("gitInfo: 无 manifest 且非 git 树 -> source=unavailable（不留空）", none.sha === null && none.source === "unavailable" && !!none.reason, JSON.stringify(none));
+    fs.writeFileSync(path.join(tmpd, "manifest.json"), JSON.stringify({ gitSha: "0123456789abcdef0123456789abcdef01234567", gitDirty: false }));
+    const fromMf = resolveGitInfo(path.join(tmpd, "no-such-dir"), tmpd);
+    assert("gitInfo: manifest.json 优先 -> sha 与 source 均来自包内", fromMf.sha === "0123456789abcdef0123456789abcdef01234567" && fromMf.source === "manifest.json", JSON.stringify(fromMf));
+    fs.writeFileSync(path.join(tmpd, "manifest.json"), JSON.stringify({ gitSha: "UNKNOWN" }));
+    const unknown = resolveGitInfo(path.join(tmpd, "no-such-dir"), tmpd);
+    assert("gitInfo: manifest 里 UNKNOWN 不得当成 sha（回落 unavailable）", unknown.source === "unavailable" && unknown.sha === null, JSON.stringify(unknown));
+    fs.rmSync(tmpd, { recursive: true, force: true });
+  }
+  // 2026-11-23：builtAt 取自包内 manifest（含两条反向用例）
+  {
+    const tmpd = fs.mkdtempSync(path.join(os.tmpdir(), "lions-install-builtat-"));
+    const a = resolveBuiltAt(tmpd);
+    assert("builtAt: 无 manifest -> source=unavailable 且带原因（不留空）", a.builtAt === null && a.source === "unavailable" && !!a.reason, JSON.stringify(a));
+    fs.writeFileSync(path.join(tmpd, "manifest.json"), JSON.stringify({ gitSha: "0123456789abcdef0123456789abcdef01234567" }));
+    const b = resolveBuiltAt(tmpd);
+    assert("builtAt: manifest 无 builtAt 字段 -> unavailable（不得拿 installedAt 顶）", b.builtAt === null && b.source === "unavailable", JSON.stringify(b));
+    fs.writeFileSync(path.join(tmpd, "manifest.json"), JSON.stringify({ builtAt: "2026-11-23T03:10:00.000Z" }));
+    const c = resolveBuiltAt(tmpd);
+    assert("builtAt: manifest 有值 -> 原样取，source=manifest.json", c.builtAt === "2026-11-23T03:10:00.000Z" && c.source === "manifest.json", JSON.stringify(c));
+    fs.rmSync(tmpd, { recursive: true, force: true });
+  }
+  // 2026-11-24（运营团队 Lead 令，事故根因）：--force-release 必须是"替换"不是"合并"；树校验必须咬得住
+  {
+    const rootd = fs.mkdtempSync(path.join(os.tmpdir(), "lions-install-force-"));
+    const rel = path.join(rootd, "releases", "0.6.7-pg");
+    fs.mkdirSync(path.join(rel, "packages/apps/doc-portal"), { recursive: true });
+    fs.writeFileSync(path.join(rel, "packages/apps/doc-portal/closed.ts"), "closed");
+    fs.writeFileSync(path.join(rel, "STALE-FILE"), "stale");
+    fs.mkdirSync(path.join(rel, "node_modules"), { recursive: true });
+    fs.writeFileSync(path.join(rel, "node_modules/x.js"), "stale");
+    const staging = fs.mkdtempSync(path.join(os.tmpdir(), "lions-install-stage-"));
+    fs.writeFileSync(path.join(staging, "VERSION"), "0.6.7-pg\n");
+    fs.writeFileSync(path.join(staging, "manifest.json"), JSON.stringify({ fileCount: 1, files: [{ path: "VERSION" }] }));
+    const placed = placeRelease({ staging, srcDir: staging, releaseDir: rel, force: true, isTar: true });
+    assert("force-release: 新树就位（VERSION 在）", fs.readFileSync(path.join(rel, "VERSION"), "utf8").trim() === "0.6.7-pg");
+    assert("force-release: 不合并旧树（STALE-FILE / doc-portal / node_modules 都不在 releaseDir）",
+      !fs.existsSync(path.join(rel, "STALE-FILE")) && !fs.existsSync(path.join(rel, "packages/apps/doc-portal")) && !fs.existsSync(path.join(rel, "node_modules")));
+    assert("force-release: 旧树保留在 <ver>.old-<ts> 且内容完好", !!placed.backup && fs.existsSync(path.join(placed.backup, "STALE-FILE")) && fs.existsSync(path.join(placed.backup, "packages/apps/doc-portal/closed.ts")));
+    const vtClean = verifyInstalledTree(rel, "open");
+    assert("verify-tree: 替换后 open 树无闭源目录 -> 绿（manifest 声明文件全在）", vtClean.ok === true && vtClean.closedPresent.length === 0 && vtClean.checked === 1, JSON.stringify(vtClean));
+    fs.mkdirSync(path.join(rel, "packages/apps/doc-portal"), { recursive: true });
+    const vtDirty = verifyInstalledTree(rel, "open");
+    assert("verify-tree: 树内出现闭源目录 -> 必须红（许可隔离）", vtDirty.ok === false && vtDirty.closedPresent.length === 1, JSON.stringify(vtDirty));
+    fs.rmSync(path.join(rel, "packages/apps/doc-portal"), { recursive: true, force: true });
+    let threw = null;
+    try { placeRelease({ staging: fs.mkdtempSync(path.join(os.tmpdir(), "lions-install-x-")), srcDir: rootd, releaseDir: rel, force: false, isTar: true }); } catch (e) { threw = e; }
+    assert("非 force 且目标已存在 -> 抛错（不静默合并）", !!threw && /release 已存在/.test(threw.message));
+    const rel3 = path.join(rootd, "releases", "0.6.7-pg-b");
+    fs.mkdirSync(rel3, { recursive: true });
+    fs.writeFileSync(path.join(rel3, "KEEP"), "keep");
+    let threw2 = null;
+    try { placeRelease({ staging: path.join(rootd, "no-such-staging"), srcDir: rootd, releaseDir: rel3, force: true, isTar: true }); } catch (e) { threw2 = e; }
+    assert("放置失败 -> 回滚：旧树换回（KEEP 仍在）", !!threw2 && fs.existsSync(path.join(rel3, "KEEP")), threw2 && threw2.message);
+    fs.rmSync(rootd, { recursive: true, force: true });
+  }
+  // 2026-11-24（P1-5 回退修复）：--repair 的纯函数断言（与主流程共用 mergeRepairedRecord / detectUnitPrefix）。
+  const rec0 = { schema: "x", version: "0.6.7-pg", edition: "open", home: "~/lions", installedAt: "2026-11-24T02:46:04Z", dbMode: "pg", ports: { mind: 14000 }, systemdDir: null, apps: { mind: { port: 14000, unit: "lions-mind.service" } } };
+  const merged = mergeRepairedRecord(rec0, { systemdDir: "~/.config/systemd/user", unitPrefix: "lions-dev-", apps: { mind: { port: 14000, unit: "lions-dev-mind.service" } }, pgUnit: "lions-dev-pg.service" });
+  assert("repair: systemdDir 按现场写入", merged.systemdDir === "~/.config/systemd/user", String(merged.systemdDir));
+  assert("repair: unitPrefix 落记录", merged.unitPrefix === "lions-dev-", String(merged.unitPrefix));
+  assert("repair: apps.unit 带前缀（旧记录是无前缀名）", merged.apps.mind.unit === "lions-dev-mind.service", merged.apps.mind.unit);
+  assert("repair: pgUnit 落记录", merged.pgUnit === "lions-dev-pg.service", String(merged.pgUnit));
+  assert("repair: 保留 version/installedAt（不伪造安装时刻）", merged.version === "0.6.7-pg" && merged.installedAt === "2026-11-24T02:46:04Z");
+  assert("repair: repairedAt 留痕", typeof merged.repairedAt === "string" && merged.repairedAt.length > 10);
+  const mergedNoPg = mergeRepairedRecord(rec0, { systemdDir: "/d", unitPrefix: "", apps: {}, pgUnit: null });
+  assert("repair: 找不到 PG 单元时删掉 pgUnit（不写不存在的单元名）", mergedNoPg.pgUnit === undefined, JSON.stringify(mergedNoPg.pgUnit));
+  const detDir = fs.mkdtempSync(path.join(os.tmpdir(), "lions-prefix-"));
+  fs.writeFileSync(path.join(detDir, "lions-dev-mind.service"), "x");
+  fs.writeFileSync(path.join(detDir, "lions-dev-pg.service"), "x");
+  const det1 = detectUnitPrefix(detDir);
+  fs.writeFileSync(path.join(detDir, "lions-test-mind.service"), "x");
+  const det2 = detectUnitPrefix(detDir);
+  fs.rmSync(detDir, { recursive: true, force: true });
+  assert("前缀反推: 单套 -> lions-dev-", det1.prefix === "lions-dev-", JSON.stringify(det1));
+  assert("前缀反推: 多套 -> null（fail-closed，不猜）", det2.prefix === null, JSON.stringify(det2));
   for (const r of results) console.log((r.ok ? "PASS" : "FAIL") + "  " + r.name + (r.detail ? " :: " + r.detail : ""));
   const bad = results.filter((r) => !r.ok).length;
   console.log(bad === 0 ? "SELFTEST OK (" + results.length + " 断言)" : "SELFTEST FAILED (" + bad + ")");
   process.exit(bad === 0 ? 0 : 1);
 }
 
+/**
+ * detectUnitPrefix — 从 systemdDir 里现存的单元文件名反推前缀（lions-<prefix>-mind.service）。
+ * 为什么要有它：--repair 没给 --unit-prefix 时不许"猜一个前缀就去写单元"——猜错就是往安装目录塞一套错名 unit。
+ * 返回 prefix=null 表示无法唯一确定（多套/零套），调用方必须停下问人，不得默认空前缀。
+ */
+function detectUnitPrefix(systemdDir) {
+  const hits = new Set();
+  let names = [];
+  try { names = fs.readdirSync(systemdDir); } catch (_e) { return { prefix: null, candidates: [], reason: "读不到目录 " + systemdDir }; }
+  for (const n of names) {
+    // 前缀口径必须与 U.unitName 一致：unit = <prefix> + app + ".service"，所以前缀含 "lions-" 与尾部 "-"（如 lions-dev-）。
+    const m = /^(lions-.+-)(mind|selfimproving|session|console|portal|pg)\.service$/.exec(n);
+    if (m) hits.add(m[1]);
+  }
+  const candidates = Array.from(hits).sort();
+  if (candidates.length === 1) return { prefix: candidates[0], candidates };
+  return { prefix: null, candidates, reason: candidates.length === 0 ? "目录里没有 lions-*-<app>.service（可能都是无前缀名）" : "目录里有多套前缀: " + candidates.join(",") };
+}
+
+/**
+ * mergeRepairedRecord — 纯函数：把现场事实合并进 install record（--repair 与 selftest 共用同一个入口，AGENTS 34②）。
+ * 只重算 unit 相关字段；version/edition/ports/dbMode/gitSha/builtAt/installedAt 现场推不出来，一律保留原值（不伪造安装时刻）。
+ */
+function mergeRepairedRecord(rec, facts) {
+  const out = Object.assign({}, rec, {
+    systemdDir: facts.systemdDir,
+    unitPrefix: facts.unitPrefix || null,
+    apps: facts.apps,
+    repairedAt: new Date().toISOString(),
+    repairNote: "按现场重算 systemdDir/unitPrefix/apps.unit/pgUnit（--skip-units 升级安装会让记录与现场脱钩）",
+  });
+  if (facts.pgUnit) out.pgUnit = facts.pgUnit; else delete out.pgUnit;
+  return out;
+}
+
+/**
+ * repairRecord — install record / unit 回填（2026-11-24 P1-5 回退 + P0-1 portal 缺失）。
+ * 不 stage、不 build、不碰库；只做三件事：
+ *   ① 缺的单元按 plan 补写（已存在的不覆盖，保护手改）；新写的 enable --now（--skip-start/--no-systemctl 时只写不启动）
+ *   ② PG 单元按磁盘实况认（带前缀找不到再认无前缀）
+ *   ③ install record 按现场重写（禁手写 json；回填必须由安装器跑一遍产生）
+ */
+function repairRecord(args) {
+  const home = path.resolve(String(args.home));
+  const recPath = H.installRecordPath(home);
+  if (!fs.existsSync(recPath)) throw new Error("没有 install.json（--repair 只用于升级/回填，不用于新装）: " + recPath);
+  const rec = JSON.parse(fs.readFileSync(recPath, "utf8"));
+  if (!fs.existsSync(path.join(home, "current"))) throw new Error("--home 下没有 current 软链，拒绝 repair（指向的不是安装根）: " + home);
+  const systemdDir = typeof args["systemd-dir"] === "string" ? path.resolve(args["systemd-dir"]) : path.join(os.homedir(), ".config", "systemd", "user");
+  let unitPrefix = typeof args["unit-prefix"] === "string" ? args["unit-prefix"] : (rec.unitPrefix || "");
+  let prefixSource = args["unit-prefix"] ? "--unit-prefix" : (rec.unitPrefix ? "install.json" : "");
+  if (!unitPrefix) {
+    const det = detectUnitPrefix(systemdDir);
+    if (!det.prefix) throw new Error("无法确定 unit 前缀（" + det.reason + "）；请显式给 --unit-prefix=lions-<env>-");
+    unitPrefix = det.prefix; prefixSource = "磁盘文件名反推";
+  }
+  const ports = rec.ports || defaultPorts();
+  const plan = U.planUnits(home, { systemdDir, portOverrides: ports, modeOverrides: null, unitPrefix });
+  const pgPlan = U.planPgUnit(home, { systemdDir, unitPrefix, port: Number(args["pg-port"]) || 5432 });
+  const result = { ok: true, home, systemdDir, unitPrefix, prefixSource, dryRun: !!args["dry-run"], written: [], skipped: [], started: [], pgUnit: null, missingAfter: [], record: null };
+  if (!args["dry-run"]) {
+    const w = U.writeUnits(plan, { force: !!args["force-units"] });
+    result.written = w.written.map((u) => u.unit);
+    result.skipped = w.skipped.map((u) => u.unit);
+    if (!args["no-systemctl"] && !args["skip-start"] && w.written.length) {
+      run("systemctl", ["--user", "daemon-reload"], { allowFail: true });
+      for (const u of w.written) {
+        const r = run("systemctl", ["--user", "enable", "--now", u.unit], { allowFail: true });
+        result.started.push(u.unit + (r.status === 0 ? ":ok" : ":fail(" + r.status + ")"));
+      }
+    }
+  }
+  result.pgUnit = fs.existsSync(pgPlan.path) ? pgPlan.unit : (fs.existsSync(path.join(systemdDir, U.pgUnitName(""))) ? U.pgUnitName("") : null);
+  result.missingAfter = plan.filter((u) => !fs.existsSync(u.path)).map((u) => u.unit);
+  // dry-run 不写盘，"缺失"是"将会补写"的预告，不是失败；只有真跑完仍缺才是失败。
+  if (result.missingAfter.length && !args["dry-run"]) result.ok = false;
+  const apps = Object.fromEntries(START_ORDER.map((a) => [a, { port: ports[a], unit: U.unitName(a, unitPrefix) }]));
+  result.record = mergeRepairedRecord(rec, { systemdDir, unitPrefix, apps, pgUnit: result.pgUnit });
+  if (!args["dry-run"]) fs.writeFileSync(recPath, JSON.stringify(result.record, null, 2) + "\n");
+  return result;
+}
+
 async function main() {
   const args = parseArgv(process.argv.slice(2));
   if (args.selftest) return runSelftest();
+  // --repair：不重装，只按现场回填 unit 与 install record（不 require --from）。
+  if (args.repair) {
+    if (!args.home) { console.error("缺少 --home=<dir>"); process.exit(3); }
+    try {
+      const r = repairRecord(args);
+      if (args.json) process.stdout.write(JSON.stringify(r, null, 2) + "\n");
+      else {
+        console.log("repair home=" + r.home);
+        console.log("  systemdDir=" + r.systemdDir + " unitPrefix=" + r.unitPrefix + "（来源：" + r.prefixSource + "）");
+        console.log("  写入单元=" + (r.written.join(",") || "-") + " / 跳过已有=" + (r.skipped.join(",") || "-") + " / 启动=" + (r.started.join(",") || "-"));
+        console.log("  pgUnit=" + (r.pgUnit || "-") + " 缺失=" + (r.missingAfter.join(",") || "-"));
+        console.log("  record=" + H.installRecordPath(r.home));
+      }
+      if (!r.ok) { console.error("REPAIR FAILED: 仍有单元缺失 " + r.missingAfter.join(",")); process.exit(1); }
+    } catch (e) { console.error("REPAIR FAILED: " + e.message); process.exit(1); }
+    return;
+  }
   if (!args.from) { console.error("缺少 --from=<tar|dir>"); process.exit(3); }
   if (!args.home) { console.error("缺少 --home=<dir>（新装建议 ~/lions）"); process.exit(3); }
   try {
@@ -1081,4 +1545,4 @@ async function main() {
 }
 
 if (require.main === module) main();
-module.exports = { parseEnvFile, renderEnv, buildAppEnv, defaultPorts, parsePortOverrides, readVersion, dbUrl, resolvePnpm, linkCurrent, buildApp, buildWorkspace, waitHealth, run, install, schemaGapCheck, pgTableCount, ensurePgTrgm, SCHEMA };
+module.exports = { parseEnvFile, renderEnv, buildAppEnv, defaultPorts, parsePortOverrides, readVersion, resolveBuiltAt, dbUrl, resolvePnpm, linkCurrent, buildApp, buildWorkspace, waitHealth, run, install, repairRecord, mergeRepairedRecord, detectUnitPrefix, schemaGapCheck, pgTableCount, ensurePgTrgm, SCHEMA, placeRelease, verifyInstalledTree, detectEdition, resolveEdition };

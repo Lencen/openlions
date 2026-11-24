@@ -1,7 +1,7 @@
 /**
- * audit.ts — 平台写操作统一审计（0.4.39-08 批1，按 uiux 契约 2026-11-09 对齐）
+ * audit.ts — 平台写操作统一审计（0.4.39-08 批1，按 设计 契约 2026-11-09 对齐）
  *
- * 与 uiux 判据（scripts/check-platform-write-audit.cjs）的对齐点：
+ * 与 设计 判据（scripts/check-platform-write-audit.cjs）的对齐点：
  *   · 落 mind 库的 "AuditLog"（平台既有审计表，2418 行在库），**不自建新表**；
  *   · entityType: 'PlatformConfig' | 'PlatformAuth'
  *   · action: 'platform.config.{create,update,delete}' / 'platform.auth.{grant,revoke,update}' 等
@@ -12,7 +12,7 @@
  * 失败策略：PLATFORM_AUDIT_ENFORCE !== "0" -> 抛错（调用方 fail-closed）；
  *          = "0" -> 只打 error 日志不阻断（表迁移/修复期）。
  *
- * 为什么不再自建 platform_audit_log：uiux 判据与平台既有审计都在 AuditLog；
+ * 为什么不再自建 platform_audit_log：设计 判据与平台既有审计都在 AuditLog；
  *   两个"审计源"必然漂移（今天已经吃过"两套口径"的多次亏）。
  */
 import { createHash, randomBytes } from "node:crypto";
@@ -25,7 +25,7 @@ export type EntityType = "PlatformConfig" | "PlatformAuth";
 export interface AuditActor {
   /** 人或 agent 标识（如 session_id / 脚本名） */
   id: string;
-  /** 类别按 uiux 契约统一为 human | agent（脚本类归 agent，不再并存 user/script） */
+  /** 类别按 设计 契约统一为 human | agent（脚本类归 agent，不再并存 user/script） */
   type: "human" | "agent";
 }
 
@@ -95,10 +95,10 @@ export async function writeAudit(e: AuditEntry): Promise<AuditResult> {
   const diff = diffOnly(e.before, e.after);
   const beforeStr = diff.keys.length && Object.keys(diff.from).length ? JSON.stringify(maskSecrets(diff.from)) : "";
   const afterStr = diff.keys.length && Object.keys(diff.to).length ? JSON.stringify(maskSecrets(diff.to)) : "";
-  // create 允许 before 空；delete 允许 after 空（uiux 判据按 changeType 认）
+  // create 允许 before 空；delete 允许 after 空（设计 判据按 changeType 认）
   if (!beforeStr && !afterStr) return fail("before 与 after 都为空（无可审计变更）");
 
-  // 2026-11-09（uiux 复核阻断）：metadata 也必须脱敏 —— 首版只脱 before/after，
+  // 2026-11-09（设计 复核阻断）：metadata 也必须脱敏 —— 首版只脱 before/after，
   //   而失败补偿审计把 attemptedBefore/attemptedAfter 原样塞进 metadata -> 审计表自己成了泄露源。
   //   规则：metadata 全量过 maskSecrets；confirmToken 是凭证，只落短哈希（可关联、不可还原）。
   const tokenHash = e.confirmToken

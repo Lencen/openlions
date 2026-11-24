@@ -1,4 +1,4 @@
--- 2026-09-24 agent-x #7 记忆过期 expires_at 自动清理
+-- 2026-09-24 agent-f #7 记忆过期 expires_at 自动清理
 -- 方案: docs/platform-logic/memory-expires-at-2026-09-24.md §2.1
 -- 目的: 给 Memory 一个**显式到期契约**, 让"到期即归档"可被独立调度器执行, 而不是依赖写者自觉。
 -- 口径: NULL = 永不过期(默认)。存量 8.6万+ 行迁移后全为 NULL, 不触发任何清扫 -> 行为不变。

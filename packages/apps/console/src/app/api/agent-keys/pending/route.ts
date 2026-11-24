@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const r = await macsAdminFetch("/api/v1/agent-keys/pending");
   if (r.status >= 400) {
-    return NextResponse.json({ ok: false, items: [], error: (r.body && r.body.error) || "取待审批列表失败", status: r.status }, { status: r.status || 502 });
+    return NextResponse.json({ ok: false, items: null, error: (r.body && r.body.error) || "取待审批列表失败", status: r.status }, { status: r.status || 502 });
   }
   return NextResponse.json({ ok: true, ...(r.body) });
 }

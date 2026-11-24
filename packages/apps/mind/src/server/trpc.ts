@@ -8,7 +8,7 @@ import { maybeAutoRenewKey, type Actor } from "./lib/key-governance";
 // P3 阶段 4-6: tRPC 鉴权 (SHARED-BRAIN-AGENT-REGISTRATION-DESIGN-v1.md §6.2)
 // 2026-06-17 ut 设计, 跟 mcp 端 x-api-key 模式对齐
 //
-// RBAC 架构预留 (2026-08-20 agent-x):
+// RBAC 架构预留 (2026-08-20 agent-e):
 //   - 当前是 flat-permission: agent × service → permissions[] (JSON)
 //   - 未来演进见 docs/RBAC-ARCHITECTURE-RESERVED.md §三
 //   - 扩展点已就位: AgentRegistry.profile / AgentServicePermission.config (JSON 字段可放 tenant_id/role/scope)

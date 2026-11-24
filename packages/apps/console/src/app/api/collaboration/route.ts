@@ -121,7 +121,7 @@ export async function GET(req: Request) {
     ? (await q(
         mind,
         "SELECT id, taskId, agentId, agentRole, status, qualityPassed, retryCount, startedAt, completedAt, createdAt, " +
-          "length(output) outputLength, substr(output,1,6000) output, substr(thoughtProcess,1,1500) thoughtProcess, " +
+          "length(\"output\") AS \"outputLength\", substr(\"output\",1,6000) AS \"output\", substr(thoughtProcess,1,1500) thoughtProcess, " +
           "substr(problemsEncountered,1,800) problemsEncountered, substr(solutionsApplied,1,800) solutionsApplied, substr(nextSteps,1,800) nextSteps " +
           "FROM TaskExecution WHERE taskId IN (" + ph + ") ORDER BY COALESCE(completedAt, startedAt, createdAt) ASC LIMIT 3000",
         ...ids

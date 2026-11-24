@@ -15,8 +15,13 @@
  *
  * 凭证：请求头 x-platform-admin-token，取值需等于服务端 env PLATFORM_ADMIN_TOKEN（未配置时回落 MIND_ADMIN_API_KEY）。
  *   铁律：admin 凭证只在服务端，绝不下发浏览器（与 macs-admin.ts 同一约定）。
+ *
+ * 0.6.4 U-56a（2026-11-18）：新增「页面 toggle 落盘」回退 ——
+ *   env PLATFORM_WRITE_AUTH **未显式设置**时，读取平台设置文件的 write_auth.mode；
+ *   显式设置 env 时 env 永远优先（/api/system/auth/toggle 对此返回 409，禁止页面覆盖）。
  */
 import type { NextRequest } from "next/server";
+import { loadRaw } from "./platform-settings";
 
 export type PlatformPerm = "perm.grant" | "auth.manage" | "config.write" | "agent.manage" | "ops.write";
 
@@ -31,9 +36,32 @@ export interface GuardResult {
   actorId?: string;
 }
 
-export function writeAuthMode(): "enforce" | "shadow" | "off" {
-  const v = String(process.env.PLATFORM_WRITE_AUTH || "shadow").toLowerCase();
-  return v === "enforce" || v === "off" ? v : "shadow";
+export type WriteAuthMode = "enforce" | "shadow" | "off";
+
+function parseMode(v: unknown): WriteAuthMode | "" {
+  const s = String(v ?? "").toLowerCase();
+  return s === "enforce" || s === "shadow" || s === "off" ? s : "";
+}
+
+/** env 是否显式设置了写鉴权模式（显式设置 = 页面不可覆盖） */
+export function writeAuthEnvSet(): boolean {
+  return parseMode(process.env.PLATFORM_WRITE_AUTH) !== "";
+}
+
+/** 当前生效模式 + 来源（env | file | default） */
+export function writeAuthModeWithSource(): { mode: WriteAuthMode; source: "env" | "file" | "default" } {
+  const envMode = parseMode(process.env.PLATFORM_WRITE_AUTH);
+  if (envMode) return { mode: envMode, source: "env" };
+  try {
+    const r = loadRaw();
+    const fileMode = parseMode((r.raw && r.raw.write_auth && r.raw.write_auth.mode) || "");
+    if (fileMode) return { mode: fileMode, source: "file" };
+  } catch { /* 读不到按默认 */ }
+  return { mode: "shadow", source: "default" };
+}
+
+export function writeAuthMode(): WriteAuthMode {
+  return writeAuthModeWithSource().mode;
 }
 
 export function confirmRequired(): boolean {

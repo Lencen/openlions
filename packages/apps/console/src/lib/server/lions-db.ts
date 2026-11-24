@@ -103,8 +103,15 @@ export function bucketExpr(tsCol: string, bucketMs: number): string {
     : "CAST(" + tsCol + " / " + bucketMs + " AS INTEGER) * " + bucketMs;
 }
 
+/** 2026-11-15 P0 hotfix：返回数字 ms；时间列比较由 adaptSql 重写为 to_timestamp($n::double/1000.0)，字符串会导致 double precision 转换失败 */
+export function tsParam(ms: number): number | string {
+  return ms;
+}
+
 /** 近期查询失败样本（供 /api/db-health 与排查使用；最多留 20 条） */
 export const queryFailures: { at: number; sql: string; error: string }[] = [];
+/** 单调失败计数（不受 queryFailures 20 条上限 shift 影响），供路由做增量检测 */
+export let queryFailureTotal = 0;
 
 /** 把毫秒时间戳格式化成 PG timestamp 列同款本地时间串（2026-10-21 对账修复，见下方说明） */
 function toLocalTs(ms: number): string {
@@ -136,8 +143,17 @@ function coerceParams(params: any[]): any[] {
  *   这里只对会话库这两张表做引号补齐（幂等：已带引号的不再处理）。
  */
 function quoteSessionTables(sql: string): string {
+  // PG-12（2026-11-16，运营团队批准）：PG 会把未加引号的标识符折成小写。
+  //   原实现只处理会话库的 Session/Message，导致 mind 库的 PascalCase 表名
+  //   （Task/Knowledge/Memory/Skill/Practice/...）全部报 relation "<lower>" does not exist，
+  //   被 q() 的 catch 吞掉 -> 页面整块 n/a 或空（3107 task-detail found=false 即此因）。
+  //   这里扩到全部已知 mind 表；幂等（负向前瞻 (?!\s*") 保证已带引号的不再处理）。
+  //   全仓扫描确认：这 9 张表的裸引用共 148 处（FROM 146 / JOIN 2），均为 PascalCase，无小写写法。
   return sql
-    .replace(/\b(FROM|JOIN)\s+(Session|Message)\b(?!\s*")/gi, (_m, kw, t) => kw + ' "' + t + '"')
+    .replace(
+      /\b(FROM|JOIN)\s+(Session|Message|Task|TaskStateTransition|TaskExecution|Todo|FlywheelEvent|Knowledge|Memory|Skill|Practice)\b(?!\s*")/gi,
+      (_m, kw, t) => kw + ' "' + t + '"'
+    )
     // 2026-10-21: 会话库的列同样是 CamelCase，未加引号会被折成 extractstatus
     .replace(/\bextractStatus\b(?!\s*")/g, '"extractStatus"');
 }
@@ -178,9 +194,25 @@ export async function q(db: any, sql: string, ...params: any[]): Promise<any[]> 
     const r = await db.query(adaptSql(pre), coerceParams(params));
     return r.rows as any[];
   } catch (e: any) {
+    queryFailureTotal += 1;
     if (queryFailures.length >= 20) queryFailures.shift();
     queryFailures.push({ at: Date.now(), sql: String(sql).slice(0, 200), error: String(e?.message || e) });
     return [];
+  }
+}
+
+/** 严格查询：失败 throw（供必须区分"真 0/空"的关键 KPI 用；同时记录 queryFailures） */
+export async function qStrict(db: any, sql: string, ...params: any[]): Promise<any[]> {
+  if (!db) throw new Error("数据库连接不可用");
+  try {
+    const pre = IS_PG ? rewritePgBooleans(quoteSessionTables(sql)) : quoteSessionTables(sql);
+    const r = await db.query(adaptSql(pre), coerceParams(params));
+    return r.rows as any[];
+  } catch (e: any) {
+    queryFailureTotal += 1;
+    if (queryFailures.length >= 20) queryFailures.shift();
+    queryFailures.push({ at: Date.now(), sql: String(sql).slice(0, 200), error: String(e?.message || e) });
+    throw e;
   }
 }
 

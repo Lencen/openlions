@@ -1,115 +1,268 @@
 "use client";
-import { humanError } from "@/lib/humanError";
-// 2026-09-14 UI-3 (todo_a76adfd6303d4e6d9f16): 知识列表 —— 详情改在侧边抽屉内打开,
-// 关闭后仍在原列表位置与筛选条件; 筛选状态写回 URL (?search/sortBy/sortOrder/page/open)。
-// 2026-09-24 IA 整改 (todo_c73421c8e82c424e97e7): 原独立菜单项 /cognitive/knowledge/governance
-// 「知识治理」是知识库的子页, 按 2026-09-21 IA 重构改为本页页内 Tab:
-//   · 默认 Tab=知识列表; Tab=知识治理 承载原治理概览, 深链 /cognitive/knowledge?tab=governance;
-//   · 旧路由 /cognitive/knowledge/governance 保留为重定向到该深链(见同目录 governance/page.tsx);
-//   · nav.ts 里 { id:'governance' } 菜单项已撤掉。
-// 2026-11-05 P2 批6（呈现层）：内联 style 清零 + 手写 .tbl 裸表 → 白名单 @/components/DataTable。
-//   列（13 列：标题/分类/置信度/主题/域/质量分/使用次数/标签/归属/可见性/来源/更新时间/操作）与数据一条不少；
-//   td 上的 nowrap / mono / 小字 / 暗色改由全局工具类 + 本目录 page.module.css 承载；
-//   操作列 th 的 92px 宽走 DataTable 的 width 档位（w90）；Tab 容器下留白改成 .tabBar。
-//   取数（/api/knowledge-list 的分页/筛选/时间范围参数）、URL 参数（含 ?tab=）、文案、抽屉行为均未动。
-import { useEffect, useState } from "react";
-import KPICard from "@/components/KPICard";
-import ListControls from "@/components/ListControls";
-import { useApi } from "@/lib/api";
-import { useGlobalFilter } from "@/components/GlobalFilter";
-import { Alert, Segmented } from "@/components/primitives";
-import CognitiveDetailDrawer from "@/components/cognitive/CognitiveDetailDrawer";
-import { useCognitiveListUrlState } from "@/components/cognitive/useCognitiveListUrlState";
-import { getQuickFilters } from "@/config/cognitiveQuickFilters";
-import { t } from "@/i18n";
-import KnowledgeGovernancePanel from "./_components/KnowledgeGovernancePanel";
-import TableCopyButton from "@/components/TableCopyButton";
-import { ownerLabel, visibilityLabel as visibility } from "@/lib/asset-ownership";
-import DataTable from "@/components/DataTable";
-import type { DataColumn } from "@/components/DataTable";
-import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
-import styles from "./page.module.css";
-interface K { items?: Array<{ id: string; title: string; category?: string; confidence?: number; theme?: string; domain?: string; usageCount?: number; tags?: string; agentSource?: string; sourceType?: string; qualityScore?: number; createdAt?: string; updatedAt?: string }>; total?: number }
-type KnowledgeRow = NonNullable<K["items"]>[number];
-const fmt = (n: number) => n.toLocaleString();
 
-// 知识库页内 Tab 的合法值 (URL ?tab= 只认这两个, 脏值回落 list, 防深链脏参数)
-const TABS = [
-  { key: "list", label: "知识列表" },
-  { key: "governance", label: "知识治理" },
-] as const;
-type TabKey = (typeof TABS)[number]["key"];
-const asTab = (v: string | null): TabKey => (v === "governance" ? "governance" : "list");
+// /cognitive/knowledge — 0.5 批次D · demo slot 还原（2026-11-13）
+// slots：s12｜（KPI/摘要）4 项 · s12｜知识条目（表格，含快捷筛选工具条）
+// 取数（既有只读端点）：/api/stats（字典口径知识数）、/api/flywheel-health（近 7 日新增）、/api/knowledge-list（列表）
+// 口径纪律（数据卡 card-cognitive-knowledge）：三个「知识总数」不得互相冒充 ——
+//   ①字典全表 = 统计接口 tables.knowledge；②列表有效 = 剔已归档；③治理库存不进指标位。
+//   列表接口不回数据时刻（G-2）→ 页脚标「请求时刻（客户端，非库内时刻）」；验证态/引用使用字典无条目 → n/a + 原因。
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import DataMoment from "@/components/DataMoment";
+import { PageHeader, PageTitle } from "@/components/ui";
+import KnowledgeGovernancePanel from "./_components/KnowledgeGovernancePanel";
+import styles from "./page.module.css";
+
+// 0.6.2 U-02 检查项③：补 unavailable（数据不可得 ≠ 请求失败）
+type Phase = "loading" | "ok" | "error" | "forbidden" | "unavailable";
+
+interface Stats { asOf?: string; data?: { tables?: Record<string, number> }; }
+interface Health { asOf?: string; seven?: Record<string, number>; }
+interface KItem {
+  id?: string; title?: string; category?: string | null; theme?: string | null; domain?: string | null;
+  confidence?: number | null; qualityScore?: number | null; usageCount?: number | null;
+  sourceType?: string | null; agentSource?: string | null; supersededBy?: string | null;
+  stale?: boolean | null; verification?: string | null; humanConfirmed?: boolean | null;
+  updatedAt?: string | null; createdAt?: string | null;
+}
+interface KResp { items?: KItem[]; total?: number; }
+
+const FORBIDDEN_RE = /(401|403|无权限|未授权|forbidden|unauthorized)/i;
+const NUM = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v.toLocaleString("zh-CN") : "n/a");
+const DAY = (v?: string | null) => (v ? new Date(v).toLocaleString("zh-CN", { hour12: false }) : "n/a");
+const clip = (v?: string | null, n = 56) => {
+  const s = String(v || "").replace(/\s+/g, " ").trim();
+  return s ? (s.length > n ? s.slice(0, n) + "…" : s) : "n/a";
+};
+const QUICK: Array<[string, string]> = [["", "全部"], ["highQuality", "高质量"], ["recent7d", "近 7 天"], ["referenced", "被引用过"]];
+
+function Kpi({ label, value, hint, tone }: { label: string; value: string; hint: string; tone?: "ok" | "warn" | "crit" | "na" }) {
+  return (
+    <div className={styles.card}>
+      <span className={styles.k}>{label}</span>
+      <b className={styles.vXl + (tone === "na" ? " " + styles.na : tone === "warn" ? " " + styles.warn : tone === "crit" ? " " + styles.crit : "")}>{value}</b>
+      <span className={styles.d}>{hint}</span>
+    </div>
+  );
+}
+
+function KnowledgePageInner() {
+  // 2026-11-15 B4-6/R1：/cognitive/knowledge/governance 307 -> ?tab=governance 的目标页此前**没有治理 tab**
+  //   （R1 实测：目标页 HTML 无治理块、/api/knowledge-governance 有数 58,749）。本页补 tab 承载，治理正文复用
+  //   既有 KnowledgeGovernancePanel（取数 /api/knowledge-governance + /api/knowledge-dedupe，只读）。
+  const sp = useSearchParams();
+  const tab = sp.get("tab") === "governance" ? "governance" : "list";
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [err, setErr] = useState("");
+  const [quick, setQuick] = useState("");
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [health, setHealth] = useState<Health | null>(null);
+  const [list, setList] = useState<KResp | null>(null);
+  const [srcErr, setSrcErr] = useState<Record<string, string>>({});
+  const [nonce, setNonce] = useState(0);
+  const reload = useCallback(() => setNonce((x) => x + 1), []);
+
+  useEffect(() => {
+    let alive = true;
+    setPhase("loading"); setErr(""); setSrcErr({});
+    const listUrl = "/api/knowledge-list?page=1&pageSize=20&sortBy=updatedAt&sortOrder=desc" + (quick ? "&quick=" + encodeURIComponent(quick) : "");
+    const SOURCES: Array<[string, string]> = [
+      ["统计", "/api/stats"],
+      ["体检", "/api/flywheel-health"],
+      ["列表", listUrl],
+    ];
+    Promise.all(SOURCES.map(async ([label, url]) => {
+      try {
+        const r = await fetch(url, { cache: "no-store" });
+        if (r.status === 401 || r.status === 403) return { label, forbidden: true as const };
+        if (!r.ok) {
+          const txt = await r.text().catch(() => "");
+          if (FORBIDDEN_RE.test(txt)) return { label, forbidden: true as const };
+          return { label, error: label + "读取失败（状态码 " + r.status + "）" };
+        }
+        return { label, data: await r.json() };
+      } catch (e: unknown) {
+        return { label, error: label + "请求失败：" + String((e as Error)?.message || e).slice(0, 80) };
+      }
+    })).then((rs) => {
+      if (!alive) return;
+      if (rs.some((x) => "forbidden" in x && x.forbidden)) { setPhase("forbidden"); return; }
+      const errs: Record<string, string> = {};
+      const listRs = rs.find((x) => x.label === "列表");
+      for (const x of rs) {
+        if ("data" in x && x.data) {
+          if (x.label === "统计") setStats(x.data as Stats);
+          if (x.label === "体检") setHealth(x.data as Health);
+          if (x.label === "列表") setList(x.data as KResp);
+        } else if ("error" in x && x.error) errs[x.label] = x.error;
+      }
+      setSrcErr(errs);
+      // 0.6.2 U-02：数据不可得用 unavailable（而非 error）——与 /about /todo 同族页一致
+      if (!listRs || !("data" in listRs) || !listRs.data) { setErr(errs["列表"] || "知识列表不可得"); setPhase("unavailable"); return; }
+      setPhase("ok");
+    });
+    return () => { alive = false; };
+  }, [nonce, quick]);
+
+  const tables = stats?.data?.tables || {};
+  const dictTotal = typeof tables.knowledge === "number" ? tables.knowledge : null;
+  const listTotal = typeof list?.total === "number" ? list.total : null;
+  const seven = health?.seven?.Knowledge;
+  const archivedDiff = dictTotal != null && listTotal != null ? dictTotal - listTotal : null;
+  const items = Array.isArray(list?.items) ? list.items : [];
+
+  const govState = (m: KItem) => {
+    if (m.supersededBy) return { text: "已归档", cls: styles.toneMute };
+    if (m.stale) return { text: "已标记过期", cls: styles.toneWarn };
+    if (m.verification) return { text: String(m.verification), cls: styles.toneMute };
+    return { text: "在库", cls: styles.toneOk };
+  };
+
+  return (
+    <main className="page" data-slot="cognitive-knowledge-page">
+      <PageHeader>
+        <PageTitle>知识库</PageTitle>
+        <div className="page-subtitle">
+          {tab === "governance"
+            ? "知识治理概览：结构化整理与长期维护（只读；审核动作统一在 /todo）"
+            : "结构化知识条目与治理状态：三个「知识总数」口径分开标；本页只读。"}
+        </div>
+      </PageHeader>
+      <div className={styles.crumbs} aria-label="页面层级"><span>#</span><span>数据</span><span>{tab === "governance" ? "治理" : "列表"}</span><span className={styles.crumbOn}>只读</span></div>
+      <div className={styles.tabs} role="tablist" aria-label="知识库视图" data-slot="cognitive-knowledge-tabs">
+        <a role="tab" aria-selected={tab === "list"} className={styles.tab + (tab === "list" ? " " + styles.tabOn : "")} href="/cognitive/knowledge">知识列表</a>
+        <a role="tab" aria-selected={tab === "governance"} className={styles.tab + (tab === "governance" ? " " + styles.tabOn : "")} href="/cognitive/knowledge?tab=governance">治理概览</a>
+      </div>
+
+      {tab === "governance" && (
+        <section className={styles.card + " " + styles.s12} data-span="12">
+          <div className={styles.cardHead}>
+            <div>
+              <h2 className={styles.cardTitle}>治理概览</h2>
+              <p className={styles.sub}>数据来自 /api/knowledge-governance + /api/knowledge-dedupe（只读；自动治理由定时任务每周执行，人工审核在 /todo）</p>
+            </div>
+            <span className={styles.tagOk}>只读</span>
+          </div>
+          <KnowledgeGovernancePanel />
+          <p className={styles.footNote}>本视图由 /cognitive/knowledge/governance 307 重定向目标承载；治理字段均为库内真实值，加载失败会显式提示（不写 0）。</p>
+        </section>
+      )}
+
+      {tab === "list" && (<>
+      {phase === "loading" && <div className={styles.state}>加载中…（不显示假计数）</div>}
+      {phase === "forbidden" && (
+        <div className={styles.state}>
+          <b>无权限访问</b><p>当前账号缺少知识库的读权限（返回 401/403）。请联系平台管理员开通后重试。</p>
+          <button className="btn" type="button" onClick={reload}>重试</button>
+        </div>
+      )}
+      {phase === "error" && (
+        <div className={styles.state}>
+          <b>加载失败</b><p>{err}；失败不等于「知识库为空」，请稍后重试。</p>
+          <button className="btn" type="button" onClick={reload}>重试</button>
+        </div>
+      )}
+      {phase === "unavailable" && (
+        <div className={styles.state}>
+          <b>数据不可得</b><p>{err || "知识数据源不可用（不等于知识库为空）"}；请稍后重试或联系管理员。</p>
+          <button className="btn" type="button" onClick={reload}>重试</button>
+        </div>
+      )}
+
+      {phase === "ok" && (
+        <>
+          <div className={styles.kpis}>
+            <Kpi
+              label="知识数（字典全表）"
+              value={dictTotal != null ? NUM(dictTotal) : "n/a"}
+              hint={dictTotal != null ? "字典口径（全表计数）· 与列表口径不同，不互相冒充" : "n/a（原因：" + (srcErr["统计"] || "统计接口不可得") + "）"}
+              tone={dictTotal != null ? "ok" : "na"}
+            />
+            <Kpi
+              label="列表有效（派生）"
+              value={listTotal != null ? NUM(listTotal) : "n/a"}
+              hint={listTotal != null ? "列表口径（剔已归档）· 与全表差 " + NUM(archivedDiff) + " 条 = 已归档行（派生，非字典指标）" : "n/a（原因：" + (srcErr["列表"] || "列表接口不可得") + "）"}
+              tone={listTotal != null ? "ok" : "na"}
+            />
+            <Kpi
+              label="近 7 日新增（派生）"
+              value={health ? NUM(seven) : "n/a"}
+              hint={health ? "近 7 日按创建时间（体检口径，派生非字典指标）" : "n/a（原因：" + (srcErr["体检"] || "体检接口不可得") + " · 不写 0）"}
+              tone={health ? "ok" : "na"}
+            />
+            <Kpi
+              label="验证态 / 引用使用"
+              value="n/a"
+              hint="n/a（原因：字典无「验证态」「引用使用」条目；引用使用聚合接口字段为坏值 —— 不写 0、不自造口径）"
+              tone="na"
+            />
+          </div>
+
+          <div className={styles.toolbar} role="group" aria-label="知识快捷筛选">
+            {QUICK.map(([key, label]) => (
+              <button key={key || "all"} type="button" className={styles.filter + (quick === key ? " " + styles.filterOn : "")} onClick={() => setQuick(key)}>
+                {label}{key === "" ? <span className={styles.badge}>{listTotal == null ? "n/a" : NUM(listTotal)}</span> : null}
+              </button>
+            ))}
+            <span className={styles.hint}>快捷筛选口径在后端 · 当前筛选共 {listTotal == null ? "n/a" : NUM(listTotal)} 条（列表口径）</span>
+          </div>
+
+          <section className={styles.card + " " + styles.s12}>
+            <div className={styles.cardHead}>
+              <div><h2 className={styles.cardTitle}>知识条目</h2><p className={styles.sub}>默认更新时间倒序 · 编号可点进详情 · 缺字段列保留并标 n/a</p></div>
+              <span className={styles.tagOk}>只读</span>
+            </div>
+            {items.length === 0 ? (
+              <div className={styles.stateMini}>
+                {quick
+                  ? "没有匹配的知识条目（接口正常返回 0 条，列表本身有数据）—— 切回「全部」或清除筛选。"
+                  : "还没有知识条目（接口正常返回空集，非加载中）—— 去提炼链路确认是否有新产物。"}
+              </div>
+            ) : (
+              <div className={styles.tblWrap}>
+                <table className={styles.tbl}>
+                  <thead>
+                    <tr><th>编号</th><th>标题</th><th>分类</th><th>主题</th><th>域</th><th>来源</th><th className={styles.num}>使用次数</th><th className={styles.num}>质量分</th><th>状态</th><th>更新时间</th></tr>
+                  </thead>
+                  <tbody>
+                    {items.map((m, i) => {
+                      const g = govState(m);
+                      return (
+                        <tr key={m.id || i}>
+                          <td className={styles.mono}><a className={styles.link} href={"/cognitive/knowledge/detail?id=" + encodeURIComponent(String(m.id || ""))}>{m.id ? String(m.id).slice(0, 14) : "n/a"}</a></td>
+                          <td className={styles.name} title={m.title || ""}>{clip(m.title)}</td>
+                          <td>{m.category || "n/a"}</td>
+                          <td>{m.theme || "n/a"}</td>
+                          <td>{m.domain || "n/a"}</td>
+                          <td className={styles.dim}>{[m.agentSource, m.sourceType].filter(Boolean).join(" · ") || "n/a"}</td>
+                          <td className={styles.num}>{NUM(typeof m.usageCount === "number" ? m.usageCount : null)}</td>
+                          <td className={styles.num}>{typeof m.qualityScore === "number" ? m.qualityScore.toFixed(2) : "n/a"}</td>
+                          <td><span className={styles.tagPlain + " " + g.cls}>{g.text}</span></td>
+                          <td className={styles.mono}>{DAY(m.updatedAt || m.createdAt)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          <footer className={styles.foot}>
+            <DataMoment items={[{ label: "统计", at: stats?.asOf }, { label: "体检", at: health?.asOf }]} showPrefix={false} />
+            <span className={styles.footNote}>列表时刻：请求时刻（客户端，非库内时刻 —— 列表接口不回数据时刻，缺口 G-2）；口径：知识数 = 字典全表；列表有效 = 剔已归档（派生）；近 7 日新增 = 体检口径（派生）；验证态 / 引用使用字典无条目 → n/a + 原因，不写 0。</span>
+          </footer>
+        </>
+      )}
+      </>)}
+    </main>
+  );
+}
 
 export default function KnowledgePage() {
-  const { search, sortBy, sortOrder, page, openId, quick, setSearch, setSortBy, setSortOrder, setPage, setOpenId, setQuick, closeOpen } = useCognitiveListUrlState();
-  const [tab, setTab] = useState<TabKey>("list");
-  // 挂载后从 URL 恢复 Tab (深链 / 刷新), 与 useCognitiveListUrlState 的做法一致, 避免 SSR/CSR 水合不一致。
-  useEffect(() => {
-    try {
-      setTab(asTab(new URLSearchParams(window.location.search).get("tab")));
-    } catch { /* ignore */ }
-  }, []);
-  // Tab 切换写回 URL (replaceState, 不跳路由), 保留列表筛选等其他参数, 使 Tab 可分享/可刷新。
-  const changeTab = (next: TabKey) => {
-    setTab(next);
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      if (next === "list") sp.delete("tab"); else sp.set("tab", next);
-      const qs = sp.toString();
-      window.history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : ""));
-    } catch { /* ignore */ }
-  };
-  const pageSize = 10;
-  // 2026-10-13 round 76-CK: 接入顶栏时间范围(③) —— 透到 mind 的 tRPC list。
-  const f = useGlobalFilter();
-  const qs = `?page=${page}&pageSize=${pageSize}&search=${encodeURIComponent(search)}&sortBy=${sortBy}&sortOrder=${sortOrder}&quick=${quick ?? ""}&range=${f.range}&_n=${f.nonce}`;
-  const { data, loading, error } = useApi<K>(`/api/knowledge-list${qs}`);
-  const items = data?.items ?? [];
-  const total = data?.total ?? 0;
-  // 2026-11-05 P2 批6：列定义与改前表头逐列对应（含操作列宽 92px -> DataTable width 档位）
-  const columns: DataColumn<KnowledgeRow>[] = [
-    { key: "title", title: "标题", render: (m) => (
-      <button type="button" className={styles.linkBtn} onClick={() => setOpenId(m.id)} title="侧边抽屉打开详情（不离开列表, 筛选与位置保持）">{m.title?.slice(0, 50) ?? m.id?.slice(0, 12) + "..."}</button>
-    ) },
-    { key: "category", title: "分类", render: (m) => <span className="nowrap">{m.category ?? "-"}</span> },
-    { key: "confidence", title: "置信度", align: "right", render: (m) => <span className="mono">{m.confidence?.toFixed(2) ?? "-"}</span> },
-    { key: "theme", title: "主题", render: (m) => <span className="nowrap">{m.theme ?? "-"}</span> },
-    { key: "domain", title: t('field.domain'), render: (m) => <span className="nowrap">{m.domain ?? "-"}</span> },
-    { key: "qualityScore", title: "质量分", align: "right", render: (m) => <span className="mono">{m.qualityScore != null ? m.qualityScore.toFixed(2) : "-"}</span> },
-    { key: "usageCount", title: "使用次数", align: "right", render: (m) => <span className="mono">{m.usageCount ?? 0}</span> },
-    { key: "tags", title: "标签", render: (m) => <span className={styles.smDim}>{m.tags?.slice(0, 40) ?? "-"}</span> },
-    { key: "owner", title: "归属", render: (m) => <span className={"nowrap " + styles.smDim}>{ownerLabel(m as any)}</span> },
-    { key: "visibility", title: "可见性", render: (m) => <span className={"nowrap " + styles.smDim}>{visibility(m as any)}</span> },
-    { key: "source", title: "来源", render: (m) => <span className={"nowrap " + styles.smDim}>{m.agentSource ?? m.sourceType ?? "-"}</span> },
-    { key: "updatedAt", title: "更新时间", render: (m) => <span className={"nowrap mono " + styles.sm}>{m.updatedAt?.slice(0, 10) ?? m.createdAt?.slice(0, 10) ?? "-"}</span> },
-    { key: "ops", title: "操作", width: 92, render: (m) => (
-      <span className="nowrap"><button type="button" className={styles.linkBtn} onClick={() => setOpenId(m.id)} title="侧边抽屉打开详情">详情</button> <a href={`/cognitive/knowledge/detail?id=${m.id}`} className={styles.detailLink} title="在新标签打开完整详情页（深链接）">↗</a></span>
-    ) },
-  ];
-  return (<div className="layout-with-sidebar"><main className="main">
-    <div className="breadcrumb"><span className={styles.bcDim}>记忆与知识</span><span className="sep">/</span><span className="current">知识库</span></div>
-    <PageHeader><PageTitle>知识库</PageTitle><div className="page-subtitle">知识条目 · 分类 · 来源 · 语义检索 · 点标题用侧边抽屉看详情（不离开列表） {loading && tab === "list" && "（加载中...）"}</div></PageHeader>
-    {/* 2026-09-24 IA 整改: 子页(知识治理)走页内 Tab, 不再单占菜单位; 均可深链 (?tab=governance) */}
-    <div className={styles.tabBar}>
-      <Segmented options={TABS.map((tb) => ({ label: tb.label, value: tb.key }))} value={tab} onChange={(v) => changeTab(v as TabKey)} />
-    </div>
-    {tab === "list" ? (<>
-    <div className="kpi-grid"><KPICard label="知识总量" value={total > 0 ? fmt(total) : "..."} /></div>
-    <div className="panel"><div className="panel-header"><span className="panel-title">知识列表</span></div>
-      <ListControls search={search} onSearch={setSearch} sortBy={sortBy} onSortBy={setSortBy} sortOrder={sortOrder} onSortOrder={setSortOrder} total={total} page={page} pageSize={pageSize} onPage={setPage} quickFilters={getQuickFilters("knowledge")} quick={quick} onQuick={setQuick} loading={loading} />
-      {error && <div className={styles.errPad}><Alert type="error" message="知识库加载失败" description={humanError(error, "这条详情")} /></div>}
-      <TableCopyButton />
-      <DataTable
-        columns={columns}
-        rows={items}
-        rowKey={(m) => m.id}
-        loading={loading}
-        empty={{ title: error ? "知识库加载失败（见上方提示）" : "无匹配记录" }}
-      /></div>
-    </>) : (
-      <KnowledgeGovernancePanel />
-    )}
-    <CognitiveDetailDrawer kind="knowledge" id={openId} open={!!openId} onClose={closeOpen} />
-  </main></div>);
+  return (
+    <Suspense fallback={<main className="page"><PageHeader><PageTitle>知识库</PageTitle><div className="page-subtitle">结构化知识条目与治理状态（只读）</div></PageHeader><div className={styles.state}>加载中…</div></main>}>
+      <KnowledgePageInner />
+    </Suspense>
+  );
 }

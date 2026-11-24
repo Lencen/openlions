@@ -27,6 +27,7 @@ export default function MessagesManagePage() {
   const [nextBefore, setNextBefore] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [asOf, setAsOf] = useState<string | null>(null);
   // 2026-10-21 保存视图（localStorage，纯前端）+ 导出 CSV（不依赖后端）
   const [views, setViews] = useState<{ name: string; transport: string; brain: string; since: string; q: string }[]>([]);
   useEffect(() => {
@@ -90,7 +91,7 @@ export default function MessagesManagePage() {
 
   const buildUrl = (before?: number | null) => {
     const u = new URLSearchParams();
-    u.set("limit", "50");
+    u.set("limit", "20");
     if (transport) u.set("transport", transport);
     if (brain) u.set("brain", brain);
     if (since !== "0") u.set("since", since);
@@ -104,7 +105,7 @@ export default function MessagesManagePage() {
     setLoading(true);
     fetch(buildUrl(null))
       .then((r) => r.json())
-      .then((j) => { if (!cancelled && j?.ok) { setRows(j.messages || []); setTotal(j.total || 0); setNextBefore(j.nextBefore ?? null); } })
+      .then((j) => { if (!cancelled && j?.ok) { setRows(j.messages || []); setTotal(j.total || 0); setNextBefore(j.nextBefore ?? null); setAsOf(j.asOf ?? null); } })
       .catch(() => { if (!cancelled) { setRows([]); setTotal(0); } })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -127,31 +128,22 @@ export default function MessagesManagePage() {
     { key: "at", title: "时间", render: (m) => <span className="mono">{fmtAt(m.at)}</span> },
     { key: "conversation", title: "会话", render: (m) => m.conversation },
     { key: "from", title: "发送方", render: (m) => <span className="mono">{m.from}</span> },
-    { key: "text", title: "摘要", render: (m) => <span className={styles.clip} title={m.text}>{m.text}</span> },
+    { key: "to", title: "接收方", render: (m) => <span className="mono">{m.to || "n/a（接口未返回接收方）"}</span> },
     {
       key: "transport", title: "传输态",
-      render: (m) => <span className={"msg-pill t-" + (m.transport || "queued")}>{m.transport === "expired" ? "已过期" : m.transport === "failed" ? "投递失败" : m.transport === "read" ? "已读" : "已送达"}</span>,
+      render: (m) => <span className={"msg-pill t-" + (m.transport || "queued")}>{m.transport === "expired" ? "已过期" : m.transport === "failed" ? "投递失败" : m.transport === "read" ? "已读" : m.transport === "pending" ? "待处理" : "已送达"}</span>,
     },
-    {
-      key: "brain", title: "处理态",
-      render: (m) => <span className={"msg-pill b-" + (m.brain || "unreplied")}>{m.brain === "replied" ? "已回复" : m.brain === "read" ? "已读未回" : "未处理"}</span>,
-    },
-    { key: "replyTo", title: "引用", render: (m) => <span className="mono">{m.replyTo ? "有" : "—"}</span> },
-    { key: "lastError", title: "最后错误", render: (m) => <span className={styles.clip} title={m.lastError || ""}>{m.lastError || "—"}</span> },
-    {
-      key: "op", title: "操作",
-      render: (m) => (
-        <button className="msg-ghost" onClick={() => { setAssignRow(m); setAssignTo(""); setAssignNote(""); setAssignMsg(null); }}>改派</button>
-      ),
-    },
+    { key: "text", title: "摘要", render: (m) => <span className={styles.clip} title={m.text}>{m.text}</span> },
+    { key: "size", title: "大小", render: (m) => <span className="mono">{m.size != null ? m.size + " B" : "n/a（接口未返回字节数）"}</span> },
   ];
 
   return (
-    <main className="page">
+    <main className={"page " + styles.managePage} data-slot="messages-manage-page">
       <div className="breadcrumb"><span className={styles.crumbDim}>服务</span><span className="sep">/</span><span className={styles.crumbDim}>消息</span><span className="sep">/</span><span className="current">管理</span></div>
       <PageHeader>
         <PageTitle>消息管理</PageTitle>
         <div className="page-subtitle">会话与消息的治理操作入口</div>
+        <div className={styles.chips} aria-label="页面层级"><span>#</span><span>服务</span><span>消息</span><span className={styles.crumbOn}>只读</span></div>
       </PageHeader>
       <div className="msg-manage-bar">
         <select className="msg-select" value={transport} onChange={(e) => setTransport(e.target.value)}>
@@ -174,36 +166,21 @@ export default function MessagesManagePage() {
             {views.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
           </select>
         ) : null}
-        <button className="msg-ghost" onClick={exportCsv} disabled={rows.length === 0} title="导出当前结果（最多 50 行/页）">导出 CSV</button>
         <span className="msg-count">共 {total} 条</span>
         <Link href="/messages" className={"msg-ghost " + styles.barEnd}>返回消息工作区</Link>
       </div>
       {loading && rows.length === 0 ? <div className="msg-empty">正在读取…</div> : rows.length === 0 ? (
         <div className="msg-empty">没有符合条件的消息</div>
       ) : (
-        <div className={styles.tableScroll}>
+        <div className={styles.tableScroll} data-slot="messages-manage-table">
           {/* 2026-11-05 P2 批8：裸 .tbl → 白名单 DataTable（行 key 取消息 id，客户端组件可传函数） */}
           <DataTable columns={columns} rows={rows} rowKey={(m) => String(m.id)} />
         </div>
       )}
-      {assignRow ? (
-        <div className="msg-trace-mask" role="dialog" aria-modal="true" aria-label="改派负责人" onClick={() => setAssignRow(null)}>
-          <div className="msg-assign-card" onClick={(e) => e.stopPropagation()}>
-            <div className={"msg-trace-title " + styles.cardHead}>改派负责人</div>
-            <div className={"msg-ctx-sub " + styles.cardLine}>消息：{assignRow.text || assignRow.id}</div>
-            <input className="msg-input" placeholder="负责人（填智能体名，如 agent-x / agent-x）" value={assignTo} onChange={(e) => setAssignTo(e.target.value)} />
-            <input className={"msg-input " + styles.fieldGap} placeholder="改派原因（必填，会进审计）" value={assignNote} onChange={(e) => setAssignNote(e.target.value)} />
-            {assignMsg ? <div className={"msg-ctx-sub " + styles.assignMsg}>{assignMsg}</div> : null}
-            <div className={styles.cardActions}>
-              <button className="msg-ghost" onClick={() => setAssignRow(null)}>取消</button>
-              <button className="msg-ghost" disabled={assignBusy || !assignTo.trim() || !assignNote.trim()} onClick={doAssign}>{assignBusy ? "提交中…" : "确认改派"}</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+
       <div className="msg-manage-foot">
-        {nextBefore ? <button className="msg-ghost" onClick={loadMore} disabled={loading}>{loading ? "加载中…" : "加载更多"}</button> : <span className="msg-count">已经到底了</span>}
-        <span className={"msg-trace-foot " + styles.footPlain}>只读：重放 / 改派请在通信服务管理端执行。</span>
+        {nextBefore ? <button className="msg-ghost" onClick={loadMore} disabled={loading}>{loading ? "加载中…" : "加载更多（游标 20 条/页）"}</button> : <span className="msg-count">已经到底了</span>}
+        <span className={"msg-trace-foot " + styles.footPlain}>数据时刻：{asOf ? new Date(asOf).toLocaleString("zh-CN", { hour12: false }) : "n/a（接口未下发 asOf）"} · 只读；写操作请到通信服务管理端执行。</span>
       </div>
     </main>
   );

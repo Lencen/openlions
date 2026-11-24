@@ -128,7 +128,7 @@ export default async function GroupDetailPage({
     return (
       <>
         <Topbar active="groups" />
-        <main className="page">
+        <main className="page" data-phase="empty">
           <h1 className="title">Group not found</h1>
           <Link href="/groups" style={{ color: "var(--accent-primary)" }}>← Back to Groups</Link>
         </main>
@@ -187,14 +187,15 @@ export default async function GroupDetailPage({
   return (
     <>
       <Topbar active="groups" />
-      <main className="page page-wide">
+      {/* 0.6.5 U-39b §2.7：详情页不套格位；统一 data-phase 供判据条件等待 */}
+      <main className="page page-wide" data-phase="ok">
         {/* Breadcrumb */}
         <div style={{ marginBottom: "var(--space-3)" }}>
           <Link href="/groups" style={{ fontSize: "13px", color: "var(--ink-muted)" }}>← Groups</Link>
         </div>
 
         {/* Group header */}
-        <div className="group-header">
+        <div className="group-header" data-slot="group-head">
           <h1>{group.titleBase || group.groupKey}</h1>
           {group.titleBase && group.titleBase !== group.groupKey && (
             <div className="meta">groupKey: {group.groupKey}</div>
@@ -218,7 +219,7 @@ export default async function GroupDetailPage({
         </div>
 
         {/* Tab bar */}
-        <div className="tab-bar">
+        <div className="tab-bar" data-slot="group-tabs">
           <Link href={`/groups/${encKey}`} className={`tab ${view === "sessions" ? "active" : ""}`}>
             Sessions ({group.members.length})
           </Link>
@@ -229,7 +230,7 @@ export default async function GroupDetailPage({
 
         {/* Sessions tab */}
         {view === "sessions" && (
-          <div className="table-wrap">
+          <div className="table-wrap" data-slot="group-sessions">
             <table className="session-table">
               <thead>
                 <tr>
@@ -277,7 +278,7 @@ export default async function GroupDetailPage({
 
         {/* Messages tab */}
         {view === "messages" && (
-          <div>
+          <div data-slot="group-messages">
             {/* Top pagination */}
             {msgTotal > MSG_LIMIT && (
               <div className="msg-pagination msg-pagination--top">

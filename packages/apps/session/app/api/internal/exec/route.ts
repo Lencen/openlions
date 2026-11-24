@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       const result = await serialize(() => prisma.$transaction(batch.map((b: any) =>
         b.kind === "query" ? prisma.$queryRawUnsafe(b.sql, ...b.params) : prisma.$executeRawUnsafe(b.sql, ...b.params),
       )));
-      audit({ batch: batch.length, ok: true, ms: Date.now() - started, sql: batch[0].sql.slice(0, 120) });
+      audit({ batch: batch.length, ok: true, ms: Date.now() - started, sql: batch[0].sql.slice(0, 300) });
       return NextResponse.json({ ok: true, result: JSON.parse(JSON.stringify(result, bigintSafe)) });
     } catch (e: any) {
       audit({ batch: batch.length, ok: false, ms: Date.now() - started, error: String(e?.message || e).slice(0, 200) });

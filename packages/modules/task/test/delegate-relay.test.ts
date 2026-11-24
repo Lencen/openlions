@@ -1,5 +1,5 @@
 /**
- * delegate-relay.test.ts — agent-x #6 `delegate_task` 原地接力 单测
+ * delegate-relay.test.ts — agent-f #6 `delegate_task` 原地接力 单测
  *
  * 运行:  node --import tsx --test packages/modules/task/test/delegate-relay.test.ts
  *        (等价: cd packages/modules/task && npm test)
@@ -284,7 +284,7 @@ test("dispatchDelegateInBackground: cancel 后不执行", async () => {
 });
 
 // ------------------------------------------- 验收 ② 静态断言: grep 命中重派逻辑
-test("源码断言: packages/ 内 delegate_task 重派逻辑存在 (agent-x #6 ②)", () => {
+test("源码断言: packages/ 内 delegate_task 重派逻辑存在 (agent-f #6 ②)", () => {
   const src = readFileSync(SRC, "utf-8");
   for (const needle of [
     "delegate_task",

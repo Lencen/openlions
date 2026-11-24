@@ -16,7 +16,7 @@
 import { prisma } from "@/lib/prisma";
 import { executeImprovingTask } from "./execute-improving-task";
 import { sweepPremiseSatisfiedFindings, type PremiseSweepResult } from "./finding-premise-close";
-// 2026-09-23 agent-x #5: cronjob 执行期上下文注入 —— 主 agent 核心 memory 冻结快照
+// 2026-09-23 agent-f #5: cronjob 执行期上下文注入 —— 主 agent 核心 memory 冻结快照
 import { captureAgentMemorySnapshot, type AgentMemorySnapshot } from "./agent-memory-snapshot";
 
 /**
@@ -111,13 +111,13 @@ export async function runImprovingTasksCron(opts: {
     };
   }
 
-  // 2. (agent-x #5) 冻结快照捕获段: 每轮 cron 启动时捕获一次主 agent 核心 memory,
+  // 2. (agent-f #5) 冻结快照捕获段: 每轮 cron 启动时捕获一次主 agent 核心 memory,
   //    本轮所有 task 执行共享同一快照(创建时一次快照多次执行一致)。
   //    捕获失败不阻断执行(非致命, 该轮不带上下文, 下一轮再试)。
   let agentMemorySnapshot: AgentMemorySnapshot | null = null;
   try {
     agentMemorySnapshot = await captureAgentMemorySnapshot();
-    console.log(`[improving-tasks-cron] agent-x#5 已捕获主 agent 核心 memory 快照: schemaVersion=${agentMemorySnapshot.schemaVersion} agentId=${agentMemorySnapshot.agentId} entries=${agentMemorySnapshot.count}`);
+    console.log(`[improving-tasks-cron] agent-f#5 已捕获主 agent 核心 memory 快照: schemaVersion=${agentMemorySnapshot.schemaVersion} agentId=${agentMemorySnapshot.agentId} entries=${agentMemorySnapshot.count}`);
   } catch (e: any) {
     console.warn(`[improving-tasks-cron] 捕获主 agent 核心 memory 快照失败(非致命, 本轮不注入): ${String(e?.message || e).slice(0, 120)}`);
   }
@@ -153,7 +153,7 @@ export async function runImprovingTasksCron(opts: {
           taskId: t.id,
           actor,
           dryRun: opts.dryRun,
-          // agent-x #5 执行期注入段: 携带本轮冻结快照, 由执行器写入 TaskExecution.metadata.agentMemorySnapshot
+          // agent-f #5 执行期注入段: 携带本轮冻结快照, 由执行器写入 TaskExecution.metadata.agentMemorySnapshot
           agentMemorySnapshot: agentMemorySnapshot ?? undefined,
         }),
         taskTimeout,

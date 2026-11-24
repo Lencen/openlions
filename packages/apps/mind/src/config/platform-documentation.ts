@@ -1,5 +1,5 @@
 /**
- * platform-documentation.ts — 平台静态档单一来源 (agent-x P2#10, 2026-09-24)
+ * platform-documentation.ts — 平台静态档单一来源 (agent-f P2#10, 2026-09-24)
  *
  * 【为何单独立文件 / 与 capabilities 的边界 (硬约束)】
  *   平台记忆 cmuc5i5jy000a1hqrms6y19t0 + cmue9y6gw04tzoi3197h0r0s3 明确要求:

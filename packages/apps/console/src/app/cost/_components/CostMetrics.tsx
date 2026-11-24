@@ -10,7 +10,7 @@ import pageStyles from "../page.module.css";
 // 2026-11-06 P2 收尾：本文件内联 style 清零，估算 token 脚注的动态色下沉 CostMetrics.module.css。
 
 export function CostHero({ data, agent }: { data: any; agent?: string | null }) {
-  // 2026-11-06 页头口径统一（UIUX PAGE-HEADER-31 §3 #18）：标题 / 一句说明 / 面包屑已上移到 page.tsx，
+  // 2026-11-06 页头口径统一（设计 PAGE-HEADER-31 §3 #18）：标题 / 一句说明 / 面包屑已上移到 page.tsx，
   //   这里只保留原 hero 的 tags 与 meta（窗口口径 / 不折算金额 / 数据时刻 / 刷新频率），字段与取值未改。
   return (
     <div className={pageStyles.heroStrip}>

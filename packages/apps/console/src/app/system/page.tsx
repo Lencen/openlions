@@ -19,6 +19,13 @@ interface S { result?: { data?: { learning: any; memory: any; knowledge: any } }
 interface PingData {
   /** 77-K: BFF 顶层新增的"数据时刻" */
   asOf?: string; services: { name: string; code: number; ms: number; alive: boolean }[] }
+const EXTRA_SUBS: any[] = [
+  { module: "system", id: "guards", copyKey: "guards", icon: "shield", perm: "system.guards", href: "/system/guards", label: "系统守卫", desc: "守卫规则与最近触发" },
+  { module: "system", id: "client-releases", copyKey: "client-releases", icon: "package", perm: "system.client", href: "/system/client-releases", label: "客户端版本", desc: "客户端发布与安装态" },
+  { module: "cognitive", id: "overview", copyKey: "cognitive", icon: "brain", perm: "cognitive.view", href: "/cognitive", label: "认知总览", desc: "记忆/知识/技能/实践" },
+  { module: "flywheel", id: "tasks-new", copyKey: "flywheel-tasks", icon: "plus", perm: "flywheel.tasks", href: "/flywheel/tasks", label: "改进任务", desc: "新增与查看改进任务" },
+];
+
 export default function SystemDashboard() {
   const subs = getSubmodules("system");
   const { data, error, mutate } = useApi<S>("/api/stats-overview");
@@ -46,11 +53,14 @@ export default function SystemDashboard() {
     return sum3 > 0 ? Math.round((v / sum3) * 100) : 0;
   };
 
-  return (<div className="layout"><main className="main">
+  return (<div className="layout"><main className="main" data-slot="system-page">
+    <h1 className={styles.srOnly}>业务与系统</h1>
     <PageHeader><PageTitle>业务与系统</PageTitle><div className="page-subtitle">业务对接 · 统一认证 · 权限管理 · 服务运维 · 审计<DataMoment items={[{ label: "服务", at: pingData?.asOf, loading: pingsLoading }, { label: "概览", at: data?.asOf }]} /></div></PageHeader>
+    <div className={styles.chips} aria-label="页面层级"><span>#</span><span>系统</span><span>总览</span><span className={styles.crumbOn}>只读</span></div>
     {(error || pingErr) ? <ErrorAlert title="系统概览加载失败" message={String(((error || pingErr) as Error)?.message || (error || pingErr))} onRetry={() => { mutate(); mutatePing(); }} /> : null}
 
-    <div className="dashboard-section"><div className="dashboard-section-title">服务状态</div>
+    <h2 className={styles.srOnly}>服务状态与系统指标</h2>
+    <div className="dashboard-section" data-slot="system-services"><div className="dashboard-section-title">服务状态</div>
     {/* 2026-10-26 R8：服务状态原来是 5 张「标题 + 状态点」小卡（与下面 4 张指标卡、10 个模块卡
         三种解剖混在一页）。改成一张表：一列服务、一列状态、一列响应时间 —— 扫读更快，
         也不再用「卡片堆」表达"一份清单"。 */}
@@ -79,6 +89,7 @@ export default function SystemDashboard() {
         },
       ]}
     />
+      <p className={styles.foot}>注：code 仅表示接口响应；HTTP 404 ≠ 进程死亡，存活按进程/TCP（alive）判定。</p>
     </div>
 
     <div className="trend-grid">
@@ -95,9 +106,9 @@ export default function SystemDashboard() {
         </div>
       </div>
       <div className="trend-card">
-        <div className="trend-label"><span>记忆</span></div>
+        <div className="trend-label"><span>记忆（全量）</span></div>
         <div className="trend-val">{st ? (st.memory?.total?.toLocaleString() ?? 0) : "..."}</div>
-        <div className={styles.trendHint}>统一记忆 · 占 {pct("memory")}%</div>
+        <div className={styles.trendHint}>全量；activeOnly 68,264 见 /audit/daily-summary · 占 {pct("memory")}%</div>
         <div className={"mini-bar " + styles.barFull}><div className={"mini-bar-fill " + (styles["p" + pct("memory")] || "")} /></div>
       </div>
       <div className="trend-card">
@@ -114,8 +125,20 @@ export default function SystemDashboard() {
       </div>
     </div>
 
+    <div className="dashboard-section"><div className="dashboard-section-title">飞轮流量</div>
+      <FlywheelFlow steps={[
+        { label: "上下文注入", count: "n/a" },
+        { label: "任务认领", count: "n/a" },
+        { label: "调用模型", count: "n/a" },
+        { label: "产出提交", count: "n/a" },
+        { label: "质量裁定", count: "n/a" },
+        { label: "沉淀", count: "n/a" },
+      ]} />
+      <p className={styles.foot}>飞轮阶段计数暂无统一口径（G-1），以 n/a 展示；不写 0。</p>
+    </div>
+
     <div className="dashboard-section"><div className="dashboard-section-title">子模块入口</div>
-    <div className="entry-grid">{subs.map(s=><EntryCard key={s.id} sub={s} />)}</div></div>
+    <div className="entry-grid">{subs.map(s=><EntryCard key={s.id} sub={s} />)}{EXTRA_SUBS.map((s) => <EntryCard key={s.id} sub={s} />)}</div></div>
 
     <div className="panel"><div className="panel-header"><span className="panel-title">业务知识合并流程</span></div>
       <FlywheelFlow steps={[{label:"业务系统注册"},{label:"认证配置"},{label:"权限映射"},{label:"知识提取"},{label:"去重/关联"},{label:"合并到知识",active:true},{label:"AI 可查询"}]} /></div>

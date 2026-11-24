@@ -1,171 +1,29 @@
-/* /agents/transfer · 数据卡 8 呈现层（2026-11-05）
-   只放本页布局类；颜色/字号/间距一律走 globals.css 的令牌（--sp-* / --fs-* / --border / --bg-surface …）。
-   规则来源：docs/design/uiux-bento-2026-11/TEMPLATES.md + data-cards/card-8-agents-transfer.md。
-   约定：页面里不再写内联 style；动态色（dry-run vs 执行）走 data-tone。 */
-
-.crumbDim { color: var(--text-dim); }
-
-.headMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-top: var(--sp-2);
-}
-
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-
-.search {
-  height: 28px;
-  width: 280px;
-  max-width: 100%;
-  padding: 0 var(--sp-3);
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text);
-  font-size: var(--fs-xs);
-}
-
-.search::placeholder { color: var(--text-muted); }
-
-.search:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-}
-
-.count {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-top: var(--sp-2);
-}
-
-.toolbar .count { margin-top: 0; }
-
-.agentLink {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.agentLink:hover .agentName { color: var(--primary); }
-
-.agentName {
-  font-weight: 600;
-  font-size: var(--fs-base);
-}
-
-.agentId {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-}
-
-.na {
-  color: var(--text-muted);
-  border-bottom: 1px dotted var(--border);
-  cursor: help;
-}
-
-.countLink {
-  color: var(--primary);
-  text-decoration: none;
-  font-variant-numeric: tabular-nums;
-}
-
-.countLink:hover { text-decoration: underline; }
-
-.formRow {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-
-.input {
-  padding: var(--sp-2) var(--sp-3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text);
-  min-width: 180px;
-}
-
-.arrow {
-  align-self: center;
-  color: var(--text-dim);
-}
-
-.checkRow {
-  align-self: center;
-  display: flex;
-  align-items: center;
-  gap: var(--sp-1-5);
-  color: var(--text-dim);
-  font-size: var(--fs-md);
-}
-
-.submit {
-  padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--radius-sm);
-  border: none;
-  color: var(--on-primary);
-  cursor: pointer;
-}
-
-.submit[data-tone="preview"] { background: var(--primary); }
-.submit[data-tone="exec"] { background: var(--status-crit); }
-
-.submit:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.formError {
-  color: var(--status-crit);
-  font-size: var(--fs-md);
-  margin-bottom: var(--sp-2);
-}
-
-.result {
-  font-size: var(--fs-md);
-}
-
-.resultHead {
-  color: var(--text-dim);
-  margin-bottom: var(--sp-1-5);
-}
-
-.resultStrong { color: var(--text); }
-.resultStrong[data-tone="ok"] { color: var(--status-ok); }
-.resultStrong[data-tone="preview"] { color: var(--primary); }
-
-.foot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-top: var(--sp-5);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  text-align: right;
-}
-
-.related {
-  display: flex;
-  gap: var(--sp-4);
-  flex-wrap: wrap;
-  margin-top: var(--sp-4);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
+/* /agents/transfer · 0.5 批E demo slot 还原（2026-11-13）；说明 + 移交记录表。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.noteText { margin: 0; font-size: var(--fs-base); color: var(--text-dim); line-height: 1.7; }
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.7; }
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateErr { border-left: 3px solid var(--status-crit); }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+.inlineLink { color: var(--primary); text-decoration: none; margin: 0 2px; }
+.inlineLink:hover { text-decoration: underline; }
+.skelRow { display: flex; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.skel { height: 12px; border-radius: 6px; background: var(--bg-surface2); display: inline-block; }
+.skelW1 { width: 12%; }
+.skelW2 { width: 30%; }
+.skelW3 { width: 24%; }

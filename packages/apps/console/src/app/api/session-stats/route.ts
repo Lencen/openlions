@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { safeFetchJson, safeStatus } from "@/lib/server/proxy-fetch";
 import { asOf, openSession, q, scalar } from "@/lib/server/lions-db";
 
-// 2026-10-26 修（frontend-line-2 实测：同一页两个「会话总数」差 19,363）：
+// 2026-10-26 修（[team] 实测：同一页两个「会话总数」差 19,363）：
 //   `GET /api/session-stats` 透传 mind `sessionRegistry.stats`，读的是 `lions_mind."SessionRegistry"`
 //   —— 这张表**自 2026-08 起就没有新数据**（全仓无 create 写入点），实测 4,429 行、最新 2026-08-28；
 //   而同页 `GET /api/session-list` 读的是活库 `lions_session."Session"`（23,700+ 行、当天仍在写）。

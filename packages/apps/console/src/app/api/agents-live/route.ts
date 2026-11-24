@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 3000);
-    // 2026-10-27(macs-backend-2): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
+    // 2026-10-27([team]): MACS_SECURITY_ENFORCE=1 下 /api/agents 需要 x-api-key；
     // 裸 fetch 会被 401（实测 33 次 MISSING_KEY），页面静默降级成"没有 agent"。
     const res = await fetch("http://localhost:8765/api/agents", {
       cache: "no-store",
@@ -241,11 +241,15 @@ export async function GET(req: Request) {
     } else if (registryActive || macsOnline) {
       state = "online";
       stateLabel = "在线待命";
+    } else {
+      // 2026-11-15 B1-2：既非 MACS online、注册表也非 ACTIVE → 离线（此前落回初始 idle，导致 offline=0 假数）。
+      state = "offline";
+      stateLabel = "离线";
     }
     // 执行体不参与"超过 24h 未露面 = 离线"的判定 (它本来就没有 MACS 心跳)
     if (role !== "executor" && state !== "offline" && lastSeen && now - lastSeen > OFFLINE_MS) {
       stuckReason = stuckReason || `最近露面 ${Math.round((now - lastSeen) / 3600000)} 小时前`;
-      if (state === "online" || state === "idle") { state = "offline"; stateLabel = "离线"; }
+      if (state === "online") { state = "offline"; stateLabel = "离线"; }
     }
 
     const avgQuality = sub && sub.qN ? round(sub.qSum / sub.qN, 3) : null;
@@ -324,7 +328,7 @@ export async function GET(req: Request) {
     total: agents.length,
     online: agents.filter((a) => a.state === "online" || a.state === "busy").length,
     busy: agents.filter((a) => a.state === "busy").length,
-    idle: agents.filter((a) => a.state === "idle").length,
+    idle: agents.filter((a) => (a.state as string) === "idle").length,
     stuck: agents.filter((a) => a.state === "stuck").length,
     offline: agents.filter((a) => a.state === "offline").length,
     taskDone, taskFailed, taskDoneAll, taskDoneAgentType, taskDoneDialogue,

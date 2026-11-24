@@ -1,396 +1,413 @@
 "use client";
-// /agents —— P1 试点页呈现层改造（ord-20261104-032 · 列表模板 A）
-// 区块顺序：页头 → 功能入口带 → 指标带(≤4) → 工具条(搜索 + FilterBar) → DataTable → 计数
-// 只动呈现层：取数（/api/agent-list、/api/session-stats、/api/stats、/api/services-list）与字段口径一行未改。
-import { useEffect, useMemo, useState } from "react";
+
+// /agents — 0.5 批次A · demo slot 还原（2026-11-13）
+// 槽位顺序：页头 + 4 chips → 工具栏（搜索 / 清单·实时 视图切换 / 状态筛选）→ s12 智能体清单表（8 列）
+//   → s12 口径说明 → 逐源数据时刻。
+// 取数：/api/agent-list（智能体合并清单）+ /api/agents-live（运行态）+ /api/session-stats（按智能体会话数），均只读。
+// 缺字段列（成功率 / 近 7 天 / 本月成本）保留列头、单元格 n/a + 原因，不折算、不写 0。
+// 四态：loading / empty / error / forbidden(401/403) / unavailable（响应缺数据行）。
+
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { t } from "@/i18n";
-import { useApi } from "@/lib/api";
-import { getSubmodules } from "@/config/submodules";
+import { PageHeader, PageTitle } from "@/components/ui";
+// 0.6.1 U-39：13 个二级入口下沉到父页「功能入口」带（侧栏不再有二级菜单）
+import FeatureEntries from "@/components/FeatureEntries";
+import { NAV_GROUPS } from "@/config/nav";
 import DataMoment from "@/components/DataMoment";
-import { Select } from "@/components/primitives";
-import {
-  PageHeader,
-  PageTitle,
-  KpiCard,
-  DataTable,
-  StateChip,
-  FilterBar,
-  StateBlock,
-  Pill,
-} from "@/components/ui";
-import type { DataColumn } from "@/components/ui";
-import RowClick from "./_components/RowClick";
+import { fmtNum, fmtTime } from "@/lib/format";
 import styles from "./page.module.css";
 
-type Agent = { agent_id: string; display_name: string; channel: string; host: string; status: string; profile?: any };
-interface A { result?: { data?: Agent[] } }
-interface B extends Array<Agent> {}
-type AR = A | B;
-
-/** 四态之「无权限」：API 401/403 或错误文案带权限字样时整页替换（TEMPLATES §1）。 */
-const FORBIDDEN_RE = /401|403|无权限|未授权/;
-
-/** 状态键 → StateChip 的 state + 中文（与改前同一套映射，只是从 <Tag> 换成白名单 StateChip）。 */
-function statusOf(a: any): { state: "ok" | "warn" | "crit" | "idle"; text: string } {
-  const s = String(a.macsStatus || a.status || "").toUpperCase();
-  if (s === "ACTIVE" || s === "ONLINE") return { state: "ok", text: "在线" };
-  if (s === "INACTIVE" || s === "OFFLINE") return { state: "warn", text: "离线" };
-  return { state: "idle", text: "未知" };
+interface Agent {
+  agent_id: string;
+  display_name?: string | null;
+  channel?: string | null;
+  host?: string | null;
+  status?: string | null;
+  macsStatus?: string | null;
+  source?: string | null;
+  last_seen_at?: string | null;
 }
+interface AgentListPayload {
+  asOf?: string;
+  items?: Agent[];
+  result?: { data?: Agent[] };
+  sources?: { mind?: number; macs?: number; merged?: number };
+}
+interface LiveAgent {
+  agentId: string;
+  state?: string;
+  stateLabel?: string;
+  macsMessages24h?: number;
+  lastSeenAt?: number | null;
+}
+interface LivePayload { asOf?: string; agents?: LiveAgent[]; summary?: { total?: number; online?: number; idle?: number; stuck?: number; offline?: number } }
+interface StatsPayload { result?: { data?: { byAgent?: Array<{ agent_id: string; count: number }> } }; asOf?: string }
 
+type Phase = "loading" | "ok" | "error" | "forbidden" | "unavailable";
+type SortKey = "name" | "channel" | "host" | "state" | "sessions";
+type Tone = "ok" | "warn" | "crit" | "idle" | "info";
+
+interface StateMeta { text: string; tone: Tone }
+const STATE_META: Record<string, StateMeta> = {
+  online: { text: "在线", tone: "ok" },
+  busy: { text: "忙碌", tone: "warn" },
+  idle: { text: "空闲", tone: "ok" },
+  stuck: { text: "疑似卡住", tone: "crit" },
+  offline: { text: "离线", tone: "idle" },
+  executor: { text: "执行体", tone: "info" },
+};
 const FILTERS = [
   { key: "ALL", label: "全部" },
-  { key: "ok", label: "在线" },
-  { key: "warn", label: "离线" },
-  { key: "idle", label: "未知" },
+  { key: "online", label: "在线" },
+  { key: "stuck", label: "异常" },
+  { key: "offline", label: "离线" },
+  { key: "executor", label: "执行体" },
 ] as const;
 
-const SORTS = [
-  { value: "name", label: "名称 A→Z（默认）" },
-  { value: "host", label: "运行时" },
-  { value: "status", label: "状态" },
-  { value: "seen", label: "最近活跃" },
-];
-
-// ===== 0.4.39-04 CLS 修复：首屏只渲染前 N 行（桌面 20 / 移动端 <=640px 10）=====
-// 成因（2026-11-09 实测 /agents@390）：DataTable 的 loading 骨架固定 5 行（223px），
-//   数据到达后一次渲染全部行（11 行 = 996px），表下内容整体被推走。
-// 对策：只把前 N 行交给 DataTable，超出部分给「显示全部 N 条」按钮（点了才全渲染）；
-//   表格容器在首屏加载态用 min-height 顶到「表头 39px + N 行」高度（见 page.module.css）。
-// 依据：@390 前 10 行 76/95/76/76/92/92/92/76/111/76（均 86，合计 862）；@1440 实测行高 60~76（均 69）。
-const N_DESKTOP = 20;
-const N_MOBILE = 10;
-
-/** 移动端判定必须放在 effect 里（matchMedia）后再切。
- *  渲染期直接读 window 会与 SSR 输出不一致 -> hydration mismatch。
- *  断点 640px 与 page.module.css 里 .agentsTableBox / .headMeta 的 @media (max-width: 640px) 必须同值。 */
-function useMobileQuery() {
-  const [mobile, setMobile] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
-    const mq = window.matchMedia("(max-width: 640px)");
-    const apply = () => setMobile(mq.matches);
-    apply();
-    if (mq.addEventListener) {
-      mq.addEventListener("change", apply);
-      return () => mq.removeEventListener("change", apply);
-    }
-    // 老 Safari 只有 addListener / removeListener（类型里没有，按可选调用兜底）
-    (mq as any).addListener?.(apply);
-    return () => (mq as any).removeListener?.(apply);
-  }, []);
-  return mobile;
+function chipClass(tone: Tone): string {
+  if (tone === "ok") return styles.chipOk;
+  if (tone === "warn") return styles.chipWarn;
+  if (tone === "crit") return styles.chipCrit;
+  if (tone === "info") return styles.chipInfo;
+  return styles.chipIdle;
+}
+function fmtShort(v?: string | number | null): string {
+  if (v === null || v === undefined || v === "") return "—";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "—";
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return mm + "-" + dd + " " + hh + ":" + mi;
 }
 
-export default function AgentsDashboard() {
-  const router = useRouter();
-  const subs = getSubmodules("agents");
-  const { data, loading, error, mutate } = useApi<AR>("/api/agent-list");
-  const asOf = (data as any)?.asOf as string | undefined; // 76-FZ: BFF 新给的"数据时刻"
-  const agents = (Array.isArray(data) ? data : ((data as any)?.items ?? (data as any)?.result?.data)) ?? [];
-  const { data: ssRaw } = useApi<{ result?: { data?: { total: number } } }>("/api/session-stats");
-  const { data: statsRaw } = useApi<{ data?: { tables?: { skill: number } } }>("/api/stats");
-  const { data: svcRaw } = useApi<{ name: string }[]>("/api/services-list");
-  const sessionTotal = ssRaw?.result?.data?.total;
-  const skillTotal = statsRaw?.data?.tables?.skill;
-  const mcpCount = (svcRaw ?? []).filter((s) => s.name.toLowerCase().includes("mcp")).length;
-
-  // 搜索（模板 A §「搜索」）：名称 / ID / 通道 / 宿主 / 状态文案，250ms 防抖；?q= 进 URL。
+export default function AgentsPage() {
+  const [phase, setPhase] = useState<Phase>("loading");
+  const [err, setErr] = useState("");
+  const [lastOkAt, setLastOkAt] = useState("");
+  const [agents, setAgents] = useState<Agent[] | null>(null);
+  const [live, setLive] = useState<Record<string, LiveAgent>>({});
+  const [liveOk, setLiveOk] = useState(false);
+  const [sessionCounts, setSessionCounts] = useState<Record<string, number> | null>(null);
+  const [listAsOf, setListAsOf] = useState("");
+  const [liveAsOf, setLiveAsOf] = useState("");
+  const [statsAsOf, setStatsAsOf] = useState("");
   const [q, setQ] = useState("");
-  const [qApplied, setQApplied] = useState("");
   const [filter, setFilter] = useState<string>("ALL");
-  const [sort, setSort] = useState<string>("name");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [reloadKey, setReloadKey] = useState(0);
 
-  // 0.4.39-04 CLS：首屏渲染窗口（桌面 N_DESKTOP / 移动端 N_MOBILE）+「显示全部」开关。
-  // 取数、字段口径、排序、列一律不变，只是先渲染前 N 行（点按钮才全渲染）。
-  const isMobile = useMobileQuery();
-  const pageSize = isMobile ? N_MOBILE : N_DESKTOP;
-  const [showAll, setShowAll] = useState(false);
-  // 搜索 / 状态筛选 / 排序变了就回到「只渲染前 N 行」，避免上一次的「显示全部」把新条件也全渲染。
-  useEffect(() => { setShowAll(false); }, [qApplied, filter, sort]);
-
-  useEffect(() => {
-    const id = setTimeout(() => setQApplied(q.trim().toLowerCase()), 250);
-    return () => clearTimeout(id);
-  }, [q]);
-
-  useEffect(() => {
+  const load = useCallback(async () => {
+    setPhase("loading");
+    setErr("");
     try {
-      const sp = new URLSearchParams(window.location.search);
-      const v = sp.get("q");
-      if (v) {
-        setQ(v);
-        setQApplied(v.trim().toLowerCase());
+      const [ar, lr, sr] = await Promise.all([
+        fetch("/api/agent-list", { cache: "no-store" }),
+        fetch("/api/agents-live", { cache: "no-store" }).catch(() => null),
+        fetch("/api/session-stats", { cache: "no-store" }).catch(() => null),
+      ]);
+      if (ar.status === 401 || ar.status === 403) {
+        setPhase("forbidden");
+        return;
       }
-      const sv = sp.get("sort");
-      if (sv && SORTS.some((s) => s.value === sv)) setSort(sv);
-    } catch { /* 无 window 时忽略 */ }
+      if (!ar.ok) {
+        setErr("智能体清单读取接口返回状态码 " + ar.status);
+        setPhase("error");
+        return;
+      }
+      const aj = (await ar.json()) as AgentListPayload | Agent[];
+      const rows = Array.isArray(aj) ? aj : Array.isArray(aj.items) ? aj.items : Array.isArray(aj.result && aj.result.data) ? (aj.result as { data: Agent[] }).data : null;
+      if (!rows) {
+        setErr("智能体清单响应里没有可用的数据行");
+        setPhase("unavailable");
+        return;
+      }
+      setAgents(rows);
+      setListAsOf(!Array.isArray(aj) && aj.asOf ? aj.asOf : "");
+      if (lr && lr.ok) {
+        const lj = (await lr.json()) as LivePayload;
+        const map: Record<string, LiveAgent> = {};
+        for (const a of lj.agents || []) map[a.agentId] = a;
+        setLive(map);
+        setLiveOk(true);
+        setLiveAsOf(lj.asOf || "");
+      } else {
+        setLive({});
+        setLiveOk(false);
+        setLiveAsOf("");
+      }
+      if (sr && sr.ok) {
+        const sj = (await sr.json()) as StatsPayload;
+        const map: Record<string, number> = {};
+        for (const x of (sj.result && sj.result.data && sj.result.data.byAgent) || []) map[x.agent_id] = Number(x.count) || 0;
+        setSessionCounts(map);
+        setStatsAsOf(sj.asOf || "");
+      } else {
+        setSessionCounts(null);
+        setStatsAsOf("");
+      }
+      setLastOkAt(new Date().toISOString());
+      setPhase("ok");
+    } catch {
+      setErr("请求失败（网络或响应解析异常）");
+      setPhase("error");
+    }
   }, []);
 
   useEffect(() => {
-    try {
-      const sp = new URLSearchParams(window.location.search);
-      if (qApplied) sp.set("q", qApplied);
-      else sp.delete("q");
-      sp.set("sort", sort); // 排序进 URL（?sort=），返回 / 刷新不丢
-      const qs = sp.toString();
-      window.history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : ""));
-    } catch { /* 忽略 */ }
-  }, [qApplied, sort]);
+    load();
+  }, [load, reloadKey]);
 
-  const errText = error ? String((error as Error)?.message || error) : "";
-  const forbidden = FORBIDDEN_RE.test(errText);
+  const stateOf = useCallback(
+    (a: Agent): StateMeta => {
+      const l = live[a.agent_id];
+      if (liveOk && l && l.state && STATE_META[l.state]) return STATE_META[l.state];
+      const s = String(a.macsStatus || a.status || "").toUpperCase();
+      if (s === "ACTIVE" || s === "ONLINE") return { text: "在线", tone: "ok" };
+      if (s === "INACTIVE" || s === "OFFLINE") return { text: "离线", tone: "idle" };
+      return { text: "未知", tone: "idle" };
+    },
+    [live, liveOk]
+  );
 
+  const filterKeyOf = useCallback(
+    (a: Agent): string => {
+      const t = stateOf(a);
+      if (t.text === "执行体") return "executor";
+      if (t.tone === "crit") return "stuck";
+      if (t.text === "在线" || t.text === "忙碌" || t.text === "空闲") return "online";
+      if (t.text === "离线") return "offline";
+      return "unknown";
+    },
+    [stateOf]
+  );
+
+  const all = agents || [];
   const counts = useMemo(() => {
-    const c: Record<string, number> = { ALL: agents.length, ok: 0, warn: 0, idle: 0 };
-    for (const a of agents) c[statusOf(a).state] += 1;
+    const c: Record<string, number> = { ALL: all.length, online: 0, stuck: 0, offline: 0, executor: 0 };
+    for (const a of all) {
+      const k = filterKeyOf(a);
+      if (c[k] !== undefined) c[k] += 1;
+    }
     return c;
-  }, [agents]);
+  }, [all, filterKeyOf]);
 
-  const filtered = useMemo(() => {
-    const kw = qApplied;
-    const list = (agents as any[]).filter((a) => {
-      if (filter !== "ALL" && statusOf(a).state !== filter) return false;
+  const rows = useMemo(() => {
+    const kw = q.trim().toLowerCase();
+    const list = all.filter((a) => {
+      if (filter !== "ALL" && filterKeyOf(a) !== filter) return false;
       if (!kw) return true;
-      const hay = [a.display_name, a.agent_id, a.channel, a.host, statusOf(a).text]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(kw);
+      const hay = [a.display_name, a.agent_id, a.channel, a.host, stateOf(a).text].filter(Boolean).join(" ").toLowerCase();
+      return hay.indexOf(kw) >= 0;
     });
-    const seen = (a: any) => (a.last_seen_at ? new Date(a.last_seen_at).getTime() || 0 : 0);
-    return list.slice().sort((a, b) => {
-      if (sort === "host") return String(a.host || "").localeCompare(String(b.host || ""));
-      if (sort === "status") return String(a.macsStatus || a.status || "").localeCompare(String(b.macsStatus || b.status || ""));
-      if (sort === "seen") return seen(b) - seen(a);
-      return String(a.display_name || a.agent_id || "").localeCompare(String(b.display_name || b.agent_id || ""));
+    const dir = sortDir === "asc" ? 1 : -1;
+    const val = (a: Agent): string | number => {
+      if (sortKey === "channel") return String(a.channel || "");
+      if (sortKey === "host") return String(a.host || "");
+      if (sortKey === "state") return stateOf(a).text;
+      if (sortKey === "sessions") return sessionCounts ? sessionCounts[a.agent_id] || 0 : -1;
+      return String(a.display_name || a.agent_id || "");
+    };
+    return list.slice().sort((x, y) => {
+      const vx = val(x);
+      const vy = val(y);
+      if (typeof vx === "number" && typeof vy === "number") return (vx - vy) * dir;
+      return String(vx).localeCompare(String(vy), "zh") * dir;
     });
-  }, [agents, filter, qApplied, sort]);
+  }, [all, filter, filterKeyOf, q, sessionCounts, sortDir, sortKey, stateOf]);
 
-  // 首屏窗口：只把前 N 行交给 DataTable（数据/排序/筛选不变，点「显示全部」才全渲染）。
-  const visibleRows = showAll ? filtered : filtered.slice(0, pageSize);
-  const hiddenCount = showAll ? 0 : Math.max(0, filtered.length - pageSize);
-  const initialLoading = loading && agents.length === 0;
+  const toggleSort = (key: SortKey) => {
+    if (key === sortKey) {
+      setSortDir(sortDir === "asc" ? "desc" : "asc");
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+  const sortMark = (key: SortKey) => (key === sortKey ? (sortDir === "asc" ? " ↑" : " ↓") : "");
+  const thButton = (key: SortKey, label: string) => (
+    <button type="button" className={styles.thBtn} onClick={() => toggleSort(key)}>
+      {label}
+      {sortMark(key)}
+    </button>
+  );
 
-  const detailHref = (a: any) => "/agents/detail?agentId=" + encodeURIComponent(a.agent_id || "");
-
-  // 排序口径（PILOT §5「表头可排（会话数 / 成功率 / 成本），默认会话数降序」）：
-  // TODO(数据卡 卡5 §8)：agent 维度的会话数 / 成功率 / P95 字典暂无口径，平台线补齐前不造列、也不编数字；
-  //   当前按名称排序，补齐后把这三列加进 columns 并把默认排序改回「会话数降序」。
-  const columns: DataColumn<any>[] = [
-    {
-      key: "who",
-      title: "智能体",
-      render: (a: any) => (
-        <div className="dt-cell-who">
-          <span className="dt-avatar">{(a.display_name || a.agent_id || "·").slice(0, 2)}</span>
-          <span>
-            <span className="dt-who-name">{a.display_name || a.agent_id}</span>
-            <span className="dt-who-sub">
-              {a.agent_id} · {a.channel || "未知通道"}
-              {a.source === "macs" ? <span className="dt-src" title="只登记在协同服务里，没登记进智能体注册表">仅协同</span> : null}
-            </span>
-          </span>
-        </div>
-      ),
-    },
-    { key: "host", title: "运行时", render: (a: any) => <span className="dt-who-sub">{a.host || "—"}</span> },
-    {
-      key: "status",
-      title: "状态",
-      width: "110px",
-      render: (a: any) => {
-        const st = statusOf(a);
-        return <StateChip state={st.state} text={st.text} />;
-      },
-    },
-    { key: "permissions", title: "权限", align: "right", width: "88px", render: (a: any) => a.permissions?.length ?? 0 },
-    {
-      key: "currentTask",
-      title: "当前任务",
-      width: "240px",
-      render: (a: any) =>
-        a.currentTask?.title ? (
-          <span className="dt-task" title={a.currentTask.title}>{a.currentTask.title}</span>
-        ) : (
-          <span className="dt-who-sub">—</span>
-        ),
-    },
-    {
-      key: "lastDone",
-      title: "最近产物",
-      width: "240px",
-      render: (a: any) =>
-        a.lastDone?.title ? (
-          <span className="dt-task" title={a.lastDone.title + " · " + (a.lastDone.updatedAt || "")}>{a.lastDone.title}</span>
-        ) : (
-          <span className="dt-who-sub">—</span>
-        ),
-    },
-    {
-      key: "lastSeen",
-      title: "最近活跃",
-      align: "right",
-      width: "150px",
-      render: (a: any) => (
-        <span className="dt-who-sub">
-          {a.last_seen_at
-            ? new Date(a.last_seen_at).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false })
-            : "—"}
-        </span>
-      ),
-    },
-    {
-      key: "open",
-      title: "",
-      width: "48px",
-      align: "right",
-      render: (a: any) => (
-        <Link className={styles.rowLink} href={detailHref(a)} title="查看智能体详情" aria-label={"查看 " + (a.display_name || a.agent_id) + " 详情"}>
-          ›
-        </Link>
-      ),
-    },
-  ];
+  const loading = phase === "loading";
 
   return (
-    <div className="layout">
-      <main className="main">
-        {/* 页头：PageHeader/PageTitle（白名单）+ 一句话口径 + 只读 chip + 逐源数据时刻 */}
-        <PageHeader>
-          <PageTitle>{t("agentsPage.title")}</PageTitle>
-          <div className="page-subtitle">
-            {t("agentsPage.subtitle")}
-          </div>
-          <div className={styles.headMeta}>
-            <Pill tone="mute">只读</Pill>
-            {/* 77-AB：本页 4 个数据源分别喂 4 张卡，逐源标时刻，取不到写「未知」，绝不借别人的时刻。 */}
-            <DataMoment
-              items={[
-                { label: "智能体", at: asOf },
-                { label: "会话", at: (ssRaw as any)?.asOf },
-                { label: "技能", at: (statsRaw as any)?.asOf },
-                { label: "服务", at: (svcRaw as any)?.asOf },
-              ]}
-            />
-          </div>
-        </PageHeader>
+    <main className="page" data-slot="agents-page">
+      <PageHeader>
+        <PageTitle>智能体</PageTitle>
+        <div className="page-subtitle">执行主体清单：类型、宿主、运行态与会话量；组织与汇报关系见组织架构。</div>
+      </PageHeader>
 
-        {/* 二级入口：从菜单搬到正文顶部，做成紧凑的「功能入口」带（PILOT §5）。
-            注：PILOT 写「5 项」，而 config/submodules 的 agents 模块实际有 8 项 —— 按「不删功能」保留全部。 */}
-        <nav className={styles.entryBand} aria-label="功能入口">
-          {subs.map((s) => (
-            <Link key={s.id} href={s.href} className={styles.entryLink}>
-              {s.label} →
-            </Link>
+      {/* 0.6.1 U-39：原侧栏二级入口（5 个）下沉到父页顶部「功能入口」带 */}
+      <FeatureEntries
+        items={(NAV_GROUPS.find((g) => g.id === "member")?.items.find((i) => i.id === "agents")?.children || []).map((c) => ({
+          href: c.href || "#",
+          label: c.label,
+          icon: c.icon,
+          desc: c.desc,
+        }))}
+      />
+
+      <div className={styles.crumbs} aria-label="页面层级">
+        <span className={styles.crumbOn}>#</span>
+        <span>成员</span>
+        <span>列表</span>
+        <span className={styles.crumbOn}>只读</span>
+      </div>
+
+      <div className={styles.toolbarRow} data-slot="agents-toolbar">
+        <input
+          className={styles.searchInput}
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="搜索名称 / 类型 / 宿主 / 状态"
+          aria-label="搜索智能体：名称、类型、宿主、状态"
+        />
+        <div className={styles.segTabs} role="group" aria-label="智能体视图">
+          <span className={styles.segTabOn}>清单</span>
+          <Link className={styles.segTab} href="/agents-live">实时 →</Link>
+        </div>
+        <div className={styles.filters} role="group" aria-label="状态筛选">
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              type="button"
+              className={filter === f.key ? styles.filterBtnOn : styles.filterBtn}
+              onClick={() => setFilter(f.key)}
+            >
+              {f.label}
+              <span className={styles.badge}>{agents ? counts[f.key] || 0 : "…"}</span>
+            </button>
           ))}
-        </nav>
+        </div>
+        <span className={styles.hint}>排序：{sortKey === "name" ? "名称" : sortKey === "channel" ? "类型" : sortKey === "host" ? "宿主" : sortKey === "state" ? "状态" : "会话数"} {sortDir === "asc" ? "升序" : "降序"} · 只读</span>
+      </div>
 
-        {forbidden ? (
-          <StateBlock
-            title="无权限访问"
-            desc={
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <div>
+            <h2 className={styles.cardTitle}>智能体清单</h2>
+            <p className={styles.sub}>
+              共 {rows.length} / {all.length} 条 · 点表头排序{liveOk ? " · 运行态取自实时接口" : " · 运行态接口不可得，状态取自名册"}
+            </p>
+          </div>
+          <span className={styles.tagOk}>只读</span>
+        </div>
+
+        {loading ? (
+          <div aria-hidden="true">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className={styles.skelRow}>
+                <span className={styles.skel + " " + styles.skelW1} />
+                <span className={styles.skel + " " + styles.skelW2} />
+                <span className={styles.skel + " " + styles.skelW3} />
+                <span className={styles.skel + " " + styles.skelW4} />
+                <span className={styles.skel + " " + styles.skelW5} />
+              </div>
+            ))}
+          </div>
+        ) : phase === "forbidden" ? (
+          <div className={styles.state}>
+            <b className={styles.stateTitle}>无权限</b>
+            <p className={styles.stateText}>当前账号缺少「成员」的读权限（接口返回 401/403）。请联系平台管理员开通后刷新本页。</p>
+          </div>
+        ) : phase === "error" ? (
+          <div className={styles.state + " " + styles.stateErr}>
+            <b className={styles.stateTitle}>加载失败</b>
+            <p className={styles.stateText}>
+              {err}。{lastOkAt ? "上次成功：" + fmtTime(lastOkAt) + "。" : "本次尚无成功记录。"}
+            </p>
+            <button type="button" className={styles.btn} onClick={() => setReloadKey((x) => x + 1)}>重试</button>
+          </div>
+        ) : phase === "unavailable" ? (
+          <div className={styles.state}>
+            <b className={styles.stateTitle}>智能体数据不可得</b>
+            <p className={styles.stateText}>{err || "读取接口可用，但响应里没有可用的数据行。"}</p>
+            <button type="button" className={styles.btn} onClick={() => setReloadKey((x) => x + 1)}>重试</button>
+          </div>
+        ) : rows.length === 0 ? (
+          <div className={styles.stateMini}>
+            {q || filter !== "ALL" ? (
+              "没有匹配的智能体：清空搜索或切换状态筛选。"
+            ) : (
               <>
-                当前账号缺少「智能体与能力」的读权限 <code>agents.read</code>（或后端返回 403）。
-                请联系平台管理员在权限配置里为该线开通 <code>agents.read</code>，开通后刷新本页。
+                暂无智能体（接口正常返回空集）。
+                <Link className={styles.inlineLink} href="/agents/onboard">去接入向导 →</Link>
               </>
-            }
-          />
+            )}
+          </div>
         ) : (
-          <>
-            <div className="kpi-grid">
-              <KpiCard label={t("agentsPage.total")} value={agents.length > 0 ? agents.length : "..."} hint="已注册智能体数" />
-              <KpiCard label="会话总数" value={sessionTotal !== undefined ? sessionTotal.toLocaleString() : "..."} hint="全部智能体累计" />
-              <KpiCard label="技能" value={skillTotal !== undefined ? skillTotal.toLocaleString() : "..."} hint="技能库条目数" />
-              <KpiCard label={t("agentsPage.mcp")} value={svcRaw ? mcpCount : "..."} hint="来自服务清单，按名称匹配统计" />
-            </div>
-
-            {/* 工具条：最左搜索 → 视图/状态筛选（FilterBar）→ 右侧只读说明与计数 */}
-            <div className={styles.toolbar}>
-              <input
-                className={styles.search}
-                type="search"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setQ("");
-                  if (e.key === "Enter") setQApplied(q.trim().toLowerCase());
-                }}
-                placeholder="搜索名称 / 编号 / 通道 / 宿主 / 状态"
-                aria-label="搜索智能体：名称、编号、通道、宿主、状态"
-              />
-              <FilterBar
-                items={FILTERS.map((f) => ({
-                  key: f.key,
-                  label: f.label,
-                  // 数据没回来时不给计数（不显示假的 0）：count 走 undefined，FilterBar 只渲染标签。
-                  count: loading && !data ? undefined : counts[f.key] || 0,
-                }))}
-                active={filter}
-                onSelect={setFilter}
-                right={<>共 {filtered.length} 条（筛选后）· 只读</>}
-              />
-            </div>
-            <div className={styles.subToolbar}>
-              <span>排序</span>
-              <Select
-                ariaLabel="排序方式"
-                className={styles.sortSelect}
-                value={sort}
-                onChange={(v: any) => setSort(String(v || "name"))}
-                options={SORTS}
-              />
-              <span>默认按名称；会话数 / 成功率 / 成本的排序口径待补齐</span>
-            </div>
-
-            {/* 首屏加载时容器用 min-height 占位（= 表头 + N 行），数据到达后表格同高 -> 表下内容不被推走。 */}
-            <div className={styles.agentsTableBox} data-loading={initialLoading ? "1" : undefined}>
-              <RowClick className={styles.clickable} onPick={(i) => { const a = visibleRows[i]; if (a) router.push(detailHref(a)); }}>
-                <DataTable
-                  loading={initialLoading}
-                  error={error ? errText : null}
-                  onRetry={() => { mutate(); }}
-                  rows={visibleRows}
-                  rowKey={(a: any, i) => a.agent_id || i}
-                  empty={{
-                    title: qApplied ? "没有匹配的智能体" : "暂无智能体",
-                    desc: qApplied
-                      ? "名称 / 编号 / 通道 / 宿主 / 状态里都没有匹配项 —— 清空搜索或切换状态筛选。"
-                      : "接口返回 0 条（/api/agent-list）。接入一个智能体后，这里会显示它的运行时、状态与权限。",
-                    action: qApplied ? (
-                      <button type="button" className="btn" onClick={() => setQ("")}>清除搜索</button>
-                    ) : (
-                      <Link className="btn" href="/agents/onboard">去接入向导 →</Link>
-                    ),
-                  }}
-                  columns={columns}
-                />
-              </RowClick>
-            </div>
-            {/* 0.4.39-04：超出前 N 行才给「显示全部」（文案走 i18n，不写死英文字面量）；点过之后可再收起。 */}
-            {hiddenCount > 0 ? (
-              <div className={styles.showAllBar}>
-                <button type="button" className="btn" onClick={() => setShowAll(true)}>
-                  {t("list.showAllRows", { n: filtered.length })}
-                </button>
-                <span className={styles.showAllHint}>{t("list.firstNHint", { n: pageSize })}</span>
-              </div>
-            ) : showAll && filtered.length > pageSize ? (
-              <div className={styles.showAllBar}>
-                <button type="button" className="btn" onClick={() => setShowAll(false)}>
-                  {t("list.collapseRows", { n: pageSize })}
-                </button>
-              </div>
-            ) : null}
-            <div className={styles.count}>
-              共 {agents.length} 条 · 当前视图 {filtered.length} 条（筛选后）· 行点击进智能体详情
-            </div>
-          </>
+          <div className={styles.tblWrap}>
+            <table className={styles.tbl}>
+              <thead>
+                <tr>
+                  <th>{thButton("name", "智能体")}</th>
+                  <th>{thButton("channel", "类型")}</th>
+                  <th>{thButton("host", "宿主")}</th>
+                  <th>{thButton("state", "状态")}</th>
+                  <th className={styles.num}>{thButton("sessions", "会话数")}</th>
+                  <th>成功率</th>
+                  <th>近 7 天</th>
+                  <th className={styles.num}>本月成本</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((a) => {
+                  const st = stateOf(a);
+                  const sc = sessionCounts ? sessionCounts[a.agent_id] : undefined;
+                  const href = "/agents/detail?agentId=" + encodeURIComponent(a.agent_id || "");
+                  return (
+                    <tr key={a.agent_id}>
+                      <td>
+                        <Link className={styles.nameLink} href={href}>{a.display_name || a.agent_id}</Link>
+                        <span className={styles.subCell}>
+                          编号 {a.agent_id}
+                          {a.source === "macs" ? <span className={styles.srcBadge}>仅协同</span> : null}
+                        </span>
+                      </td>
+                      <td>{a.channel || <span className={styles.naCell}>n/a</span>}</td>
+                      <td className={styles.monoCell}>{a.host || "n/a"}</td>
+                      <td><span className={chipClass(st.tone)}>{st.text}</span></td>
+                      <td className={styles.num}>
+                        {sessionCounts ? fmtNum(sc || 0) : <span className={styles.naCell} title="会话统计接口不可得">n/a</span>}
+                      </td>
+                      <td><span className={styles.naCell} title="按智能体的验收比值口径已备，本页尚未接入">n/a</span></td>
+                      <td><span className={styles.naCell} title="无 7 日趋势接口">n/a</span></td>
+                      <td className={styles.num}><span className={styles.naCell} title="无单价/成本表">n/a</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
 
-      </main>
-    </div>
+        <p className={styles.foot}>
+          <DataMoment items={[{ label: "智能体", at: listAsOf }, { label: "运行态", at: liveOk ? liveAsOf : null }, { label: "会话统计", at: statsAsOf }]} />
+          {" · 来源：智能体合并清单（只读）"}
+        </p>
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <div>
+            <h2 className={styles.cardTitle}>口径</h2>
+            <p className={styles.sub}>智能体 = 执行主体；组织 = 汇报关系与小组，两者分开</p>
+          </div>
+        </div>
+        <p className={styles.noteText}>
+          本页是执行主体清单（类型 = 接入通道，宿主 = 运行时，状态 = 运行态），不表示组织归属；部门树与汇报关系在
+          <Link className={styles.inlineLink} href="/agents/org">组织架构</Link>，跨部门协作组在
+          <Link className={styles.inlineGroup} href="/agents/groups">小组</Link>。
+          「成功率」「近 7 天」「本月成本」三列暂无可直接取数的接口或已签口径，按 n/a 显示，不折算、不写 0。
+        </p>
+      </section>
+    </main>
   );
 }

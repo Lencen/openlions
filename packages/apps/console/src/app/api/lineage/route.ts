@@ -90,7 +90,7 @@ export async function GET(req: Request) {
       n,
       avg: round(stat?.avgQ, 3),
       unscored: num(stat?.unscored),
-      total: scalar(mind, `SELECT COUNT(*) c FROM ${t.table}`),
+      total: await scalar(mind, `SELECT COUNT(*) c FROM ${t.table}`),
     };
 
     // 来源构成

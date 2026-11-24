@@ -132,7 +132,7 @@ export function writableOwner(
   const reqOwner = requested?.ownerAgentId == null || String(requested.ownerAgentId) === "" ? null : String(requested.ownerAgentId);
   // 2026-10-26 修：**可见性默认值必须跟着 owner 走**——
   //   无主（匿名/管线写入）默认 global（公共），有主默认 private；否则会出现"owner=null 但 visibility=private"的自相矛盾行，
-  //   前端按列值显示就会把公共存量误标成私有（2026-10-26 frontend-line-2 实测发现 71 行）。
+  //   前端按列值显示就会把公共存量误标成私有（2026-10-26 [team] 实测发现 71 行）。
   const pick = (owner: string | null) => (explicit ?? (owner ? "private" : "global")) as AssetVisibility;
   // 管理员可显式指定 owner（代写）；未指定时仍归属自己（身份管理员有 agentId，root_admin 为 null）。
   if (isAdminActor(actor)) { const owner = reqOwner ?? actorId; return { ownerAgentId: owner, visibility: pick(owner) }; }

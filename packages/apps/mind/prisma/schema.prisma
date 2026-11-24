@@ -119,7 +119,7 @@ model Memory {
   sourcePracticeId String?                 // 产出此条 Memory 的那个 Practice.id(session-extract 一次调用同写 Practice 与 K/M/S)
   qualityScore   Float     @default(0.0)   // 结构化质量分 0-1 (程序计算, 非 LLM 自评)
   summary        String?                   // 人类可读摘要 (结构化 content 的 summary 字段)
-  // ===== 2026-09-24 agent-x #7 记忆过期自动清理 (docs/platform-logic/memory-expires-at-2026-09-24.md) =====
+  // ===== 2026-09-24 agent-f #7 记忆过期自动清理 (docs/platform-logic/memory-expires-at-2026-09-24.md) =====
   //   显式到期时间契约: NULL = 永不过期(默认, 存量行为不变); 非空且 <= now 的行由
   //   scripts/memory-expiry-sweep.cjs 归档(tier=COLD, decayScore=1.0, 不硬删除)。
   expiresAt      DateTime?                 // 到期时间, NULL=永不过期
@@ -764,7 +764,7 @@ model SyncLog {
 }
 
 // ============================================================================
-// 2026-08-21 agent-x: 飞轮错误日志 (P2 错误分类落库)
+// 2026-08-21 agent-e: 飞轮错误日志 (P2 错误分类落库)
 //   之前: 错误只在 console / .log 打印, 无法历史分析
 //   现在: 按 errorType 分类落库, 可按类型/时间/SQL 分析
 //   用途: 飞轮 dashboard 错误趋势图, 自动触发重跑 (4 类错误可重试)
@@ -793,7 +793,7 @@ model FlywheelErrorLog {
 
 // ============================================================================
 // P3 阶段 4-6: Agent 服务注册 (SHARED-BRAIN-AGENT-REGISTRATION-DESIGN-v1.md)
-// 2026-06-17 ut 设计, 14:00 agent-x 端 7 人评审
+// 2026-06-17 ut 设计, 14:00 agent-b 端 7 人评审
 // ============================================================================
 
 // 服务元数据表 (动态可扩, 加服务 INSERT 一行, 不改代码)
@@ -873,7 +873,7 @@ model AgentServicePermission {
   //   续期: 每次 register 命中或写入都刷新
   idempotent_until DateTime?
   // P0-B23 修复 (2026-06-18 18:00): 明文 key 缓存 (只用于 idempotent_reused 重发)
-  //   业务目的: 13/agent-x 等首次 onboard 拿占位符后, 24h 内再 register 走幂等分支,
+  //   业务目的: 13/agent-b 等首次 onboard 拿占位符后, 24h 内再 register 走幂等分支,
   //     旧逻辑不返明文 (DB 只存 hash), 13 端 .env 拿不到真 key → 401
   //   安全门: 这字段权限等于 DB 明文, 必须 mode 0600, 仅 admin/grantApiKey 可读
   //   清理: force=true 重 register 会刷新, 老 key 自动失效
@@ -1071,7 +1071,7 @@ model TaskExecution {
   nextSteps           String?
   retryCount          Int       @default(0)
   qualityPassed       Boolean?
-  // ===== 2026-09-23 agent-x #5 机制修复: cronjob 执行期上下文注入 =====
+  // ===== 2026-09-23 agent-f #5 机制修复: cronjob 执行期上下文注入 =====
   // 承载 JSON 字符串, 与 TaskStateTransition.metadata 同款口径(nullable, 旧数据不受影响)。
   // 约定写入键: agentMemorySnapshot(主 agent 核心 memory 冻结快照, schemaVersion=1,
   //   见 src/server/pipeline/agent-memory-snapshot.ts)。后续执行期上下文键按需追加, 不破坏既有读取方。
@@ -1416,3 +1416,50 @@ model ResourcePermission {
   @@index([subjectType, subjectId])
 }
 
+
+// ===== 0.6.3 U-19/U-20 决策治理（2026-11-18，[team]）=====
+// 三表：决策事项 / 8 维分析 / 落地追踪。口径见 docs/productization 与 REGISTER。
+// 红线：DecisionAnalysis8D 对同一决策必须恰好 8 行、dimension 不重复（判据 check-decisions.cjs C5 强制）。
+
+model DecisionItem {
+  id         String   @id @default(cuid())
+  title      String
+  status     String   @default("pending") // pending|decided|executing|done|rejected
+  priority   String?  // P0|P1|P2
+  decidedBy  String?
+  decidedAt  DateTime?
+  reason     String?
+  createdAt  DateTime @default(now())
+  dims       DecisionAnalysis8D[]
+  outcomes   DecisionOutcome[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DecisionAnalysis8D {
+  id         String   @id @default(cuid())
+  decisionId String
+  dimension  String   // dim1..dim8 或业务名（同一 decision 内唯一）
+  content    String
+  createdAt  DateTime @default(now())
+  decision   DecisionItem @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@unique([decisionId, dimension])
+  @@index([decisionId])
+}
+
+model DecisionOutcome {
+  id         String   @id @default(cuid())
+  decisionId String
+  action     String
+  owner      String?
+  dueAt      DateTime?
+  doneAt     DateTime?
+  status     String   @default("todo") // todo|doing|done|blocked
+  createdAt  DateTime @default(now())
+  decision   DecisionItem @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+
+  @@index([decisionId])
+  @@index([status])
+}

@@ -36,7 +36,7 @@ export async function GET(req: Request) {
   const executions = await q(
     mind,
     "SELECT id, agentId, agentRole, status, qualityPassed, retryCount, startedAt, completedAt, createdAt, " +
-      "length(output) outputLength, substr(output,1,20000) output, " +
+      "length(\"output\") AS \"outputLength\", substr(\"output\",1,20000) AS \"output\", " +
       "length(thoughtProcess) thoughtProcessLength, substr(thoughtProcess,1,4000) thoughtProcess, " +
       "length(problemsEncountered) problemsEncounteredLength, substr(problemsEncountered,1,2000) problemsEncountered, " +
       "length(solutionsApplied) solutionsAppliedLength, substr(solutionsApplied,1,2000) solutionsApplied, " +
@@ -47,23 +47,23 @@ export async function GET(req: Request) {
 
   // 关联产物: 四类认知表里 sourceId = taskId 的行
   const products: any[] = [];
-  const productTables: { table: string; titleCol: string }[] = [
-    { table: "Knowledge", titleCol: "title" },
-    { table: "Memory", titleCol: "COALESCE(title, substr(content,1,80))" },
-    { table: "Practice", titleCol: "title" },
-    { table: "Skill", titleCol: "name" },
+  const productTables: { table: string; titleCol: string; extraCols: string; whereClause: string; staleExpr: string; sourceNote: string | null }[] = [
+    { table: "Knowledge", titleCol: "title", extraCols: "verification, usageCount", whereClause: "\"sourceId\" = $1", staleExpr: "stale", sourceNote: null },
+    { table: "Memory", titleCol: "COALESCE(title, substr(content,1,80))", extraCols: "NULL::text AS \"verification\", accessCount AS \"usageCount\"", whereClause: "\"sourceId\" = $1", staleExpr: "NULL::boolean AS \"stale\"", sourceNote: "usageCount 映射自 accessCount；verification n/a（该表无 verification 列）；Memory 无 stale 列，撤回看 supersededBy" },
+    { table: "Practice", titleCol: "title", extraCols: "NULL::text AS \"verification\", NULL::bigint AS \"usageCount\"", whereClause: "\"sourceId\" = $1", staleExpr: "stale", sourceNote: "verification/usageCount n/a（该表无对应列）" },
+    { table: "Skill", titleCol: "name", extraCols: "NULL::text AS \"verification\", totalUsageCount AS \"usageCount\"", whereClause: "\"sourceIds\"::text LIKE '%' || $1::text || '%'", staleExpr: "stale", sourceNote: "usageCount 映射自 totalUsageCount；verification n/a（该表无 verification 列）" },
   ];
   for (const t of productTables) {
     const rows = await q(
       mind,
-      `SELECT id, ${t.titleCol} title, qualityScore, verification, stale, createdAt, usageCount FROM ${t.table} WHERE sourceId = ? ORDER BY createdAt DESC LIMIT 30`,
+      `SELECT id, ${t.titleCol} title, qualityScore, ${t.extraCols}, ${t.staleExpr}, createdAt FROM ${t.table} WHERE ${t.whereClause} ORDER BY createdAt DESC LIMIT 30`,
       id
     );
     for (const r of rows) {
       products.push({
         table: t.table, id: r.id, title: r.title, qualityScore: r.qualityScore,
         verification: r.verification ?? null, stale: r.stale ?? null,
-        createdAt: num(r.createdAt), usageCount: r.usageCount ?? null,
+        createdAt: num(r.createdAt), usageCount: r.usageCount ?? null, sourceNote: t.sourceNote,
       });
     }
   }

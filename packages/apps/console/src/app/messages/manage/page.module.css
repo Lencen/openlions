@@ -44,3 +44,8 @@
 
 /* 只读脚注去边框内边距（原内联 border: none; padding: 0） */
 .footPlain { border: none; padding: 0; }
+.chips { display: flex; gap: 6px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.chips span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; min-height: 22px; display: inline-flex; align-items: center; }
+.crumbOn { color: var(--c-status-ok); }
+.managePage :global(.msg-select), .managePage :global(.msg-input), .managePage :global(.msg-ghost) { min-height: 24px; }
+.managePage :global(a.msg-ghost), .managePage :global(button.msg-ghost) { display: inline-flex; align-items: center; }

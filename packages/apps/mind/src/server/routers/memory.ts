@@ -100,7 +100,7 @@ export const memoryRouter = createRouter({
             filePath: true, theme: true, agentSource: true, reinforceCount: true,
             supersededBy: true, importance: true, qualityScore: true,
             createdAt: true, updatedAt: true, lastAccessed: true,
-            // 2026-10-23 R-contract: 归属字段**增量**暴露给前端（前端线要按 owner/visibility 渲染）
+            // 2026-10-23 R-contract: 归属字段**增量**暴露给前端（前端团队要按 owner/visibility 渲染）
             ownerAgentId: true, memoryScope: true,
           },
         }),

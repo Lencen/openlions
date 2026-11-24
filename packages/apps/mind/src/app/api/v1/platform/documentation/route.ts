@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { describePlatformDocumentation } from "@/config/platform-documentation";
 
 /**
- * GET /api/v1/platform/documentation — 平台静态档 (agent-x P2#10, A 类只读, 无入参)
+ * GET /api/v1/platform/documentation — 平台静态档 (agent-f P2#10, A 类只读, 无入参)
  *
  * 交付物: 回答"平台是什么"—— 能力边界 / 服务清单 / 限制条件 / 版本兼容矩阵。
  * 与 capabilities 的边界: 本接口是**静态档** (带版本号, 不随请求变化);

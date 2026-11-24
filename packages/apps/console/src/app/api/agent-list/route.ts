@@ -20,6 +20,26 @@ export async function GET() {
     return NextResponse.json({ _error: r.error }, { status: 502 });
   }
   const data = r.data;  const agents = data?.result?.data?.json || data?.result?.data || [];
+  // 2026-11-13 安全修复（运营团队报告）：**BFF 层字段白名单**（与 mind 侧 select 白名单双保险）。
+  //   上游即便哪天又回传 token_hash / api_key_hash / api_key_plain，也不会经本路由漏到浏览器。
+  const AGENT_ALLOW = [
+    "id", "agent_id", "display_name", "channel", "host", "avatar", "profile", "status",
+    "role", "tenant_id", "created_at", "updated_at", "last_seen_at",
+  ];
+  const PERM_ALLOW = [
+    "id", "agent_id", "service_name", "token_id", "expires_at", "permissions", "config",
+    "status", "scope", "created_at", "updated_at", "last_used_at", "idempotent_until",
+  ];
+  const pick = (o: any, keys: string[]) => {
+    const out: any = {};
+    for (const k of keys) if (o && Object.prototype.hasOwnProperty.call(o, k)) out[k] = o[k];
+    return out;
+  };
+  const sanitizeAgent = (o: any) => {
+    const safe = pick(o, AGENT_ALLOW);
+    if (Array.isArray(o?.permissions)) safe.permissions = o.permissions.map((p: any) => pick(p, PERM_ALLOW));
+    return safe;
+  };
   // 2026-10-26 修（两个真 bug，都是"静默为空"）：
   //   ① 本路由一直用 `one(sql, param)` 调用，而 lions-db 的签名是 `one(db, sql, ...params)`
   //      → db 位收到的是 SQL 字符串 → db.query 不存在 → 抛错被 catch 吞掉 → 「当前任务」**从来没显示过**；
@@ -45,15 +65,16 @@ export async function GET() {
         a.agent_id || ""
       );
     } catch { lastDone = null; }
-    return { ...a, currentTask, lastDone };
+    // 2026-11-13：不再 { ...a } 整行透传（会带 token_hash 等），改为白名单投影
+    return { ...sanitizeAgent(a), currentTask, lastDone };
   }));
   // 2026-10-15（round 76-FZ, 规范铁律 2）：**给这一页补上"数据时刻"**。
   //   本文件的注释里本来就写着"冻结快照 = agent 列表与当前任务双双停在编译时刻" ✗ ——
   //   也就是说这一页**天生有"数据是什么时候的"这个信息缺口** ✓, 正好是铁律 2 要治的。
   //   形状改为 { asOf, items }（原先返回裸数组 ✗）-> 因此**同步改了全部 4 个消费者** ✓,
   //   且消费者一律用 Array.isArray(x) ? x : x.items 的**容错写法**, 老形状也不会崩 ✓。
-  // 2026-10-26 修（老板报「agent-x / agent-x 没显示」）：本页原来只读 mind 的 agent 注册表，
-  //   而 MACS 里还有一批在跑的执行体（agent-x / agent-x / agent-x / utc …）没登记进 mind —— 于是列表"看起来缺人"。
+  // 2026-10-26 修（老板报「agent-b / agent-x 没显示」）：本页原来只读 mind 的 agent 注册表，
+  //   而 MACS 里还有一批在跑的执行体（agent-c / agent-b / agent-f / utc …）没登记进 mind —— 于是列表"看起来缺人"。
   //   现在合并两个来源：mind 注册表为主，MACS 独有的一并列出并标注 source=macs（"未注册进 mind"），
   //   不做静默丢弃；两处都有的，标 source=both 并带上 MACS 的在线状态。
   let macsAgents: any[] = [];
@@ -64,7 +85,7 @@ export async function GET() {
   } catch { macsAgents = []; }
 
   const byId = new Map<string, any>();
-  for (const a of out as any[]) byId.set(String(a.agent_id || ""), { ...a, source: "mind", macsStatus: null });
+  for (const a of out as any[]) byId.set(String(a.agent_id || ""), { ...sanitizeAgent(a), source: "mind", macsStatus: null });
   for (const ma of macsAgents) {
     const id = String(ma.agent_id || ma.id || "");
     if (!id) continue;

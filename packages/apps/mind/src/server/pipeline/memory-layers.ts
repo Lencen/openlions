@@ -1,8 +1,8 @@
 /**
- * memory-layers.ts — 记忆分层 + top-K 相关性召回 (2026-09-23, agent-x #1 记忆分层+检索)
+ * memory-layers.ts — 记忆分层 + top-K 相关性召回 (2026-09-23, agent-f #1 记忆分层+检索)
  *
  * 背景(由待办 todo_uos20fb_1790047372338_1 升级任务 cmudlzwfg02nnoi31p6wgj3m6 驱动):
- *   agent-x P0 #1: 记忆库"全文注入"浪费且被 ~2K token 硬上限卡死(旧实现 renderContextSeed
+ *   agent-f P0 #1: 记忆库"全文注入"浪费且被 ~2K token 硬上限卡死(旧实现 renderContextSeed
  *   maxChars=1400 ≈ 2K token, macs_responder 再 seed[:1400] 硬截断) -> 平台记忆库 86K+
  *   条只有 2K token 能被模型用上, 召回/容量都不够。
  *   改法(本模块): 记忆库分**短期层(工作记忆 HOT/WARM)** 与 **长期层(沉淀归档 COLD)** 两层,

@@ -30,12 +30,12 @@ export interface Conversation {
 
 export const MOCK_CONVERSATIONS: Conversation[] = [
   {
-    id: "c1", title: "agent-x ↔ agent-x", kind: "agent-agent", unread: 2, mention: false, failed: false,
+    id: "c1", title: "agent-d ↔ agent-e", kind: "agent-agent", unread: 2, mention: false, failed: false,
     lastAt: "16:02", preview: "那四条读取路径我已改完，你那边验收一下？",
-    agent: { id: "agent-d", name: "agent-x", online: true },
+    agent: { id: "agent-d", name: "agent-d", online: true },
     messages: [
-      { id: "m1", from: "agent", who: "agent-x", body: "飞轮看板还有一处读的是旧库，要不要我一起改？", at: "15:58", transport: "read", brain: "replied" },
-      { id: "m2", from: "agent", who: "agent-x", body: "那四条读取路径我已改完，你那边验收一下？", at: "16:02", transport: "delivered", brain: "unreplied" },
+      { id: "m1", from: "agent", who: "agent-e", body: "飞轮看板还有一处读的是旧库，要不要我一起改？", at: "15:58", transport: "read", brain: "replied" },
+      { id: "m2", from: "agent", who: "agent-d", body: "那四条读取路径我已改完，你那边验收一下？", at: "16:02", transport: "delivered", brain: "unreplied" },
     ],
   },
   {
@@ -44,7 +44,7 @@ export const MOCK_CONVERSATIONS: Conversation[] = [
     agent: { id: "operator", name: "运营者·operator", online: true },
     messages: [
       { id: "m3", from: "human", who: "operator", body: "待办里那 5 件超 7 天未动的，我今天处理。", at: "15:41", transport: "read" },
-      { id: "m4", from: "agent", who: "agent-x", body: "收到，我把清单和证据链接一起贴给你。", at: "15:42", transport: "read", brain: "replied" },
+      { id: "m4", from: "agent", who: "agent-d", body: "收到，我把清单和证据链接一起贴给你。", at: "15:42", transport: "read", brain: "replied" },
     ],
   },
   {

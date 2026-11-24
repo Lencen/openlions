@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { IS_PG, MIND_DB, queryFailures, q, openMind } from "@/lib/server/lions-db";
+import { IS_PG, MIND_DB, queryFailures, queryFailureTotal, q, openMind } from "@/lib/server/lions-db";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +14,11 @@ export async function GET() {
     driver: IS_PG ? "postgres" : "sqlite",
     pool: db ? "up" : "down",
     failures: queryFailures.length,
+    // 2026-11-16（[team] 派单 / tq 溯源）：暴露单调失败总量。
+    //   queryFailures 是 20 条环形缓冲（lions-db.ts shift），failures 恒 <=20 饱和，真实总数不可知；
+    //   queryFailureTotal（lions-db.ts:114）不受 shift 影响，供判据做总量真门（cap=200）。
+    //   failures / samples 字段语义不变（兼容既有判据，不破坏）。
+    queryFailureTotal,
     samples: queryFailures.slice(-5).map((f) => ({ at: new Date(f.at).toISOString(), sql: f.sql, error: f.error })),
     asOf: new Date().toISOString(),
   });

@@ -2,7 +2,7 @@
 // 2026-09-10 商业化改版: Agent 活跃看板
 // 回答: 每个 Agent 现在在不在线 / 正在做什么任务 / 最近一次提交是什么时候 / 最近产出质量如何 / 是否卡住
 // 2026-09-14 页面瘦身: 分节控件抽到 ./_components/*, 本文件只负责取数与拼装 (<200 行)。
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert } from "@/components/primitives"; // 2026-09-18 antd 绞杀(同 API 形状)
 import { useApi } from "@/lib/api";
 import DataMoment from "@/components/DataMoment";
@@ -22,7 +22,21 @@ import styles from "./page.module.css";
 
 export default function AgentsLivePage() {
   const f = useGlobalFilter();
-  const [view, setView] = useState<"board" | "collab" | "workplan">("board");
+  const [view, setViewState] = useState<"board" | "collab" | "workplan">("board");
+  // 2026-11-15 B1-3：视图记忆写 URL hash（board/collab/workplan），刷新/前进后退保持。
+  const setView = (v: "board" | "collab" | "workplan") => {
+    setViewState(v);
+    try { history.replaceState(null, "", "#" + v); } catch {}
+  };
+  useEffect(() => {
+    const readHash = () => {
+      const h = (window.location.hash || "").replace("#", "");
+      if (h === "board" || h === "collab" || h === "workplan") setViewState(h);
+    };
+    readHash();
+    window.addEventListener("hashchange", readHash);
+    return () => window.removeEventListener("hashchange", readHash);
+  }, []);
   const { data, loading, error, mutate } = useApi<any>(f.withQuery("/api/agents-live") + "&_n=" + f.nonce);
   // 2026-09-10: 每个 Agent 名下未完成的待办数 (TODO 一等实体, 与改进任务分开)
   const { data: todoData } = useApi<any>("/api/todos?ownerType=agent&status=ALL&limit=500");
@@ -62,7 +76,7 @@ export default function AgentsLivePage() {
           <PageTitle>实时会话</PageTitle>
           <div className="page-subtitle">正在进行的会话与智能体实时状态</div>
         </PageHeader>
-        <ErrorBlock message={String(error?.message || "")} onRetry={mutate} />
+        <ErrorBlock message="智能体看板暂时取不到（数据服务响应异常），可稍后刷新重试；其余页面不受影响。" onRetry={mutate} />
       </main>
     );
   }
@@ -72,13 +86,16 @@ export default function AgentsLivePage() {
   const agents = data?.agents ?? [];
 
   return (
-    <main className="page">
+    <main className="page" data-slot="agents-live-page">
       <div className="breadcrumb"><span className={styles.crumbDim}>成员</span><span className="sep">/</span><span className={styles.crumbDim}>智能体</span><span className="sep">/</span><span className="current">实时</span></div>
+      <h1 className={styles.srOnly}>智能体活跃看板</h1>
       <PageHeader>
         <PageTitle>实时会话</PageTitle>
         <div className="page-subtitle">正在进行的会话与智能体实时状态</div>
+        <div className={styles.chips} aria-label="页面层级" data-slot="agents-live-header"><span>#</span><span>成员</span><span>实时</span><span className={styles.crumbOn}>只读</span></div>
       </PageHeader>
 
+      <h2 className={styles.srOnly}>实时状态与指标</h2>
       <AgentsLiveHero data={data} s={s} agent={f.agent} />
 
       <ViewSwitch view={view} onChange={setView} hint={t('agentsLive.switchHint')} />

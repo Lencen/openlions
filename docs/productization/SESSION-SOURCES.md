@@ -18,7 +18,7 @@
 | `claude_jsonl` | **Claude Code** 会话 | `~/.claude/projects/**/*.jsonl` |
 | `codex_jsonl` | **Codex** 会话 | `~/.codex/sessions/**/*.jsonl` |
 | `openclaw_jsonl` | **OpenClaw** 会话 | `~/.openclaw/agents/*/sessions/*.jsonl` |
-| `DSH_SESSION`（独立脚本） | **agent-x Harness** 会话 | `~/.dsh/sessions/**` |
+| `DSH_SESSION`（独立脚本） | **agent-d Harness** 会话 | `~/.dsh/sessions/**` |
 
 ## 2 一键接入（统一客户端 `lions-sync.py`）
 
@@ -33,7 +33,7 @@ python3 scripts/lions-sync.py --agent agent-operator   # 只同步指定 agent
 python3 scripts/lions-sync.py --selftest              # 适配器自测（含 Codex 解析）
 ```
 
-## 3 agent-x Harness（DSH）会话
+## 3 agent-d Harness（DSH）会话
 
 ```bash
 python3 scripts/dsh-session-sync.py --dry-run

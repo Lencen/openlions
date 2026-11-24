@@ -49,9 +49,9 @@ export default function PortalHome() {
   const dataEntries = caps ? Object.entries(caps.data) : [];
 
   return (
-    <main className="main" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
+    <main className="main" data-slot="portal-home" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
       {/* Hero */}
-      <div style={{ marginBottom: 24 }}>
+      <div style={{ marginBottom: 24 }} data-slot="hero">
         <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 8 }}>LIONS 智能体平台</h1>
         <p style={{ color: "var(--text-dim)", fontSize: 13, maxWidth: 640, lineHeight: 1.7 }}>
           Layered Integration Of Neural Sessions — 认知飞轮驱动。AI 接入即获得全部能力,
@@ -60,7 +60,7 @@ export default function PortalHome() {
       </div>
 
       {/* KPI */}
-      <div className="kpi-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 160px))" }}>
+      <div className="kpi-grid" data-slot="kpi" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(0, 160px))" }}>
         <div className="kpi-card">
           <span className="kpi-label">已注册 Agent</span>
           <span className="kpi-value">{agents?.total ?? "–"}</span>
@@ -85,7 +85,7 @@ export default function PortalHome() {
 
       <div className="grid-2">
         {/* 服务 */}
-        <div className="panel">
+        <div className="panel" data-slot="services">
           <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
             <span className="panel-title" style={{ "--tab-color": "var(--module-core)" } as React.CSSProperties}>平台服务</span>
           </div>
@@ -106,7 +106,7 @@ export default function PortalHome() {
         </div>
 
         {/* 认知数据 */}
-        <div className="panel">
+        <div className="panel" data-slot="cognition-assets">
           <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
             <span className="panel-title" style={{ "--tab-color": "var(--module-builtin)" } as React.CSSProperties}>认知资产</span>
           </div>
@@ -131,7 +131,7 @@ export default function PortalHome() {
       </div>
 
       {/* API 快速接入 */}
-      <div className="panel">
+      <div className="panel" data-slot="api-quickstart">
         <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
           <span className="panel-title" style={{ "--tab-color": "var(--module-extension)" } as React.CSSProperties}>快速接入 API</span>
           <Link href="/docs" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none" }}>查看全部 →</Link>
@@ -153,7 +153,7 @@ export default function PortalHome() {
       </div>
 
       {/* Agent 列表预览 */}
-      <div className="panel">
+      <div className="panel" data-slot="agent-status">
         <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
           <span className="panel-title" style={{ "--tab-color": "var(--module-audit)" } as React.CSSProperties}>Agent 状态</span>
           <Link href="/agents" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none" }}>全部 →</Link>

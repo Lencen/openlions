@@ -13,7 +13,15 @@
  * 用法:
  *   node scripts/lions-doctor.cjs [--home=DIR] [--json]
  *   node scripts/lions-doctor.cjs [--home=DIR] --bundle=<out.tar.gz> [--yes]
+ *   node scripts/lions-doctor.cjs [--home=DIR] --env=dev --env-state=<run/env-state.json> [--strict]
  *   node scripts/lions-doctor.cjs --selftest
+ *
+ * 2026-11-19（运营团队派单·判据假红）：加 --env/--env-state。
+ *   三环境默认按需停机，旧逻辑"5 单元非 active 即 fail" -> dev/prod 停机时 doctor --strict 恒报 4 个 svc-* 异常（假红）。
+ *   现在：state=stopped -> svc/db 检查判 skip（明细写明停机方），不计 fail；
+ *        state 缺失/损坏/非法 -> 保持 fail（fail-closed，不降级）+ 单列一条 env-state 异常说明原因；
+ *        **反向：state=stopped 但服务实测在线 -> fail**（防"用停机当遮羞布"）。
+ *        不带 --env 时不改变任何既有行为（向后兼容）。
  */
 "use strict";
 
@@ -79,14 +87,14 @@ function quickCheck(releaseDir, home, app) {
   return { ok: good, detail: good ? "quick_check ok" : "quick_check: " + txt.slice(0, 80), level: good ? "ok" : "fail" };
 }
 async function pgCheck(releaseDir, home, app, rec) {
-  // 2026-10-27 (商业化线): PG 安装根没有 data/<app>/dev.db；doctor 不能把健康 PG 误判为“库不存在”。
+  // 2026-10-27 (运营团队): PG 安装根没有 data/<app>/dev.db；doctor 不能把健康 PG 误判为“库不存在”。
   const envPath = releaseDir ? path.join(releaseDir, APPS[app].dir, ".env") : null;
   if (!envPath || !fs.existsSync(envPath)) return { ok: false, detail: "找不到 .env", level: "fail", advice: "重跑安装或检查 release/.env" };
   const env = parseEnvFile(fs.readFileSync(envPath, "utf8"));
   const key = app === "mind" ? "MIND_DATABASE_URL" : (app === "session" ? "SESSION_DATABASE_URL" : "SELFIMPROVING_DATABASE_URL");
   const url = env[key] || env.DATABASE_URL || "";
   if (!/^postgres(ql)?:\/\//.test(url)) return { ok: false, detail: "PG URL 缺失（" + key + "）", level: "fail", advice: "检查 app .env 的 " + key };
-  // 2026-10-29 (商业化线): 导出根没有 pg；从安装 release 解析（与 installer 同理），否则 doctor 在干净包上直接崩。
+  // 2026-10-29 (运营团队): 导出根没有 pg；从安装 release 解析（与 installer 同理），否则 doctor 在干净包上直接崩。
   let PgMod = null;
   for (const base of [releaseDir, path.join(releaseDir, "packages/apps/console"), path.join(releaseDir, "packages/apps/selfimproving")]) {
     try { PgMod = require(require.resolve("pg", { paths: [base] })); break; } catch (_e) {}
@@ -102,7 +110,7 @@ async function pgCheck(releaseDir, home, app, rec) {
   } finally { try { await c.end(); } catch (_e) {} }
 }
 function systemdActive(unit) {
-  // 2026-10-29 (商业化线): sudo/非登录 shell 下 XDG_RUNTIME_DIR 缺失会 “Failed to connect to bus”；
+  // 2026-10-29 (运营团队): sudo/非登录 shell 下 XDG_RUNTIME_DIR 缺失会 “Failed to connect to bus”；
   //   按 uid 推导 /run/user/<uid>，让多实例/巡检也能读用户 systemd。
   const uid = typeof process.getuid === "function" ? process.getuid() : null;
   const runtime = process.env.XDG_RUNTIME_DIR || (uid !== null ? "/run/user/" + uid : "");
@@ -137,9 +145,51 @@ function selectApps(declaredApps, present) {
   return { check, skip };
 }
 
+/**
+ * 环境状态分档（纯函数，供 selftest 断言 / 与 scripts/lib/env-state.sh 同一套规则）。
+ *   state=stopped -> 未在线: skip；仍在线: fail（state 与事实不符，防遮羞布）
+ *   其它 state     -> null（走原有 ok/warn/fail 判定，不改既有行为）
+ * 真值表交叉断言：scripts/check-3env-envstate-skip.sh（同一输入在 bash/node 两侧必须同结论）。
+ */
+function envSvcLevel(state, liveOk) {
+  if (state !== "stopped") return null;
+  return liveOk ? "fail" : "skip";
+}
+/**
+ * DB 级：按需停机时 PG 可能仍常驻（实测 dev/prod 的 pg 单元在 state=stopped 后仍 active），
+ *   "PG 可连"不能等价于"环境在跑"——服务是否在线由 svc-* 判（那里 stopped+在线 = fail）。
+ *   故 DB 级：可连 -> warn（把 state 漂移显性化，但不判红）；不可连 -> skip。
+ */
+function envDbLevel(state, liveOk) {
+  if (state !== "stopped") return null;
+  return liveOk ? "warn" : "skip";
+}
+function envClassify(state, liveOk) {
+  if (state === "running") return liveOk ? "OK" : "FAIL";
+  if (state === "stopped") return liveOk ? "FAIL" : "SKIP";
+  return "FAIL";
+}
+/** 读 env-state.json：返回 {ok, state, by, reason, file}；读不到/坏 JSON -> ok=false（调用方保持 fail-closed） */
+function readEnvStatePolicy(env, file) {
+  const f = file || process.env.LIONS_ENV_STATE || "";
+  if (!f) return { ok: false, state: "", by: "", reason: "未指定 --env-state（且 LIONS_ENV_STATE 未设），无法判断该环境是否按需停机 -> 保持 fail-closed", file: "" };
+  let data;
+  try { data = JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { return { ok: false, state: "", by: "", reason: "env-state 缺失/不可读/坏 JSON: " + f, file: f }; }
+  const e = data && typeof data === "object" ? data[env] : null;
+  const state = e && typeof e.state === "string" ? e.state : "";
+  const by = e && typeof e.by === "string" ? e.by : "";
+  if (state !== "running" && state !== "stopped") return { ok: false, state, by, reason: "env-state[" + env + "].state=" + (state || "缺失") + " 非法（只允许 running|stopped）", file: f };
+  if (state === "stopped" && !by) return { ok: false, state, by, reason: "env-state[" + env + "].state=stopped 但缺 by（无法说明停机方，fail-closed）", file: f };
+  return { ok: true, state, by, reason: "", file: f };
+}
+
 async function diagnose(args) {
   const home = H.resolveHome({ home: typeof args.home === "string" ? args.home : undefined });
   const rec = H.readInstallRecord(home);
+  // 2026-11-19：按需停机分档（仅 --env 时生效；见文件头 2026-11-19 段）
+  const envName = typeof args.env === "string" ? args.env : "";
+  let envPolicy = null;
+  if (envName) envPolicy = readEnvStatePolicy(envName, typeof args["env-state"] === "string" ? args["env-state"] : "");
   const checks = [];
   const add = (id, label, level, detail, advice) => checks.push({ id, label, level, detail: detail || "", advice: advice || "" });
 
@@ -152,15 +202,23 @@ async function diagnose(args) {
 
   const releaseDir = currentRelease(home);
   const version = rec && !rec._unparsable ? rec.version : null;
-  add("install", "安装记录", version ? "ok" : "fail", version ? "版本 " + (typeof args.home === "string" ? version : version) + "，current=" + (releaseDir || "缺失") : "找不到 install.json", version ? "" : "先跑 lions-install");
+  add("install", "安装记录", version ? "ok" : "fail", version ? "版本 " + version + "，current=" + (releaseDir || "缺失") : "找不到 install.json", version ? "" : "先跑 lions-install");
   const dirs = [H.dataDir(home), H.logsDir(home), path.join(home, "releases")];
   add("dirs", "目录结构", dirs.every((d) => fs.existsSync(d)) ? "ok" : "warn", dirs.map((d) => path.basename(d) + (fs.existsSync(d) ? "✓" : "✗")).join(" "), "缺目录可重跑安装");
 
   // 只体检"这一版真的装了"的服务：open 版无 portal -> skip，不再假红（selectApps 有 --selftest 断言）。
   const presentFn = (app) => !!(releaseDir && fs.existsSync(path.join(releaseDir, APPS[app].dir)));
   const sel = selectApps(rec && rec.apps ? Object.keys(rec.apps) : null, presentFn);
+  if (envPolicy && !envPolicy.ok) add("env-state", "环境状态", "fail", envPolicy.reason, "检查 --env-state 指向的 run/env-state.json（jq . <文件>）；停机请用 scripts/env-down.sh 落状态");
   for (const app of sel.check) {
-    if (APPS[app].hasDatabase) { const q = (rec && rec.dbMode === "pg") ? await pgCheck(releaseDir, home, app, rec) : quickCheck(releaseDir, home, app); add("db-" + app, "数据库 " + app, q.level, q.detail, q.ok ? "" : (q.advice || "从 backups/ 恢复或跑 lions doctor --bundle 求助")); }
+    if (APPS[app].hasDatabase) {
+      const q = (rec && rec.dbMode === "pg") ? await pgCheck(releaseDir, home, app, rec) : quickCheck(releaseDir, home, app);
+      // 按需停机时的 DB 判定（见 envDbLevel 注释）：未连 -> skip；仍可连 -> warn（显性化 state 漂移，不判红）
+      const lv = envPolicy && envPolicy.ok ? envDbLevel(envPolicy.state, !!q.ok) : null;
+      if (lv === "skip") add("db-" + app, "数据库 " + app, "skip", "按需停机（state=stopped by " + envPolicy.by + "），未连接", "");
+      else if (lv === "warn") add("db-" + app, "数据库 " + app, "warn", "按需停机但 PG 仍可连（state=stopped by " + envPolicy.by + " -> state 与事实漂移，停环境时未停 PG？）", "核对 run/env-state.json 与 systemctl --user is-active lions-<env>-pg");
+      else add("db-" + app, "数据库 " + app, q.level, q.detail, q.ok ? "" : (q.advice || "从 backups/ 恢复或跑 lions doctor --bundle 求助"));
+    }
   }
   for (const app of sel.skip) add("svc-" + app, "服务 " + app, "skip", "未安装（install record 未声明 " + APPS[app].dir + "），跳过", "");
 
@@ -177,8 +235,16 @@ async function diagnose(args) {
     const hp = APPS[app].healthPaths[0];
     const probe = (sc.status === 0 && active === "active") ? await httpProbe(port, hp) : { ok: false, status: 0, error: "unit " + active };
     unitInfo.push({ app, unit, port, active, health: probe });
-    const level = probe.ok ? "ok" : (active === "active" ? "warn" : "fail");
-    add("svc-" + app, "服务 " + app, level, ":" + port + " " + active + " / " + (probe.ok ? "HTTP " + probe.status : (probe.error || "无响应")), probe.ok ? "" : "systemctl --user start " + unit + "；仍失败看 " + path.join(H.logsDir(home), app + ".log"));
+    const lv = envPolicy && envPolicy.ok ? envSvcLevel(envPolicy.state, !!probe.ok) : null;
+    if (lv) {
+      // 按需停机：未起 = skip（不判红，明细写停机方）；state=stopped 但实测在线 = fail（遮羞布）
+      add("svc-" + app, "服务 " + app, lv,
+        lv === "skip" ? ":" + port + " 按需停机（state=stopped by " + envPolicy.by + "），未启动" : ":" + port + " " + active + " / HTTP " + probe.status + "（state=stopped 但服务实测在线 -> state 与事实不符，fail-closed）",
+        lv === "skip" ? "" : "先确认 run/env-state.json 与事实是否一致（scripts/env-up.sh/env-down.sh）");
+    } else {
+      const level = probe.ok ? "ok" : (active === "active" ? "warn" : "fail");
+      add("svc-" + app, "服务 " + app, level, ":" + port + " " + active + " / " + (probe.ok ? "HTTP " + probe.status : (probe.error || "无响应")), probe.ok ? "" : "systemctl --user start " + unit + "；仍失败看 " + path.join(H.logsDir(home), app + ".log"));
+    }
   }
 
   const envSecrets = [];
@@ -196,7 +262,7 @@ async function diagnose(args) {
   try { const s = fs.statfsSync(home); add("disk", "磁盘空间", s.bavail * s.bsize > 2 * 1073741824 ? "ok" : "warn", ((s.bavail * s.bsize) / 1073741824).toFixed(1) + " GB 可用", "清理 backups/ 或扩容"); } catch (_e) {}
   add("mem", "内存", os.freemem() > 1024 * 1024 * 1024 ? "ok" : "warn", (os.freemem() / 1073741824).toFixed(1) + " GB 空闲", "内存不足时先停不用的服务");
 
-  return { home, version, current: releaseDir, checks, units: unitInfo, skipped: sel.skip, secrets: envSecrets, summary: { ok: checks.filter((c) => c.level === "ok").length, warn: checks.filter((c) => c.level === "warn").length, fail: checks.filter((c) => c.level === "fail").length, skip: checks.filter((c) => c.level === "skip").length } };
+  return { home, version, current: releaseDir, env: envPolicy, checks, units: unitInfo, skipped: sel.skip, secrets: envSecrets, summary: { ok: checks.filter((c) => c.level === "ok").length, warn: checks.filter((c) => c.level === "warn").length, fail: checks.filter((c) => c.level === "fail").length, skip: checks.filter((c) => c.level === "skip").length } };
 }
 
 function makeBundle(result, args) {
@@ -259,6 +325,31 @@ function runSelftest() {
   assert("旧记录保持 5 服务", selLegacy.check.length === 5 && selLegacy.skip.length === 0, JSON.stringify(selLegacy));
   const selMissing = selectApps(["mind"], () => false);
   assert("未声明且未安装 -> skip 而非 fail", selMissing.check.join(",") === "mind" && selMissing.skip.length === 4, JSON.stringify(selMissing));
+  // 2026-11-19（运营团队派单）：按需停机分档真值表 + 反向路径
+  assert("分档：running+live -> OK", envClassify("running", true) === "OK");
+  assert("分档：running+down -> FAIL", envClassify("running", false) === "FAIL");
+  assert("分档：stopped+down -> SKIP", envClassify("stopped", false) === "SKIP");
+  assert("分档：stopped+live -> FAIL（反向：防用停机当遮羞布）", envClassify("stopped", true) === "FAIL");
+  assert("分档：未知 state -> FAIL（fail-closed）", envClassify("weird", false) === "FAIL" && envClassify("", false) === "FAIL");
+  assert("服务级：stopped 未起 -> skip", envSvcLevel("stopped", false) === "skip");
+  assert("服务级：stopped 却在线 -> fail（遮羞布）", envSvcLevel("stopped", true) === "fail");
+  assert("服务级：running 不改既有判定（返回 null 走原逻辑）", envSvcLevel("running", true) === null && envSvcLevel("running", false) === null);
+  assert("DB 级：stopped 未连 -> skip", envDbLevel("stopped", false) === "skip");
+  assert("DB 级：stopped 但 PG 仍可连 -> warn（不判红，但显性化漂移）", envDbLevel("stopped", true) === "warn");
+  assert("DB 级：running 返回 null 走原逻辑", envDbLevel("running", true) === null);
+  // env-state 解析：坏输入必须 fail-closed（不能"读不到就当 running"）
+  const td = fs.mkdtempSync(path.join(os.tmpdir(), "doctor-envstate-"));
+  const good = path.join(td, "good.json");
+  fs.writeFileSync(good, JSON.stringify({ dev: { state: "stopped", by: "devops-release" }, test: { state: "running" }, prod: { state: "stopped", by: "[team]" } }));
+  assert("env-state 合法 -> ok", readEnvStatePolicy("dev", good).ok === true && readEnvStatePolicy("dev", good).by === "devops-release");
+  const noby = path.join(td, "noby.json");
+  fs.writeFileSync(noby, JSON.stringify({ dev: { state: "stopped" }, test: { state: "running" }, prod: { state: "stopped", by: "x" } }));
+  assert("env-state stopped 无 by -> fail-closed", readEnvStatePolicy("dev", noby).ok === false);
+  const badj = path.join(td, "bad.json"); fs.writeFileSync(badj, "not-json");
+  assert("env-state 坏 JSON -> fail-closed", readEnvStatePolicy("dev", badj).ok === false);
+  assert("env-state 文件不存在 -> fail-closed", readEnvStatePolicy("dev", path.join(td, "nope.json")).ok === false);
+  assert("env-state 未指定路径 -> fail-closed", readEnvStatePolicy("dev", "").ok === false || !!process.env.LIONS_ENV_STATE);
+  fs.rmSync(td, { recursive: true, force: true });
   for (const r of results) console.log((r.ok ? "PASS" : "FAIL") + "  " + r.name + (r.detail ? " :: " + r.detail : ""));
   const bad = results.filter((r) => !r.ok).length;
   console.log(bad === 0 ? "SELFTEST OK (" + results.length + " 断言)" : "SELFTEST FAILED (" + bad + ")");

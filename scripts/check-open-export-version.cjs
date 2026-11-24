@@ -36,7 +36,9 @@ if (!new RegExp("^" + exportVersion.replace(/[.*+?^\$\{\}()|[\]\\]/g, "\\$&") + 
 }
 
 const readme = read("README.md");
-const tarballs = [...readme.matchAll(/lions-(\d+\.\d+\.\d+)\.tar\.gz/g)].map((m) => m[1]);
+// 2026-11-24: 包名可能带版别后缀（lions-0.6.7-pg.tar.gz）。旧正则只抓纯 semver ->
+//   "lions-0.6.7-pg.tar.gz" 一条都抓不到 -> tarballs.length=0 -> 判 "README 没有安装示例"（假红且指错方向）。
+const tarballs = [...readme.matchAll(/lions-(\d+\.\d+\.\d+(?:-[a-z0-9.]+)?)\.tar\.gz/g)].map((m) => m[1]);
 if (tarballs.length === 0) failures.push("d) README has no lions-<version>.tar.gz install example");
 for (const v of tarballs) if (v !== exportVersion) failures.push("d) README tar.gz=" + v + " expected " + exportVersion);
 

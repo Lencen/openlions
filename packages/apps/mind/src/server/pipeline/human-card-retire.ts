@@ -17,9 +17,8 @@
  *   - sweepStaleHumanCards({apply}): apply=false 时 **纯只读 dry-run**(绝不写库), apply=true 才 UPDATE 为 DROPPED。
  *   作废是**存档**: status=DROPPED + note/meta 留痕(retiredBy/retiredReason/retiredAt), 不删行、不丢信息。
  */
-import { openMindDb } from "@/server/lib/open-mind-db";
 import { todoRepoFor } from "@/server/lib/todo-repo";
-import path from "path";
+import { prisma } from "@/lib/prisma";
 import { parseStructuredFindings } from "./findings-parse";
 import {
   findingRefFromCardRow, matchCardFinding, decideCardRetraction, isRecapFinding, findDecidedTopicMatch,
@@ -41,17 +40,6 @@ export interface SweepResult {
   errors: string[];
 }
 
-const defaultDbPath = () =>
-  process.env.MIND_DB_PATH || path.join(process.cwd(), "prisma", "dev.db");
-
-async function openDb(dbPath: string | undefined, readonly: boolean) {
-
-  // 该站点是**动态只读**(readonly 参数) ⇒ role 必须动态, 不能写死 readonly
-  const db = openMindDb({ role: readonly ? "readonly" : "direct-rw", dbPath: dbPath || defaultDbPath(), caller: "human-card-retire" });
-
-  return db;
-}
-
 /** 读仍在等人类回复(OPEN/DOING)的人类决策卡。只读; 失败抛错由调用方转统计。 */
 export async function loadOpenHumanDecisionCards(dbPath?: string): Promise<OpenCardRow[]> {
   const repo = todoRepoFor(dbPath);
@@ -67,15 +55,12 @@ export async function loadReflectionFindings(ids: string[], dbPath?: string): Pr
   const out = new Map<string, any[]>();
   const uniq = [...new Set(ids.filter(Boolean))];
   if (!uniq.length) return out;
-  const db = await openDb(dbPath, true);
-  try {
-    const stmt = db.prepare("SELECT id, structuredFindings FROM FlywheelReflection WHERE id = ?");
-    for (const id of uniq) {
-      const row: any = stmt.get(id);
-      out.set(id, row ? parseStructuredFindings(row.structuredFindings) : []);
-    }
-    return out;
-  } finally { db.close(); }
+  const rows: any[] = (await prisma.flywheelReflection.findMany({
+    where: { id: { in: uniq } },
+    select: { id: true, structuredFindings: true },
+  })) as any[];
+  for (const row of rows) out.set(String(row.id), parseStructuredFindings(row.structuredFindings));
+  return out;
 }
 
 /** 把一张人类决策卡作废为 DROPPED(存档留痕)。写库; 返回是否命中 1 行。 */

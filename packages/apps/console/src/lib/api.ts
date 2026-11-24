@@ -17,6 +17,7 @@ export function useApi<T>(path: string, opts?: { pollMs?: number }) {
   const [data, setData] = useState<T | undefined>(undefined);
   const [error, setError] = useState<Error | undefined>(undefined);
   const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<number | null>(null);
   // 2026-09-15 UI-7 D1 修复(独立复核 REJECTED): 只接受"最新一次请求"的响应。
   //   根因: 深链接/刷新 ?quick=<x> 时, 首帧先发**未过滤**请求, 挂载后 effect 再从 URL 恢复 quick 并发过滤请求;
   //   两个请求并发, 未过滤响应若晚到会 setData 覆盖已渲染的过滤结果 -> URL/chip 显示已筛选, 列表却是全量。
@@ -27,6 +28,7 @@ export function useApi<T>(path: string, opts?: { pollMs?: number }) {
     const my = ++seq.current;
     try {
       const res = await fetch(pathWithNonce);
+      setStatus(res.status);
       const json = await res.json();
       // 2026-10-13 round 76-O: HTTP 非 2xx 也走 error 通道。
       //   此前只 catch fetch/json 抛错 -> 接口返回 500 + JSON 错误体时走到 setData(错误体),
@@ -67,7 +69,7 @@ export function useApi<T>(path: string, opts?: { pollMs?: number }) {
     return () => clearInterval(interval);
   }, [fetchData, pollMs]);
 
-  return { data, error, loading, mutate: fetchData };
+  return { data, error, loading, status, mutate: fetchData };
 }
 
 /** 按需拉取 (path 为 null 时不发请求), 用于"点开某条记录看详情"的场景 */
@@ -91,7 +93,9 @@ export function useLazyApi<T>(path: string | null) {
         const json = await r.json().catch(() => null);
         if (!r.ok) {
           const detail = (json as any)?.error;
-          throw new Error(detail ? String(detail) : "请求失败（状态码 " + r.status + "）");
+          const err = new Error(detail ? String(detail) : "请求失败（状态码 " + r.status + "）");
+          (err as any).status = r.status;
+          throw err;
         }
         return json;
       })

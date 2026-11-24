@@ -185,7 +185,7 @@ export default function WorkbenchPage() {
   if (!v2) return <WorkbenchPlaceholder />;
   if (error) {
     return (
-      <main className="page">
+      <main className="page" data-slot="workbench-page">
         <PageHero title="工作台" subtitle="屏 02 · 6 件事驾驶舱" />
         <ErrorBlock message={String(error?.message || "")} onRetry={mutate} />
       </main>

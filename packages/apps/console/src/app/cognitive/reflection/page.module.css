@@ -1,33 +1,51 @@
-/* /cognitive/reflection 页内样式（2026-11-05 P2 批6 呈现层改造：内联 style 清零）
-   只放本页私有样式；能复用全局 .panel / .kpi-grid / .nowrap / .mono / .badge 的一律复用。
-   表格本体改由白名单 @/components/DataTable 渲染（.dt 系列样式在 globals.css），本文件只补单元格内容样式。 */
+/* /cognitive/reflection · demo slot（0.5 批次D）— 只用全局令牌，无裸 hex */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: 12px; color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--c-status-ok); }
 
-/* 面包屑里的「记忆与知识」灰字（原来是内联 color） */
-.bcDim { color: var(--text-dim); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.s12 { grid-column: span 12; }
+.k { font-size: 12px; color: var(--text-muted); }
+.vXl { font-size: 30px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.na { color: var(--text-muted); }
+.warn { color: var(--c-status-warn); }
+.crit { color: var(--c-status-crit); }
+.d { font-size: 12px; color: var(--text-muted); }
 
-/* 标题列链接按钮 / 操作列「详情」按钮（原来是 linkBtn 内联样式对象 CSSProperties） */
-.linkBtn {
-  background: none;
-  border: 0;
-  padding: 0;
-  cursor: pointer;
-  color: var(--primary);
-  font: inherit;
-  text-align: left;
-}
+.toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 0 0 14px; }
+.filter { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; background: var(--bg-surface); font-size: 12px; color: var(--text-muted); cursor: pointer; }
+.filterOn { color: var(--primary); border-color: var(--primary); }
+.badge { border-radius: 999px; background: var(--bg-surface2); padding: 0 6px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.hint { margin-left: auto; font-size: 12px; color: var(--text-muted); }
 
-/* 小字（原来是内联 fontSize: var(--fs-sm)） */
-.sm { font-size: var(--fs-sm); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cardTitle { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.6; }
+.sub { font-size: 12px; color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: 12px; color: var(--c-status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
 
-/* 小字 + 次级暗色（原来是内联 fontSize + color） */
-.smDim { font-size: var(--fs-sm); color: var(--text-dim); }
+.tblWrap { overflow-x: auto; margin-top: 8px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 1060px; }
+.tbl th { text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; white-space: nowrap;  line-height: 24px; }
+.tbl td { border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; vertical-align: top;  line-height: 24px; }
+.tbl tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: var(--c-font-mono); font-size: 12px; white-space: nowrap; }
+.name { min-width: 180px; max-width: 280px; font-weight: 500; }
+.concl { min-width: 240px; max-width: 380px; }
+.dim { color: var(--text-muted); }
+.link { color: var(--primary); text-decoration: none; }
+.tagPlain { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; color: var(--text-muted); white-space: nowrap; }
+.toneOk { color: var(--c-status-ok); }
+.toneWarn { color: var(--c-status-warn); }
+.toneCrit { color: var(--c-status-crit); }
+.toneMute { color: var(--text-muted); }
 
-/* 深链接 ↗：代替原来的 className="tiny" + 内联 marginLeft/color，
-   这里把 fs-sm 与 text-dim 一并写全，避免与全局 .tiny 的 color 打架 */
-.detailLink { margin-left: var(--sp-1-5); color: var(--text-dim); font-size: var(--fs-sm); }
+.stateMini { border: 1px dashed var(--border); border-radius: 10px; padding: 18px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.state { border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: var(--text-muted); }
+.state b { color: var(--text); }
+.foot { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+.footNote { font-size: 12px; color: var(--text-muted); }
 
-/* 错误块外留白（原来是内联 padding: var(--sp-3)） */
-.errPad { padding: var(--sp-3); }
-
-/* 页脚相关视图出链（原来是内联 flex + gap + wrap + marginTop） */
-.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+@media (max-width: 1280px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .kpis { grid-template-columns: 1fr; } }

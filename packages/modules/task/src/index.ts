@@ -33,7 +33,7 @@ export class PrismaTaskStore {
 
 export const __PLACEHOLDER__ = true;
 
-// ==================== agent-x #6: `delegate_task` 原地接力 (失败自动重派) ====================
+// ==================== agent-f #6: `delegate_task` 原地接力 (失败自动重派) ====================
 // 平台侧重派策略/包装; 详见 src/delegate-relay.ts 顶部注释与 docs/platform-logic/delegate-relay-2026-09-24.md。
 export {
   DELEGATE_TASK_TOOL,

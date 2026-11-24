@@ -1,6 +1,6 @@
 "use client";
 // 页头右侧的日期控件
-// 2026-11-05 页头口径统一（UIUX PAGE-HEADER-31 §3 #16）：面包屑/标题/一句说明已上移到 page.tsx，
+// 2026-11-05 页头口径统一（设计 PAGE-HEADER-31 §3 #16）：面包屑/标题/一句说明已上移到 page.tsx，
 //   本组件只剩「前一天 / 今天 / 后一天 + 日期输入」。文件名沿用 DailyHeader（仅 page.tsx 引用），
 //   不改名以免扩大改动面。
 import { bjToday, shiftDate } from "./shared";

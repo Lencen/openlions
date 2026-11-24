@@ -397,7 +397,7 @@ export function parseConversationFile(
 }
 
 /**
- * 2026-08-21 agent-x 修复: SyncLog 与 pipeline sessionId/filePath 匹配错位
+ * 2026-08-21 agent-e 修复: SyncLog 与 pipeline sessionId/filePath 匹配错位
  *   之前: SyncLog.sourcePath 是 UUID (hermes-session-scanner 写的), pipeline.filePath 是 hermes://xxx, 永远不匹配 → alwaysProcessed=0
  *   现在: pipeline 写 DB 后用 filePath 写 SyncLog (db-writer.ts), 同时保留 UUID 旧数据
  *   匹配策略: 同时返回 filePath->count 和 sessionId->count 两套 key, 让 pipeline 用两者之一查

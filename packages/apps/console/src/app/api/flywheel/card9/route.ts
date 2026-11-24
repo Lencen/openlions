@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { openMind } from "@/lib/server/lions-db";
 
 // 2026-11-06 · 数据卡 9（/flywheel）落地：4 条判据的实时值 + 阈值 + 状态
-// 口径：docs/design/uiux-bento-2026-11/data-cards/card-9-flywheel.md
+// 口径：[internal-doc]
 //
-// 契约（2026-11-06 20:4x 修正，消费方 frontend-line-2 反馈）：
+// 契约（2026-11-06 20:4x 修正，消费方 [team] 反馈）：
 //   - checks[].value  是**给人看的展示串**（如 "3.3%" / "4743 条 / 最近 4.8h"），不要拿它去 parse；
 //   - checks[].valueNum 是**同一事实的数值**（百分比 0-100 / 条数 / 小时），null = 不可得；
 //   - 单条查询失败只降级该条为 state="na"+reason，**不把整块判 unknown**

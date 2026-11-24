@@ -1,192 +1,130 @@
 "use client";
-// 2026-11-05 P2 呈现层改造（批 4/5）：内联样式清零 + 手写 .tbl 表 → 白名单 DataTable。
-//   列/字段/文案不变；动态色走 data-tone，动态条宽走 5% 一档的 .pXX 档位类。
-//   取数（/api/stats、/api/flywheel-dashboard）与全部业务文案一字未改。
-import KPICard from "@/components/KPICard";
-import EntryCard from "@/components/EntryCard";
-import BarChart from "@/components/BarChart";
-import Sparkline from "@/components/Sparkline";
-import { getSubmodules } from "@/config/submodules";
-import { artifactLabel, entityLabel } from "@/config/artifactTypes";
+// 0.5.1 B4 附录 /cognitive 认知看板 · Bento 改造（2026-11-15）
+// 数据：/api/stats（KPI/质量/覆盖率，有 asOf）+ /api/flywheel-dashboard（趋势/最近事件，无 asOf）
+// 口径：五表求和（当次数据）；trend.writes=[] 是取数失败 → n/a+原因，严禁 0。
 import { useApi } from "@/lib/api";
-import { Empty } from "@/components/primitives";
-import ErrorAlert from "@/components/ErrorAlert";
-import { fmtTime , UNKNOWN } from "@/lib/format";
-import TableCopyButton from "@/components/TableCopyButton";
-import DataMoment from "@/components/DataMoment";
-import DataTable from "@/components/DataTable";
-import type { DataColumn } from "@/components/DataTable";
+import BentoGrid from "@/components/bento/BentoGrid";
+import BentoCard from "@/components/bento/BentoCard";
+import BentoState from "@/components/bento/BentoState";
+import { Chips, KpiTile, usePhaseOverride } from "../system/_components/bento-kit";
+import { fmtNum, fmtTime } from "@/lib/format";
 import { PageHeader, PageTitle } from "@/components/ui/PageHeader";
+import Link from "next/link";
 import styles from "./page.module.css";
 
-interface StatsData {
-  /** 77-J: BFF 顶层新增的"数据时刻"(本页数字的真正来源) */
-  asOf?: string; success: boolean; data: { tables: any; topics: any; quality: any; coverageDistribution: Record<string, number> } }
-interface DashData {
-  /** 76-GC: 飞轮看板自带的"数据时刻" */
-  timestamp?: string; tableStats: { table: string; active: number; h24: number }[]; trend: { writes: { hb: number; c: number }[] } }
+interface StatsData { asOf?: string; data?: { tables?: any; topics?: any; quality?: any; coverageDistribution?: Record<string, number> } }
+interface DashData { trend?: { writes?: { hb: number; c: number }[]; error?: string }; recentEvents?: any[] }
+type Phase = "loading" | "empty" | "error" | "unavailable" | "forbidden" | "ok";
 
-function fmt(n: number) { return n.toLocaleString() }
-
-/** 百分比 → 5% 一档的档位类 */
-function pctClass(p: number): string {
-  const step = Math.min(100, Math.max(0, Math.round(p / 5) * 5));
-  return styles["p" + step] || styles["p0"];
-}
-
-function toHourly(rows: { hb: number; c: number }[] | undefined, nowMs: number): number[] {
-  const arr = new Array(24).fill(0);
-  if (!rows) return arr;
-  const curHour = Math.floor(nowMs / 3600000);
-  for (const r of rows) {
-    const idx = 23 - (curHour - r.hb);
-    if (idx >= 0 && idx < 24) arr[idx] = r.c;
-  }
-  return arr;
-}
-
-type QualityKey = "memory" | "knowledge" | "reflection" | "practice" | "skill";
-type QualityRow = { key: QualityKey; label: string; high: number; mid: number; low: number; pct: number };
+const QUALITY_KINDS = ["memory", "knowledge", "practice", "reflection", "skill"] as const;
+const KIND_LABEL: Record<string, string> = { memory: "记忆", knowledge: "知识", practice: "实践", reflection: "反思", skill: "技能" };
+const COV_BUCKETS = ["0-0.2", "0.2-0.4", "0.4-0.6", "0.6-0.8", "0.8-1.0"];
 
 export default function CognitiveDashboard() {
-  const subs = getSubmodules("cognitive");
-  const { data, loading, error, mutate } = useApi<StatsData>("/api/stats");
-  const { data: dash, error: dashErr, mutate: mutateDash } = useApi<DashData>("/api/flywheel-dashboard");
-  const s = data?.data; const t = s?.tables; const topics = s?.topics; const q = s?.quality;
+  const stats = useApi<StatsData>("/api/stats");
+  const dash = useApi<DashData>("/api/flywheel-dashboard");
+  const forced = usePhaseOverride();
+  const s = stats.data?.data;
+  const t = s?.tables;
+  const topics = s?.topics;
+  const q = s?.quality;
   const cov = s?.coverageDistribution ?? {};
-  const writes24 = toHourly(dash?.trend?.writes, Date.now());
-  const writesSum = writes24.reduce((a: number, b: number) => a + b, 0);
-  const totalAll = t ? t.memory + t.knowledge + t.reflection + t.practice + t.skill : 0;
+  const writes = dash.data?.trend?.writes;
 
-  const tableBars = t ? [
-    { label: artifactLabel("Memory"), value: t.memory, color: "var(--table-memory)" },
-    { label: artifactLabel("Knowledge"), value: t.knowledge, color: "var(--table-knowledge)" },
-    { label: artifactLabel("Practice"), value: t.practice, color: "var(--table-practice)" },
-    { label: artifactLabel("Reflection"), value: t.reflection, color: "var(--table-reflection)" },
-    { label: artifactLabel("Skill"), value: t.skill, color: "var(--table-skill)" },
-  ] : [];
-  const covBars = [
-    { label: "0-0.2", value: cov["0-0.2"] ?? 0, color: "var(--cov-0-2)" },
-    { label: "0.2-0.4", value: cov["0.2-0.4"] ?? 0, color: "var(--cov-0-4)" },
-    { label: "0.4-0.6", value: cov["0.4-0.6"] ?? 0, color: "var(--cov-0-6)" },
-    { label: "0.6-0.8", value: cov["0.6-0.8"] ?? 0, color: "var(--cov-0-8)" },
-    { label: "0.8-1.0", value: cov["0.8-1.0"] ?? 0, color: "var(--cov-1-0)" },
-  ];
+  const loading = stats.loading;
+  const base: Phase = loading ? "loading" : stats.error ? "error" : !t ? "unavailable" : "ok";
+  const phase: Phase = forced && forced !== "ok" ? (forced as Phase) : base;
 
-  // 质量表行（与改前逐行 map 的口径一致：缺该类型就跳过；total 至少 1）
-  const qualityRows: QualityRow[] = (["memory", "knowledge", "reflection", "practice", "skill"] as const)
-    .filter((k) => !!q?.[k])
-    .map((k) => {
-      const d = q[k];
-      const total = d.high + d.mid + d.low || 1;
-      return {
-        key: k,
-        label: entityLabel(k.charAt(0).toUpperCase() + k.slice(1)),
-        high: d.high,
-        mid: d.mid,
-        low: d.low,
-        pct: (d.high + d.mid * 0.5) / total,
-      };
-    });
+  const totalAll = t ? Number(t.memory || 0) + Number(t.knowledge || 0) + Number(t.reflection || 0) + Number(t.practice || 0) + Number(t.skill || 0) : null;
+  const qualityTotals = QUALITY_KINDS.reduce((acc, k) => {
+    const d = q?.[k];
+    if (!d) return acc;
+    acc.high += Number(d.high || 0); acc.mid += Number(d.mid || 0); acc.low += Number(d.low || 0);
+    return acc;
+  }, { high: 0, mid: 0, low: 0 });
+  const qualityTotal = qualityTotals.high + qualityTotals.mid + qualityTotals.low;
+  const highPct = qualityTotal ? (qualityTotals.high / qualityTotal) * 100 : null;
+  const writesEmpty = !writes || writes.length === 0;
+  const writesError = dash.data?.trend?.error;
+  const writesSum = writesEmpty ? 0 : writes!.reduce((a, x) => a + Number(x.c || 0), 0);
+  const covTotal = COV_BUCKETS.reduce((a, k) => a + Number(cov[k] || 0), 0);
 
-  const qualityColumns: DataColumn<QualityRow>[] = [
-    { key: "label", title: "类型", render: (r) => <span className="nowrap">{r.label}</span> },
-    { key: "high", title: "高", align: "right", render: (r) => <span className={styles.okText}>{r.high.toLocaleString()}</span> },
-    { key: "mid", title: "中", align: "right", render: (r) => <span className={styles.warnText}>{r.mid.toLocaleString()}</span> },
-    { key: "low", title: "低", align: "right", render: (r) => <span className={styles.critText}>{r.low.toLocaleString()}</span> },
-    {
-      key: "pct",
-      title: "质量概览",
-      width: 180,
-      render: (r) => (
-        <>
-          <div className={"mini-bar " + styles.miniBarTrack}>
-            <div
-              className={"mini-bar-fill " + styles.miniBarFill + " " + pctClass(r.pct * 100)}
-              data-tone={r.pct >= 0.6 ? "ok" : r.pct >= 0.4 ? "warn" : "crit"}
-            />
-          </div>
-          <span className={styles.capSm}>{Math.round(r.pct * 100)}% 有效质量</span>
-        </>
-      ),
-    },
-  ];
+  if (phase !== "ok") {
+    return (
+      <main className="page">
+        <h1 className={styles.srOnly}>认知看板</h1>
+        <PageHeader><PageTitle>认知看板</PageTitle><div className="page-subtitle">统一大脑 · 记忆/知识/反思/实践/技能</div><Chips group="认知" page="看板" /></PageHeader>
+        <BentoState phase={phase === "empty" ? "empty" : phase} title={phase === "empty" ? "无数据" : phase === "error" ? "认知看板加载失败" : phase === "unavailable" ? "认知统计不可得" : "加载中"} detail={phase === "error" ? "平台统计接口（stats）请求失败 · 状态码 " + (stats.status != null ? String(stats.status) : (String(stats.error?.message || "").match(/\d{3}/)?.[0] || "n/a（强制态无响应）")) + "；请稍后重试。" : phase === "unavailable" ? "平台统计接口（stats）未返回五表数据 · 不把取不到当 0。" : undefined} onRetry={() => { stats.mutate(); dash.mutate(); }} />
+      </main>
+    );
+  }
 
   return (
-    <div className="layout"><main className="main">
-      <PageHeader><PageTitle>记忆与知识</PageTitle>
-      <div className="page-subtitle">统一大脑 · 所有 AI 共享的记忆/知识/反思/实践/技能<DataMoment items={[{ label: "表格", at: data?.asOf }, { label: "反思", at: dash?.timestamp }]} /></div></PageHeader>
-      {(error || dashErr) ? <ErrorAlert title="认知看板加载失败" message={String((error || dashErr)?.message || (error || dashErr))} onRetry={() => { mutate(); mutateDash(); }} /> : null}
+    <main className="page" data-slot="cognitive-page">
+      <h1 className={styles.srOnly}>认知看板</h1>
+      <PageHeader>
+        <PageTitle>认知看板</PageTitle>
+        <div className="page-subtitle">统一大脑 · 所有 AI 共享的记忆/知识/反思/实践/技能 · 数据时刻 {stats.data?.asOf ? fmtTime(stats.data.asOf) : "n/a（接口未下发 asOf）"} · 趋势 n/a（趋势接口无 asOf）</div>
+        <Chips group="认知" page="看板" />
+      </PageHeader>
 
-      <div className="trend-grid">
-        <div className="trend-card trend-card-hero">
-          <div className="trend-label"><span>认知数据总量</span></div>
-          <div className="trend-val">{loading ? "..." : fmt(totalAll)}</div>
-          <div className={styles.trendCaption}>5 表活跃总和</div>
-          <Sparkline data={writes24} color="var(--table-memory)" />
-        </div>
-        <div className="trend-card">
-          {/* 2026-10-13 round 76-DM: 原来标签行右侧又放了同一个 +{fmt(writesSum)}, 与下面的大数字**完全重复** -> 去掉。 */}
-          <div className="trend-label"><span>24h 写入</span></div>
-          {/* 2026-10-13 round 76-DQ: 加载中显示 **+0**(实际 +1,025), 属假计数 -> 补 loading 守卫。 */}
-          <div className={"trend-val " + styles.trendVal} data-tone="primary">{loading ? "..." : "+" + fmt(writesSum)}</div>
-          <Sparkline data={writes24} color="var(--table-knowledge)" />
-        </div>
-        <div className="trend-card">
-          <div className="trend-label"><span>主题覆盖</span></div>
-          <div className="trend-val">{topics ? fmt(topics.total) : "..."}</div>
-          <div className={styles.trendCaption}>平均覆盖率 {topics ? (topics.avgCoverage * 100).toFixed(1) + "%" : "..."}</div>
-          <div className={"mini-bar " + styles.miniBarFull}>
-            <div className={"mini-bar-fill " + pctClass(Math.min(100, (topics?.avgCoverage ?? 0) * 100))} />
+      <BentoGrid>
+        <KpiTile span={3} label="五表总量" metric={totalAll == null ? { kind: "na", reason: "统计接口未返回 tables" } : { kind: "value", value: fmtNum(totalAll), hint: "五表求和 · 来源：平台统计接口" }} />
+        <KpiTile span={3} label="主题数" metric={topics?.total == null ? { kind: "na", reason: "接口未返回主题数" } : { kind: "value", value: fmtNum(topics.total), hint: topics.avgCoverage != null ? "平均覆盖 " + (Number(topics.avgCoverage) * 100).toFixed(2) + "%" : "平均覆盖 n/a" }} />
+        <KpiTile span={3} label="活性（24h 写入）" metric={writesError ? { kind: "na", reason: "趋势查询失败（接口已标记 error，不是 0）" } : writesEmpty ? { kind: "value", value: "0", hint: "24h 窗口内无写入" } : { kind: "value", value: fmtNum(writesSum), hint: "24h 写入合计 · 趋势接口" }} />
+        <KpiTile span={3} label="高质量占比" metric={highPct == null ? { kind: "na", reason: "质量分布接口未返回" } : { kind: "value", value: highPct.toFixed(2) + "%", hint: "派生：high / (high+mid+low)，全量" }} />
+
+        <BentoCard span={8} title="质量分布" sub="全量 · 五表 high/mid/low；派生占比在 KPI">
+          <table className={styles.table}>
+            <thead><tr><th>类型</th><th className={styles.num}>高</th><th className={styles.num}>中</th><th className={styles.num}>低</th><th className={styles.num}>合计</th></tr></thead>
+            <tbody>
+              {QUALITY_KINDS.map((k) => {
+                const d = q?.[k];
+                if (!d) return null;
+                const sum = Number(d.high || 0) + Number(d.mid || 0) + Number(d.low || 0);
+                return <tr key={k}><td>{KIND_LABEL[k]}</td><td className={styles.num}>{fmtNum(d.high)}</td><td className={styles.num}>{fmtNum(d.mid)}</td><td className={styles.num}>{fmtNum(d.low)}</td><td className={styles.num}>{fmtNum(sum)}</td></tr>;
+              })}
+            </tbody>
+            <tfoot><tr><th>合计</th><th className={styles.num}>{fmtNum(qualityTotals.high)}</th><th className={styles.num}>{fmtNum(qualityTotals.mid)}</th><th className={styles.num}>{fmtNum(qualityTotals.low)}</th><th className={styles.num}>{fmtNum(qualityTotal)}</th></tr></tfoot>
+          </table>
+          <p className={styles.note}>高质量占比为派生口径（high / 全量质量行），非独立接口字段。</p>
+        </BentoCard>
+
+        <BentoCard span={4} title="主题覆盖" sub="全量 · 主题与平均覆盖率">
+          <ul className={styles.kv}>
+            <li><span>主题数</span><b>{topics?.total == null ? "n/a" : fmtNum(topics.total)}</b></li>
+            <li><span>平均覆盖率</span><b>{topics?.avgCoverage == null ? "n/a（接口未下发）" : (Number(topics.avgCoverage) * 100).toFixed(2) + "%"}</b></li>
+            <li><span>覆盖率桶合计</span><b>{fmtNum(covTotal)}</b></li>
+            <li><span>校验</span><b>{topics?.total != null && covTotal !== Number(topics.total) ? "与主题数不一致，见桶" : "5 桶合计 = 主题数"}</b></li>
+          </ul>
+          <p className={styles.note}>两口径警告：本页只用五表求和 {totalAll == null ? "n/a" : fmtNum(totalAll)}（当次口径）；若出现 200,358 为另一口径，待查，不混称总量。</p>
+        </BentoCard>
+
+        <BentoCard span={12} title="覆盖率分布" sub="5 桶 · 合计应与主题数一致">
+          <div className={styles.bars}>
+            {COV_BUCKETS.map((k) => {
+              const v = Number(cov[k] || 0);
+              const pct = covTotal ? Math.round((v / covTotal) * 100) : 0;
+              return <div key={k} className={styles.barRow}><span className={styles.barLabel}>{k}</span><div className={styles.barTrack}><div className={styles.barFill} style={{ width: pct + "%" }} /></div><span className={styles.barVal}>{fmtNum(v)}</span></div>;
+            })}
           </div>
-        </div>
-        <div className="trend-card">
-          <div className="trend-label"><span>数据健康</span></div>
-          {/* 2026-10-13 round 76-DS: `q` 未加载时 `q?.emptyHash === 0` 为 **false** -> 显示 [0 空 Hash] + [待清理],
-              是**误报警**(让用户以为有垃圾要清)。加载中应显示 …。 */}
-          <div className={"trend-val " + styles.trendVal} data-tone={loading ? "dim" : q?.emptyHash === 0 ? "ok" : "warn"}>
-            {loading ? "…" : q?.emptyHash === 0 ? "✓ 干净" : `${fmt(q?.emptyHash ?? 0)} 空 Hash`}
-          </div>
-          <div className={styles.trendCaption}>{loading ? "检测中" : q?.emptyHash === 0 ? "无需修复" : "待清理"}</div>
-          <div className={"mini-bar " + styles.miniBarFull}>
-            <div
-              className={"mini-bar-fill " + styles.miniBarFill + " " + pctClass(q?.emptyHash === 0 ? 100 : 40)}
-              data-tone={q?.emptyHash === 0 ? "ok" : "warn"}
-            />
-          </div>
-        </div>
-      </div>
+        </BentoCard>
 
-      <div className="dashboard-section"><div className="dashboard-section-title">子模块入口</div>
-      <div className="entry-grid">{subs.map(s => <EntryCard key={s.id} sub={s} />)}</div></div>
+        <BentoCard span={12} title="活性趋势与最近事件" sub="趋势接口无 asOf；空数组是取数失败，不是 0">
+          {writesEmpty ? <BentoState phase={writesError ? "unavailable" : "empty"} title={writesError ? "24h 趋势 n/a" : "24h 窗口内无写入"} detail={writesError ? "趋势查询失败（接口已标记 error，不是 0）；最近事件仍按接口返回展示。" : "趋势接口返回空数组且无 error：24h 窗口内无写入，显示 0 不是取数失败。"} /> : (
+            <div className={styles.bars}>
+              {writes!.slice(-24).map((x) => <div key={x.hb} className={styles.barRow}><span className={styles.barLabel}>{new Date(x.hb * 3600000).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false })}</span><div className={styles.barTrack}><div className={styles.barFill} style={{ width: Math.min(100, Number(x.c || 0)) + "%" }} /></div><span className={styles.barVal}>{fmtNum(x.c)}</span></div>)}
+            </div>
+          )}
+          <h3 className={styles.subhead}>最近事件</h3>
+          {dash.data?.recentEvents?.length ? <ul className={styles.events}>{dash.data.recentEvents.slice(0, 8).map((e: any, i: number) => <li key={i}><span>{e.time || e.at ? fmtTime(e.time || e.at) : "n/a"}</span><b>{e.title || e.type || e.kind || "事件"}</b></li>)}</ul> : <p className={styles.note}>无事件（接口返回空集）。</p>}
+        </BentoCard>
 
-      <div className="grid-2">
-        <div className="panel"><div className="panel-header"><span className="panel-title">5 表数据分布</span></div>
-        {tableBars.length > 0 ? <BarChart bars={tableBars} /> : loading ? <div className={"skeleton " + styles.skelBlock} /> : <Empty description="暂无数据" />}</div>
-        {/* 2026-10-20 维度审计（B9-2）：覆盖率分布口径不清 —— 补一句"覆盖率高=被引用得多"，
-          并给"低分资产"一个治理入口（原来只有分布、没有下一步动作）。 */}
-      <div className="panel"><div className="panel-header">
-        <span className="panel-title">覆盖率分布</span>
-        <span className={styles.headNote}>口径：0–1，越高表示这条资产被引用/使用的次数越多</span>
-      </div>
-        {covBars.some(b => b.value > 0) ? <BarChart bars={covBars} /> : loading ? <div className={"skeleton " + styles.skelBlock} /> : <Empty description="暂无数据" />}</div>
-      </div>
-
-      <div className="panel"><div className="panel-header">
-        <span className="panel-title">数据质量分布（质量分：高 ≥0.7 / 中 ≥0.4 / 低 &lt;0.4，仅活跃数据）</span>
-        <span className={styles.warmNote}>
-          低分合计 {((q?.memory?.low || 0) + (q?.knowledge?.low || 0) + (q?.practice?.low || 0) + (q?.reflection?.low || 0) + (q?.skill?.low || 0)).toLocaleString()} 条 ·{" "}
-          <a href="/cognitive/knowledge/governance">去治理 →</a>
-        </span>
-      </div>
-        {qualityRows.length > 0 ? <><TableCopyButton />
-            <DataTable
-              columns={qualityColumns}
-              rows={qualityRows}
-              rowKey={(r) => r.key}
-            />
-            </> : loading ? <div className={"skeleton " + styles.skelBlockSm} /> : <Empty description="暂无数据" />}
-      </div>
-    </main></div>
+        <BentoCard span={12} title="相关视图" sub="认知资产与治理入口 · 只读">
+          <p className={styles.links}><Link href="/cognitive/knowledge">知识库</Link><Link href="/cognitive/memory">记忆库</Link><Link href="/cognitive/practice">实践</Link><Link href="/cognitive/reflection">反思</Link><Link href="/cognitive/skills">技能</Link><Link href="/cognitive/knowledge?tab=governance">治理概览</Link></p>
+          <p className={styles.note}>0.5.1 只读：本页不渲染任何写控件；数据来自平台统计接口与飞轮看板接口。</p>
+        </BentoCard>
+      </BentoGrid>
+    </main>
   );
 }

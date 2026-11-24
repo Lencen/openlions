@@ -69,6 +69,13 @@ export default async function GroupsPage({
     prisma.sessionGroup.groupBy({ by: ["agentType"], _count: true, where: whereWithId }),
   ]);
 
+  // 0.6.5（设计 07:31 修正设计稿）：原 3 KPI「跨部门组/已归档」字段不存在 -> 换有字段的指标
+  //   「分组总数 / 有会话组 / 抽取待处理」；有会话组 = sessionCount > 0 的计数（单查一次）
+  let withSessions: number | null = null;
+  try {
+    withSessions = await prisma.sessionGroup.count({ where: { ...(whereWithId as any), sessionCount: { gt: 0 } } });
+  } catch { withSessions = null; }
+
   const statusMap: Record<string, number> = {};
   for (const s of statusCounts) statusMap[s.extractStatus || "PENDING"] = s._count;
   const agentMap: Record<string, number> = {};
@@ -89,8 +96,29 @@ export default async function GroupsPage({
   return (
     <>
       <Topbar active="groups" />
-      <main className="page page-wide">
-        <div className="list-header">
+      <main className="page page-wide" data-phase={total > 0 ? "ok" : "empty"}>
+        {/* 0.6.5 U-39b §2.3：3 KPI（分组总数 / 跨部门组 / 已归档）。
+            后两项 SessionGroup 模型无对应字段（schema 只有 groupKey/titleBase/agentType/cronJobId/workdir
+            + 聚合统计），按 U-02 口径写 na + 原因，不猜、不写 0。 */}
+        <div className="kpi-strip kpi-strip--3" data-slot="kpi-groups">
+          <div className="kpi-card bento-cell" data-kpi="total" data-cell="groups-total">
+            <div className="kpi-k">分组总数</div>
+            <div className="kpi-v">{total.toLocaleString()}</div>
+            <div className="kpi-d">当前过滤条件下</div>
+          </div>
+          <div className="kpi-card bento-cell" data-kpi="withSessions" data-cell="groups-with-sessions">
+            <div className="kpi-k">有会话组</div>
+            <div className="kpi-v">{withSessions == null ? <span className="na">n/a</span> : withSessions.toLocaleString()}</div>
+            <div className="kpi-d">{withSessions == null ? "原因：分组统计查询不可用" : "至少含 1 个会话的分组"}</div>
+          </div>
+          <div className="kpi-card bento-cell" data-kpi="pending" data-cell="groups-pending">
+            <div className="kpi-k">抽取待处理</div>
+            <div className="kpi-v">{(statusMap["PENDING"] || 0).toLocaleString()}</div>
+            <div className="kpi-d">提取状态为待处理的分组</div>
+          </div>
+        </div>
+
+        <div className="list-header" data-slot="page-head">
           <div className="left">
             <h1>Session Groups</h1>
             <div className="subtitle">{total} groups · 按主题归类的会话聚合</div>
@@ -109,7 +137,7 @@ export default async function GroupsPage({
         </div>
 
         {/* Status filter */}
-        <div className="filter-section">
+        <div className="filter-section" data-slot="status-filter">
           <div className="filter-label">Status</div>
           <div className="chips">
             <Link href={`/groups?${qParams({})}`} className={`chip ${!searchParams.status ? "active" : ""}`}>
@@ -139,7 +167,7 @@ export default async function GroupsPage({
         </div>
 
         {/* Table */}
-        <div className="table-wrap">
+        <div className="table-wrap" data-slot="group-table">
           <table className="session-table">
             <thead>
               <tr>
@@ -188,7 +216,7 @@ export default async function GroupsPage({
         </div>
 
         {groups.length === 0 && (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--ink-muted)" }}>
+          <div data-empty-block="true" style={{ textAlign: "center", padding: "60px 20px", color: "var(--ink-muted)" }}>
             No groups found.
           </div>
         )}

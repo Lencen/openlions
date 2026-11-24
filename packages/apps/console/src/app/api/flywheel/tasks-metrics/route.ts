@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { openMind } from "@/lib/server/lions-db";
 
 // 2026-11-06 · 数据卡 7 §6 缺的三个只读值：完成(7d) / 失败(7d) / P95(7d, 秒)
-// 口径：docs/design/uiux-bento-2026-11/data-cards/card-7-flywheel-tasks.md 与 DATA-DICTIONARY 同名条目。
+// 口径：[internal-doc] 与 DATA-DICTIONARY 同名条目。
 // 硬约束：取不到 -> null + reason（页面显示「不可得 + 原因」），不写 0。
 export const dynamic = "force-dynamic";
 

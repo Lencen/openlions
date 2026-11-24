@@ -15,12 +15,12 @@ export interface DataColumn<T> {
   width?: string | number;
   align?: "left" | "right";
   render?: (row: T, index: number) => ReactNode;
-  /** 该列渲染成**行表头** `<th scope="row">`（2026-11-05 商业线裁决 D）。
+  /** 该列渲染成**行表头** `<th scope="row">`（2026-11-05 运营团队裁决 D）。
    *  用途：热力图 / 键值表这类"首列是行名"的表，换掉原手写表后仍要保住行表头语义（WCAG 1.3.1）。 */
   rowHeader?: boolean;
 }
 
-/** 可展开行（2026-11-05 商业线裁决 D）：与原子件 primitives.Table 的 expandable 同形状，
+/** 可展开行（2026-11-05 运营团队裁决 D）：与原子件 primitives.Table 的 expandable 同形状，
  *  目的是让"必须原地展开"的表能留在白名单里，而不是绕过去用原子件。
  *  · expandedRowRender 是函数 —— 只能由**客户端组件**传；服务端组件传函数会触发 RSC 边界错误。 */
 export interface DataTableExpandable<T> {

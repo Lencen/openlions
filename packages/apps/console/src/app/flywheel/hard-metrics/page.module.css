@@ -1,27 +1,64 @@
-/* /flywheel/hard-metrics · 飞轮硬指标看板（2026-11-05 P2 批9 呈现层）
-   内联 style 清零：报错行、KPI 行与图表面板的下间距、图表内边距、统计时间行、底部相关视图。
-   周环比的涨跌色是动态值，改由 data-tone 属性选择器承载（值与原内联三元逐一对应）。
-   宽高等复用 globals.css 既有类，不新增全局类、不改 globals.css。 */
+/* /flywheel/hard-metrics · demo slot（0.5 批F）— 只用全局令牌，无裸 hex */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: 12px; color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--c-status-ok); }
 
-/* 取数失败提示（原内联 color: var(--status-warn)，配合 globals 的 .tiny） */
-.errText { color: var(--status-warn); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 16px; }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 16px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.bento { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 16px; }
+.s12 { grid-column: span 12; }
+.s8 { grid-column: span 8; }
+.s4 { grid-column: span 4; }
+.k { font-size: 12px; color: var(--text-muted); }
+.vXl { font-size: 30px; font-weight: 650; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.na { color: var(--text-muted); }
+.warn { color: var(--c-status-warn); }
+.crit { color: var(--c-status-crit); }
+.d { font-size: 12px; color: var(--text-muted); }
+.metaLine { font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.7; }
+.metaLine b { color: var(--text); font-weight: 600; }
 
-/* KPI 行下间距（原内联 marginBottom: var(--sp-3)，配合 globals 的 .kpi-grid） */
-.kpiRow { margin-bottom: var(--sp-3); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.cardTitle { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.6; }
+.sub { font-size: 12px; color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: 12px; color: var(--c-status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
+.tagNa { font-size: 12px; color: var(--text-muted); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; }
 
-/* 图表面板下间距（原内联 marginBottom: var(--sp-3)） */
-.panelMb { margin-bottom: var(--sp-3); }
+.tblWrap { overflow-x: auto; margin-top: 8px; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 720px; }
+.tbl th { text-align: left; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; white-space: nowrap;  line-height: 24px; }
+.tbl td { border-bottom: 1px solid var(--border); padding: 10px 8px 10px 0; vertical-align: top;  line-height: 24px; }
+.tbl tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mono { font-family: var(--c-font-mono); font-size: 12px; white-space: nowrap; }
+.name { font-weight: 500; }
+.dim { color: var(--text-muted); }
+.tagPlain { font-size: 12px; border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; color: var(--text-muted); white-space: nowrap; }
+.toneOk { color: var(--c-status-ok); }
+.toneWarn { color: var(--c-status-warn); }
+.toneCrit { color: var(--c-status-crit); }
+.toneMute { color: var(--text-muted); }
+.detailCell { min-width: 260px; max-width: 420px; color: var(--text-muted); }
 
-/* 图表区容器内边距（原内联 padding: var(--sp-3)） */
-.chartBox { padding: var(--sp-3); }
+.noteBox { border: 1px solid var(--border); border-radius: 12px; background: var(--bg-surface2); padding: 10px 14px; margin-top: 10px; font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 5px; }
+.noteTitle { font-weight: 600; color: var(--text); }
+.noteList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 
-/* 统计时间行（原内联 marginBottom: var(--sp-2)，配合 globals 的 .tiny） */
-.metaLine { margin-bottom: var(--sp-2); }
+.stateMini { border: 1px dashed var(--border); border-radius: 10px; padding: 18px 12px; text-align: center; color: var(--text-muted); font-size: 12px; }
+.state { border: 1px solid var(--border); border-radius: 14px; padding: 16px; color: var(--text-muted); }
+.state b { color: var(--text); }
+.foot { display: flex; flex-direction: column; gap: 6px; margin-top: 16px; font-size: 12px; color: var(--text-muted); }
+.footNote { font-size: 12px; color: var(--text-muted); }
 
-/* 周环比数值：涨绿 / 跌红 / 无环比（原内联三元 color） */
-.delta[data-tone="ok"] { color: var(--status-ok); }
-.delta[data-tone="crit"] { color: var(--status-crit); }
-.delta[data-tone="plain"] { color: inherit; }
-
-/* 底部相关视图（原内联 flex / gap / flexWrap / marginTop） */
-.footLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
+@media (max-width: 1280px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .s12 { grid-column: span 6; }
+  .s8 { grid-column: span 6; }
+  .s4 { grid-column: span 3; }
+}
+@media (max-width: 900px) {
+  .kpis { grid-template-columns: 1fr; }
+  .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .s12, .s8, .s4 { grid-column: span 2; }
+}

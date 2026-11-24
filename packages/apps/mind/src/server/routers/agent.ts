@@ -28,9 +28,58 @@ import {
   type IssuedKeyEntry,
 } from "../lib/key-governance";
 
+/**
+ * 2026-11-13 安全修复（运营团队报告）：agent.list / agent.get 的**对外投影白名单**。
+ *
+ * 背景：原先 list/get 用 findMany/findUnique 不带 select -> 返回整行 + include permissions，
+ *   于是 token_hash（Portal API token 的 sha256）与 permissions 里的 api_key_hash / api_key_plain（明文钥匙）
+ *   一并回传给 console BFF，再被原样透传给浏览器。
+ *   当前 token_hash 值均为 null，但**字段不应存在**（一旦有值就是可直接利用的凭证指纹/明文）。
+ *
+ * 口径：只返回页面确实用到的字段；安全字段一律不选。
+ *   若将来有消费者确需新字段，**显式加白名单**，不要退回"整行返回"。
+ */
+const AGENT_PUBLIC_FIELDS = {
+  id: true,
+  agent_id: true,
+  display_name: true,
+  channel: true,
+  host: true,
+  avatar: true,
+  profile: true,
+  status: true,
+  role: true,
+  tenant_id: true,
+  created_at: true,
+  updated_at: true,
+  last_seen_at: true,
+} as const;
+
+const AGENT_PERMISSION_PUBLIC_FIELDS = {
+  id: true,
+  agent_id: true,
+  service_name: true,
+  token_id: true,
+  expires_at: true,
+  permissions: true,
+  config: true,
+  status: true,
+  scope: true,
+  created_at: true,
+  updated_at: true,
+  last_used_at: true,
+  idempotent_until: true,
+  // 不选: api_key_hash（凭证指纹）、api_key_plain（明文钥匙）
+} as const;
+
+const AGENT_PUBLIC_SELECT = {
+  ...AGENT_PUBLIC_FIELDS,
+  permissions: { select: AGENT_PERMISSION_PUBLIC_FIELDS },
+} as const;
+
 // ============================================================================
 // P3 阶段 4-6: Agent 服务注册端点
-// 2026-06-17 ut 设计, 跟 agent-x 端 mcp chat register 协议对齐
+// 2026-06-17 ut 设计, 跟 agent-b 端 mcp chat register 协议对齐
 // 设计文档: docs/SHARED-BRAIN-AGENT-REGISTRATION-DESIGN-v1.md
 //
 // 2026-10-15 钥匙治理(人类批准, 见 packages/apps/mind/src/server/lib/key-governance.ts 头部):
@@ -47,7 +96,7 @@ const SERVICE_NAME_REGEX = /^[a-z][a-z0-9_]*$/;
 // 白名单: 历史上拿"永久"key 的 agent_id(跟 mcp 端 mcp_bootstrap 白名单对齐)
 // 2026-06-18: 拆分 agent-h → agent-g(claude 端) + agent-h(hermes 端)
 // 2026-10-15 钥匙治理 item 4: **移除已下线的 agent-h / agent-g**(库内两行 status=INACTIVE)。
-//   白名单现在只剩在役的 agent-x / agent-x; 且"永久档"已取消 —— 白名单请求 permanent 会被
+//   白名单现在只剩在役的 agent-b / agent-c; 且"永久档"已取消 —— 白名单请求 permanent 会被
 //   **降级为 90 天并在响应/审计里显式标注**(见 register 的 deprecations), 不再存在 100 年钥匙。
 const PERMANENT_AGENT_WHITELIST = new Set(["agent-b", "agent-c"]);
 
@@ -106,7 +155,7 @@ export const agentRouter = createRouter({
         long_term: z.boolean().default(false),
         // 2026-06-17 P3 修复: permanent 标志, true = 永久 (9999 年)
         // 安全门: 必须在白名单 PERMANENT_AGENT_WHITELIST 内, 否则 403
-        // 用于 agent-x/13/ut 三方永久信任, 永不续期
+        // 用于 agent-b/13/ut 三方永久信任, 永不续期
         permanent: z.boolean().default(false),
         // P0 幂等 (2026-06-18): idempotent=true (默认) → ACTIVE+未过期 perm 沿用旧 key, 不覆盖
         //   force=true → 强制轮换, 忽略 idempotent
@@ -143,7 +192,7 @@ export const agentRouter = createRouter({
       if (permanentRequested && !PERMANENT_AGENT_WHITELIST.has(input.agent_id)) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: `permanent key 已取消(2026-10-15 钥匙治理): 新签发一律 ${BUSINESS_KEY_TTL_DAYS} 天; 且 ${input.agent_id} 不在白名单内(agent-x/13)。`,
+          message: `permanent key 已取消(2026-10-15 钥匙治理): 新签发一律 ${BUSINESS_KEY_TTL_DAYS} 天; 且 ${input.agent_id} 不在白名单内(agent-b/13)。`,
         });
       }
       const permanentDowngraded = permanentRequested && PERMANENT_AGENT_WHITELIST.has(input.agent_id);
@@ -444,8 +493,10 @@ export const agentRouter = createRouter({
     // B18 修复 (2026-06-18 15:25): 用 updated_at DESC (最近活动优先)
     return prisma.agentRegistry.findMany({
       where: { status: "ACTIVE" },
-      // 2026-09-07: 返回全部权限(含 REVOKED), 供 console 授权矩阵展示 REVOKED 状态
-      include: { permissions: true },
+      // 2026-11-13 安全修复：改为**显式白名单**（不再 include permissions 整表）
+      //   原实现会把 token_hash 与 permissions.api_key_hash/api_key_plain 一并返回给 console。
+      //   仍返回全部权限(含 REVOKED)供授权矩阵展示，但只限安全字段。
+      select: AGENT_PUBLIC_SELECT,
       orderBy: { updated_at: "desc" },
     });
   }),
@@ -458,8 +509,8 @@ export const agentRouter = createRouter({
     .query(async ({ input }) => {
       return prisma.agentRegistry.findUnique({
         where: { agent_id: input.agent_id },
-        // 2026-09-07: 全量权限供授权矩阵
-        include: { permissions: true },
+        // 2026-11-13 安全修复：同 list，显式白名单（不返回 token_hash / 钥匙指纹 / 明文）
+        select: AGENT_PUBLIC_SELECT,
       });
     }),
 
@@ -1215,7 +1266,7 @@ export const agentRouter = createRouter({
   // ==========================================================================
   // 8. grantApiKey - 管理员用, 强制重发明文 api_key (P0-B23)
   //   鉴权: adminProcedure (MIND_ADMIN_API_KEY)
-  //   业务场景: 13/agent-x 等 agent 首次 onboard 拿到占位符 (没存明文) 后,
+  //   业务场景: 13/agent-b 等 agent 首次 onboard 拿到占位符 (没存明文) 后,
   //     可立刻调这个端点重发明文 + 存 DB, 后续 register 走幂等也能返
   //   安全门:
   //     - adminProcedure 鉴权 (MIND_ADMIN_API_KEY)

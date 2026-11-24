@@ -11,17 +11,15 @@ import { t } from "@/i18n";
 import { matchNav } from "@/config/nav";
 import { fmtNum } from "@/lib/format";
 import GlobalSearch from "@/components/GlobalSearch";
-import TopNavNotifications from "@/components/TopNavNotifications";
-import DataMomentBadge from "@/components/DataMomentBadge";
 import styles from "./TopNav.module.css";
 
 export default function TopNav() {
   const pathname = usePathname() || "/";
   const hit = useMemo(() => matchNav(pathname), [pathname]);
   const [todos, setTodos] = useState<{ humanOpen: number; open: number } | null>(null);
-  // 2026-11-02（前端线 B2）：版本号**不再写死**。原先是硬编码 "v0.3.0"（与代码 0.1.0、安装 0.1.1 三个号并存）。
+  // 2026-11-02（前端团队 B2）：版本号**不再写死**。原先是硬编码 "v0.3.0"（与代码 0.1.0、安装 0.1.1 三个号并存）。
   //   现在读 /api/version（仓库根 VERSION + git 提交 + 进程启动时刻）；读不到显示 "v—"，**绝不冒充一个版本号**。
-  const [version, setVersion] = useState<{ platform: string; gitSha: string; gitDirty: boolean } | null>(null);
+  const [version, setVersion] = useState<{ platform: string; deployedPlatform?: string | null; deployedSource?: string | null; gitSha: string; gitDirty: boolean } | null>(null);
   useEffect(() => {
     let alive = true;
     fetch("/api/version", { cache: "no-store" })
@@ -29,7 +27,7 @@ export default function TopNav() {
       .then((d) => {
         if (!alive || !d) return;
         if (typeof d.platform === "string" && d.platform) {
-          setVersion({ platform: d.platform, gitSha: String(d.gitSha || ""), gitDirty: Boolean(d.gitDirty) });
+          setVersion({ platform: d.platform, deployedPlatform: typeof d.deployedPlatform === "string" ? d.deployedPlatform : null, deployedSource: typeof d.deployedSource === "string" ? d.deployedSource : null, gitSha: String(d.gitSha || ""), gitDirty: Boolean(d.gitDirty) });
         }
       })
       .catch(() => { /* 版本不可达 -> 保持 v—，不显示假版本 */ });
@@ -67,7 +65,7 @@ export default function TopNav() {
     <nav className="topnav" aria-label="主导航">
       <div className="topnav-logo">
         <div className="logo-icon" aria-hidden="true" />
-        <span className="logo-text">LIONS Console</span>
+        <span className="logo-text">Lions 控制台</span>
       </div>
       <div className="topnav-context">
         {hit ? (
@@ -75,7 +73,6 @@ export default function TopNav() {
             <span className={"ctx-group " + styles.ctxGroup}>{hit.group.label}</span>
             <span className="ctx-sep">/</span>
             <span className="ctx-page">{hit.item.label}</span>
-            {hit.item.desc ? <span className="ctx-desc">{hit.item.desc}</span> : null}
           </>
         ) : (
           <span className="ctx-page">{t('topnav.managementHub')}</span>
@@ -83,33 +80,12 @@ export default function TopNav() {
       </div>
       <div className="topnav-right">
         {/* 2026-10-15（round 76-GP）铁律 2 的系统性做法: 全站每一页都显示"本页数据取自 HH:MM:SS" */}
-        <DataMomentBadge />
         <GlobalSearch />
-        {/* 2026-10-22 通知聚合：本线未确认 / 传输待处理 / 未送达（真实数据，不可达时不显示 0） */}
-        <TopNavNotifications />
-        <Tooltip title={t('topnav.todoTip')}>
-          {/* 2026-09-24: 徽标深链带 owner=human —— 有待我处理时直达已筛选态 (IA 整改: 过滤视图不另占菜单位) */}
-          <Link href={todos && todos.humanOpen > 0 ? "/todo?owner=human" : "/todo"} className="topnav-todo" aria-label={t('nav.item.todo.label')}>
-            <Icon name="check-square" size={16} />
-            <span>{t('topnav.todoShort')}</span>
-            {todos ? (
-              <span className={"todo-badge" + (todos.humanOpen > 0 ? " hot" : "")}>
-                {todos.humanOpen > 0 ? fmtNum(todos.humanOpen) : fmtNum(todos.open)}
-              </span>
-            ) : null}
-          </Link>
-        </Tooltip>
-        {/* 2026-10-22 a11y：aria-label 不能挂在没有 role 的 span 上（axe: aria-prohibited-attr），补 role="img" */}
-        <span className={"pulse-dot " + styles.pulseOk} role="img" title="服务在线" aria-label="服务在线" />
-        <span
-          className={styles.version}
-          title={
-            version
-              ? `版本号 ${version.platform}${version.gitSha ? ` · ${version.gitSha}` : ""}${version.gitDirty ? " · 工作区有未提交改动" : ""}（来自仓库根 VERSION，/api/version）`
-              : "版本号读取中或不可达（不显示假版本）"
-          }
-          data-version-source="/api/version"
-        >{version ? `v${version.platform}` : "v—"}</span>
+        <div className={styles.demoControls} aria-label="视图设置">
+          <button type="button" className={styles.demoSelect} title="风格（demo slot；当前固定 Bento）">风格 <b>Bento（默认）</b> ▾</button>
+          <button type="button" className={styles.demoSelect} title="四态预览（demo slot；当前正常）">四态 <b>正常</b> ▾</button>
+          <span className={styles.avatar} title="当前用户（示意）">LE</span>
+        </div>
       </div>
     </nav>
   );

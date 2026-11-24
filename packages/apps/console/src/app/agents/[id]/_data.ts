@@ -100,20 +100,34 @@ export interface SessionRow {
   title?: string | null;
   message_count?: number;
   status?: string | null;
+  /** 2026-11-15 B4 运行页：运行时长与"最近活动"用真实起止时间（缺字段则 n/a+原因） */
+  started_at?: string | null;
+  ended_at?: string | null;
+  last_message_at?: string | null;
+  processing_error?: string | null;
   updated_at?: string | null;
   uploaded_at?: string | null;
 }
 
-/** 同源 BFF 取数(带状态): 区分「取数失败」与「取到空值」 */
-export async function bffGetResult<T>(path: string): Promise<{ ok: boolean; data: T | null }> {
+/** 同源 BFF 取数(带状态): 区分「取数失败」与「取到空值」
+ *  0.5.1 B4：补 status / error —— 设计 F 要求 error 态显示「中文 + 端点 + 状态码提示 + 重试」，
+ *  此前只返回 ok=false，页面拿不到状态码只能写"加载失败"。 */
+export async function bffGetResult<T>(path: string): Promise<{ ok: boolean; data: T | null; status: number | null; error: string | null }> {
   try {
     const h = headers();
     const host = h.get("host") || `127.0.0.1:${process.env.PORT || 3004}`;
     const res = await fetch(`http://${host}${path}`, { cache: "no-store" });
-    if (!res.ok) return { ok: false, data: null };
-    return { ok: true, data: (await res.json()) as T };
-  } catch {
-    return { ok: false, data: null };
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const j: any = await res.json();
+        detail = String(j?.error || j?._error || "").slice(0, 160);
+      } catch { /* 非 JSON 响应 */ }
+      return { ok: false, data: null, status: res.status, error: detail || `HTTP ${res.status}` };
+    }
+    return { ok: true, data: (await res.json()) as T, status: res.status, error: null };
+  } catch (e: any) {
+    return { ok: false, data: null, status: null, error: String(e?.message || e).slice(0, 160) };
   }
 }
 
@@ -122,24 +136,24 @@ export async function bffGet<T>(path: string): Promise<T | null> {
   return (await bffGetResult<T>(path)).data;
 }
 
-export interface AgentLoad { ok: boolean; agent: AgentRow | null }
+export interface AgentLoad { ok: boolean; agent: AgentRow | null; asOf: string | null; status: number | null; error: string | null }
 
 /** 带「是否成功」的取数结果: 供页面区分「取到空值」与「取数失败」 */
-export interface Sourced<T> { ok: boolean; data: T }
+export interface Sourced<T> { ok: boolean; data: T; asOf?: string | null; status?: number | null; error?: string | null }
 
 /** 名册取数带上「是否成功」: ok=false 表示接口失败(≠ agent 不存在), 供页面区分降级态 */
 export async function loadAgent(id: string): Promise<AgentLoad> {
-  const r = await bffGetResult<AgentRow[]>("/api/agent-list");
-  if (!r.ok) return { ok: false, agent: null };
-  const list = Array.isArray(r.data) ? r.data : ((r.data as any)?.items ?? []);   // 76-FZ: 新形状 { asOf, items } 的容错
-  return { ok: true, agent: list.find((a) => a?.agent_id === id) ?? null };
+  const r = await bffGetResult<any>("/api/agent-list");
+  if (!r.ok) return { ok: false, agent: null, asOf: null, status: r.status, error: r.error };
+  const list = Array.isArray(r.data) ? r.data : (r.data?.items ?? []);   // 76-FZ: 新形状 { asOf, items } 的容错
+  return { ok: true, agent: list.find((a: any) => a?.agent_id === id) ?? null, asOf: r.data?.asOf ?? null, status: r.status, error: null };
 }
 
-export async function loadLive(id: string): Promise<Sourced<LiveAgent | null>> {
-  const r = await bffGetResult<{ agents?: LiveAgent[] }>(
-    `/api/agents-live?agent=${encodeURIComponent(id)}&range=24h`,
+export async function loadLive(id: string, range: "1h" | "24h" | "7d" | "30d" | "all" = "24h"): Promise<Sourced<LiveAgent | null>> {
+  const r = await bffGetResult<any>(
+    `/api/agents-live?agent=${encodeURIComponent(id)}&range=${range}`,
   );
-  return { ok: r.ok, data: r.data?.agents?.[0] ?? null };
+  return { ok: r.ok, data: r.data?.agents?.[0] ?? null, asOf: r.data?.asOf ?? null, status: r.status, error: r.error };
 }
 
 export async function loadServices(id: string): Promise<Sourced<ServiceRow[]>> {
@@ -152,13 +166,26 @@ export async function loadServices(id: string): Promise<Sourced<ServiceRow[]>> {
   return { ok: true, data: d?.result?.data ?? [] };
 }
 
-export async function loadSessions(id: string, pageSize = 15): Promise<Sourced<{ items: SessionRow[]; total: number }>> {
-  const r = await bffGetResult<{ result?: { data?: { items?: SessionRow[]; total?: number } } }>(
-    `/api/session-list?page=1&pageSize=${pageSize}&agent_id=${encodeURIComponent(id)}`,
+export interface SessionPage { items: SessionRow[]; total: number; limit: number; offset: number }
+
+export async function loadSessions(id: string, page = 1, pageSize = 20): Promise<Sourced<SessionPage>> {
+  const p = Math.max(1, Math.floor(Number(page) || 1));
+  const r = await bffGetResult<any>(
+    `/api/session-list?page=${p}&pageSize=${pageSize}&agent_id=${encodeURIComponent(id)}`,
   );
-  if (!r.ok) return { ok: false, data: { items: [], total: 0 } };
-  const data = r.data?.result?.data;
-  return { ok: true, data: { items: data?.items ?? [], total: Number(data?.total ?? 0) } };
+  if (!r.ok) return { ok: false, data: { items: [], total: 0, limit: pageSize, offset: 0 }, status: r.status, error: r.error };
+  const data = r.data?.result?.data ?? r.data?.data ?? {};
+  return {
+    ok: true,
+    data: {
+      items: data?.items ?? [],
+      total: Number(data?.total ?? 0),
+      limit: Number(data?.limit ?? pageSize),
+      offset: Number(data?.offset ?? 0),
+    },
+    status: r.status,
+    error: null,
+  };
 }
 
 export function parseJson(v: unknown): Record<string, any> {
@@ -228,3 +255,34 @@ export function pct(v: unknown): string {
   if (!Number.isFinite(n)) return "-";
   return `${Math.round(n * 100)}%`;
 }
+
+/** 毫秒时长 -> 人类可读（2 小时 5 分 / 3 分 12 秒）; 不可计算返回 ""（由调用方给 n/a+原因） */
+export function fmtDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return "";
+  const sec = Math.round(ms / 1000);
+  if (sec < 60) return `${sec} 秒`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min} 分 ${sec % 60} 秒`;
+  const hr = Math.floor(min / 60);
+  return `${hr} 小时 ${min % 60} 分`;
+}
+
+/** 执行状态 -> 中文（界面不直接印英文枚举） */
+export const EXEC_STATUS_LABEL: Record<string, string> = {
+  COMPLETED: "已完成",
+  DONE: "已完成",
+  PROCESSED: "已处理",
+  FAILED: "失败",
+  SKIPPED: "已跳过",
+  RUNNING: "执行中",
+  PENDING: "待执行",
+};
+
+/** 会话状态 -> 中文（0.5.1 状态键新旧并存：DONE/PROCESSED 都是"已提炼"） */
+export const SESSION_STATUS_LABEL: Record<string, string> = {
+  PENDING: "待提炼",
+  DONE: "已提炼",
+  PROCESSED: "已提炼",
+  SKIPPED: "已跳过",
+  FAILED: "失败",
+};

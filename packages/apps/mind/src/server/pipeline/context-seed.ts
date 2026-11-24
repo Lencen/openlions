@@ -8,7 +8,7 @@
  */
 import { prisma } from "@/lib/prisma";
 import { buildInjectedTitle } from "./injected-ids";
-// 2026-09-23 agent-x #1 记忆分层+检索: 记忆按短期/长期两层 top-K 相关性召回, 注入容量 2K->50K+ token。
+// 2026-09-23 agent-f #1 记忆分层+检索: 记忆按短期/长期两层 top-K 相关性召回, 注入容量 2K->50K+ token。
 import { recallTopK, terms, queryTokens, retrievalTokens, maxCharsForTokens, memorySeedMaxTokens } from "./memory-layers";
 
 export interface ContextHit { kind: "memory" | "knowledge" | "skill" | "practice"; id: string; title: string; snippet: string; score: number | null; source: string | null; theme: string | null; layer?: string | null;
@@ -44,7 +44,7 @@ export async function searchContext(opts: { query?: string; theme?: string; kind
 
   if ((kinds as readonly string[]).includes("memory")) {
     if (layered) {
-      // 2026-09-23 agent-x #1: 记忆走分层 top-K 相关性召回(短期层/长期层各取 K 条), 替换旧的
+      // 2026-09-23 agent-f #1: 记忆走分层 top-K 相关性召回(短期层/长期层各取 K 条), 替换旧的
       //   "qualityScore 直排 + 活性过滤"。K 按 limit 分配: 短期层与长期层各半(都至少 1 条)。
       const memK = Math.max(2, limit);
       const shortK = Math.max(1, Math.ceil(memK / 2));
@@ -84,7 +84,7 @@ export async function searchContext(opts: { query?: string; theme?: string; kind
   if ((kinds as readonly string[]).includes("skill")) {
     // 2026-09-15 撤回流程落地(待办 todo_c4869259208d4a748fb9): 原查询只挡 supersededBy/legacy,
     //   被撤回(Skill PATCH stale=true / 撤回流程)的技能仍会被注入 agent 提示词 -> 撤回不生效。
-    // 2026-09-23 agent-x #2 Skills 按需加载(方案 A): 加载层**只注入 {name,description} 轻量列表**,
+    // 2026-09-23 agent-f #2 Skills 按需加载(方案 A): 加载层**只注入 {name,description} 轻量列表**,
     //   select 不再取 content(steps 全文), snippet 只来自 description; 需要全文时由
     //   skillViewByName()(skill_view 按需取回)另行取回 —— 不再 100+ 全文注入浪费 token。
     const where: any = { supersededBy: null, legacy: false, stale: false, NOT: { tier: "COLD" } };
@@ -369,7 +369,7 @@ export async function searchContext(opts: { query?: string; theme?: string; kind
   return picked;
 }
 
-/** agent-x #2 Skills 按需加载(方案 A): skill_view(name) 按需取回全文。
+/** agent-f #2 Skills 按需加载(方案 A): skill_view(name) 按需取回全文。
  *  加载层(platform 上下文注入)只给 {name,description} 轻量列表; agent 判定某技能可用时,
  *  以 name 精确取回完整规范(steps=content / trigger / verification / pitfalls 等)。
  *  失败(未找到/无全文)返回 null, 不抛异常 —— 与 searchContext 的"失败不阻塞"口径一致。 */

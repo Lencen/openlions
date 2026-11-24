@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     result: r.status < 400 ? "ok" : "failed",
     reason: `${decision}${note ? " · " + note : ""}${r.status < 400 ? "" : " · " + ((r.body && r.body.error) || r.status)}`,
   });
-  // 平台审计（uiux 契约）：只写成功路径；越权/告警不落审计由 guard 与下方判断保证
+  // 平台审计（设计 契约）：只写成功路径；越权/告警不落审计由 guard 与下方判断保证
   try {
     await writeAudit({
       entityType: "PlatformAuth",

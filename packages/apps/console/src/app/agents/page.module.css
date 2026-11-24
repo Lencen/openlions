@@ -1,163 +1,71 @@
-/* /agents · P1 试点页呈现层（ord-20261104-032）
-   只放本页需要的布局类；组件与全局令牌都在 globals.css，不在这里复制色值。
-   注意：FilterBar 的 .toolbar/.filters/.filter 是设计原型里的类名（assets/app.css），
-   console 的 globals.css 还没收录 —— 按「不许改 globals.css」的约定，本页用 CSS Module 作用域补上，
-   只影响本页。 */
-.toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-.toolbar > :global(.toolbar) {
-  flex: 1 1 auto;
-  min-width: 0;
-  margin: 0;
-}
-.toolbar :global(.filters) {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.toolbar :global(.filter) {
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-dim);
-  font-size: var(--fs-xs);
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.toolbar :global(.filter:hover) {
-  border-color: var(--border-hi);
-  background: var(--bg-hover);
-}
-.toolbar :global(.filter.on) {
-  background: var(--primary-dim);
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
-  font-weight: 600;
-}
-.toolbar :global(.filter .n) {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-.toolbar :global(.filter.on .n) {
-  color: var(--primary);
-}
-.toolbar :global(.spacer) {
-  flex: 1;
-}
-.search {
-  height: 28px;
-  width: 300px;
-  max-width: 100%;
-  padding: 0 var(--sp-3);
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text);
-  font-size: var(--fs-xs);
-}
-.search::placeholder {
-  color: var(--text-muted);
-}
-.search:focus-visible {
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-}
-.subToolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-2);
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-.sortSelect {
-  height: 28px;
-}
-.headMeta {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-top: var(--sp-2);
-}
-/* 0.4.39-04 CLS：本行含「逐源数据时刻」，时刻从「未知/加载中」变成具体时间后
-   390 档会多折 1 行（实测 51px -> 71px），把功能入口带 / 指标带 / 表格整体推下去。
-   这里按实测终态预留高度（76px，含 5px 余量），数据到达前后同高。 */
-@media (max-width: 640px) {
-  .headMeta {
-    min-height: 76px;
-  }
-}
-.entryBand {
-  display: flex;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-}
-.entryLink {
-  font-size: var(--fs-sm);
-  color: var(--text-dim);
-  text-decoration: none;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 4px 10px;
-}
-.entryLink:hover {
-  color: var(--primary);
-  border-color: var(--primary);
-}
-.rowLink {
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: var(--fs-md);
-}
-.rowLink:hover {
-  color: var(--primary);
-}
-.clickable :global(tbody tr) {
-  cursor: pointer;
-}
-.count {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-  margin-top: var(--sp-2);
-}
+/* /agents · 0.5 批次A demo slot 还原（2026-11-13）
+   只放本页需要的布局/表格/状态类；颜色与字号全部走 tokens（globals.css），不复制色值。
+   结构：页头 + 4 chips → 工具栏 → s12 智能体清单表 → s12 口径说明 → 逐源数据时刻。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
 
-/* ================= 0.4.39-04 CLS 修复 =================
-   成因（2026-11-09 实测 /agents@390）：DataTable 的 loading 骨架固定 5 行（223px），
-   数据到达后一次渲染全部 11 行（996px），表下内容整体被推走。
-   对策：page.tsx 首屏只渲染前 N 行（桌面 20 / 移动端 10）+「显示全部」按钮；
-   DataTable 本轮禁改，所以加载态用容器 min-height 顶到「表头 39px + N 行」的高度。
-   行高依据（实测）：@390 前 10 行 76/95/76/76/92/92/92/76/111/76（均 86，合计 862）；
-   @1440 行高 60~76（均 69）。表头 39px。
-   min-height 只在首屏加载态生效（data-loading="1"）：筛选后行数变少时不会留下大片空白。 */
-.agentsTableBox[data-loading="1"] {
-  min-height: calc(39px + 20 * 69px); /* 桌面 N=20：39 + 1380 = 1419px */
-}
-@media (max-width: 640px) {
-  .agentsTableBox[data-loading="1"] {
-    min-height: calc(39px + 10 * 86px); /* 移动端 N=10：39 + 860 = 899px */
-  }
-}
+.toolbarRow { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; margin-bottom: var(--sp-3); }
+.searchInput { height: 28px; width: 300px; max-width: 100%; padding: 0 var(--sp-3); border-radius: 999px; border: 1px solid var(--border); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); }
+.searchInput::placeholder { color: var(--text-muted); }
+.searchInput:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.segTabs { display: inline-flex; border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.segTab, .segTabOn { display: inline-flex; align-items: center; font-size: var(--fs-xs); padding: 4px 10px; text-decoration: none; }
+.segTab { color: var(--text-muted); }
+.segTab:hover { color: var(--primary); }
+.segTabOn { color: var(--text); background: var(--bg-surface2); font-weight: 600; }
+.filters { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.filterBtn, .filterBtnOn { height: 28px; padding: 0 10px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg-surface); font-size: var(--fs-xs); display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.filterBtn { color: var(--text-dim); }
+.filterBtn:hover { border-color: var(--border-hi); }
+.filterBtnOn { color: var(--primary); background: var(--primary-dim); font-weight: 600; }
+.badge { color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.hint { margin-left: auto; font-size: var(--fs-xs); color: var(--text-muted); }
 
-/* 「显示全部 / 收起」一行（与 /system/client-releases、/platform/logic 同款排布） */
-.showAllBar {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  flex-wrap: wrap;
-  margin-top: var(--sp-2);
-}
-.showAllHint {
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.tbl tbody tr:hover td { background: var(--bg-hover); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.thBtn { border: 0; background: transparent; padding: 0; color: inherit; font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.thBtn:hover { color: var(--primary); }
+.nameLink { color: var(--text); text-decoration: none; }
+.nameLink:hover { color: var(--primary); }
+.subCell { display: block; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); word-break: break-all; }
+.srcBadge { margin-left: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 0 6px; color: var(--text-muted); font-family: var(--font-sans); }
+.monoCell { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); }
+
+.chipOk, .chipWarn, .chipCrit, .chipIdle, .chipInfo { display: inline-block; font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chipOk { color: var(--status-ok); }
+.chipWarn { color: var(--status-warn); }
+.chipCrit { color: var(--status-crit); }
+.chipIdle { color: var(--text-muted); }
+.chipInfo { color: var(--info); }
+
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateErr { border-left: 3px solid var(--status-crit); }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.stateMini { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: var(--fs-xs); }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+.noteText { margin: 0; font-size: var(--fs-base); color: var(--text-dim); line-height: 1.7; }
+.inlineLink, .inlineGroup { color: var(--primary); text-decoration: none; margin: 0 2px; }
+.inlineLink:hover, .inlineGroup:hover { text-decoration: underline; }
+.skelRow { display: flex; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.skel { height: 12px; border-radius: 6px; background: var(--bg-surface2); display: inline-block; }
+
+@media (max-width: 900px) { .searchInput { width: 100%; } .hint { margin-left: 0; } }
+
+/* 骨架条宽度档位（替代内联 style，保持 0 内联样式） */
+.skelW1 { width: 24%; } .skelW2 { width: 12%; } .skelW3 { width: 14%; } .skelW4 { width: 10%; } .skelW5 { width: 14%; }

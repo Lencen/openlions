@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
 }
 
 // POST /api/system/comm/send — 运营者与某 agent 的会话
-// 2026-10-27 修两处（商业化线 P0）：
+// 2026-10-27 修两处（运营团队 P0）：
 //   ① **收费写操作必须有授权门**：原来 GET 有 macs.collab 门、POST 没有 → 未授权也能发消息（写操作裸奔）。
 //      现在 POST 最前面同样 requireFeature，未授权/未知一律 402，且**不产生任何副作用**（不调 MACS）。
 //   ② **不再写死具体人名**：原 sender_id 硬编码 "operator"（真实运营者身份），客户版不能 ship 一个具体人名。

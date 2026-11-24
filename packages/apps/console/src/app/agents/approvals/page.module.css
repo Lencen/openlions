@@ -1,115 +1,37 @@
-/* /agents/approvals · P2 批2 呈现层（2026-11-05）
-   页头面包屑的弱化色 + 行内错误提示；其余沿用 globals.css 的 .breadcrumb/.page-subtitle。 */
-
-.crumbDim {
-  color: var(--text-dim);
-}
-
-.err {
-  color: var(--status-crit);
-  margin-bottom: var(--sp-3);
-}
-/* ── PendingApprovalsTable（批4/5 呈现层，pat* 前缀）────────────────────────
-   原来整张表是内联样式：显示名小字 / 终端 code / 档案省略 / 授权勾选区（maxHeight 64 滚动）/
-   审批通过（成功色实心）与拒绝（危险色字）。按钮仍走 globals 的 .btn，这里只补配色。 */
-.patSub { font-size: var(--fs-xs); color: var(--text-dim); }
-.patSm { font-size: var(--fs-sm); }
-.patMuted { color: var(--text-muted); }
-
-/* 档案列：限宽省略（原来是内联 maxWidth/overflow/textOverflow/whiteSpace） */
-.patProfile {
-  display: inline-block;
-  max-width: 200px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  vertical-align: bottom;
-  font-size: var(--fs-sm);
-  color: var(--text-muted);
-}
-
-/* 授权业务 + 操作单元格 */
-.patAuthCell { max-width: 320px; }
-.patAuthBlock { margin-bottom: var(--sp-2); font-size: var(--fs-sm); }
-.patAuthHint { color: var(--text-dim); margin-bottom: var(--sp-1); }
-.patSvcList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--sp-1) var(--sp-2-5);
-  max-height: 64px;
-  overflow-y: auto;
-}
-.patSvcItem {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-0-5);
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-/* 审批/拒绝按钮行 */
-.patActRow { display: flex; gap: var(--sp-1-5); flex-wrap: wrap; }
-.patApprove { background: var(--status-ok); color: var(--on-accent); border-color: transparent; }
-.patReject { color: var(--status-crit); }
-
-/* 空态（原来是内联 padding sp-7 + 居中 + 提示行） */
-.patEmpty { padding: var(--sp-7); text-align: center; color: var(--text-muted); }
-.patEmptyHint { margin-top: var(--sp-2); font-size: var(--fs-base); }
-
-/* ── 批6（page.tsx 本体：KPI 带 / 一次性领取券 / 页脚出链）2026-11-05 ───────────
-   原来这 13 处是内联 style；能复用 .kpi-grid / .tiny / .badge 的仍然复用，这里只补差量。 */
-
-/* KPI 带：原来是内联 marginBottom: var(--sp-3)（.kpi-grid 自带 --gap-sect，这里保留改前值）。
-   双类名：确保压过 globals.css 的 .kpi-grid，与改前内联的优先级等价。 */
-.aprKpi.aprKpi { margin-bottom: var(--sp-3); }
-
-/* 一次性领取券卡片（原来内联 margin/padding/圆角/底色/主色描边） */
-.aprTicket {
-  margin: var(--sp-3) 0;
-  padding: var(--sp-3);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--primary);
-}
-.aprTicketTitle { font-size: var(--fs-md); font-weight: 600; margin-bottom: var(--sp-1-5); }
-.aprTicketRow { display: flex; gap: var(--sp-2); align-items: center; margin-bottom: var(--sp-1-5); }
-
-/* 券值代码块：长券值不撑破布局（原来内联 wordBreak: break-all） */
-.aprTicketCode {
-  flex: 1;
-  font-size: var(--fs-base);
-  word-break: break-all;
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--radius-xs);
-  background: var(--bg);
-}
-
-/* 「复制 / 收起」按钮（原来内联 padding/字号/圆角/光标/底色/描边/前景色） */
-.aprTicketBtn {
-  padding: var(--sp-1) var(--sp-2);
-  font-size: var(--fs-sm);
-  border-radius: var(--radius-xs);
-  cursor: pointer;
-  background: var(--bg-hover);
-  border: 1px solid var(--border);
-  color: var(--text);
-}
-
-.aprTicketNote { font-size: var(--fs-sm); color: var(--text-muted); }
-
-/* 命令折叠区（原文一字未删，只把内联样式换成类） */
-.aprTicketDetails { margin-top: var(--sp-1-5); }
-.aprTicketSummary { cursor: pointer; font-size: var(--fs-sm); }
-.aprTicketPre {
-  font-size: var(--fs-sm);
-  padding: var(--sp-2);
-  border-radius: var(--radius-sm);
-  background: var(--bg);
-  overflow-x: auto;
-  margin: var(--sp-1-5) 0 0;
-}
-.aprTicketHint { font-size: var(--fs-sm); color: var(--text-muted); margin-top: var(--sp-1); }
-
-/* 页脚「相关视图」出链行（与 .tiny 组合使用） */
-.aprLinks { display: flex; gap: var(--sp-4); flex-wrap: wrap; margin-top: var(--sp-4); }
-
+/* /agents/approvals · 0.5 批E demo slot 还原（2026-11-13）
+   s12 摘要（4 KPI）+ s12 接入审批表；只放布局/表格/状态类，颜色字号走 tokens。 */
+.crumbs { display: flex; gap: 6px; margin: 6px 0 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.crumbs span { border: 1px solid var(--border); border-radius: 999px; padding: 0 8px; line-height: 20px; }
+.crumbOn { color: var(--status-ok); }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap-block); margin-bottom: var(--gap-sect); }
+.card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); min-width: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.cardHead { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
+.cardTitle { font-size: var(--fs-lg); font-weight: 600; margin: 0; }
+.sub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.tagOk { font-size: var(--fs-xs); color: var(--status-ok); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.tblWrap { overflow-x: auto; }
+.tbl { width: 100%; border-collapse: collapse; font-size: var(--fs-base); }
+.tbl th { text-align: left; font-weight: 600; font-size: var(--fs-xs); color: var(--text-muted); padding: 10px 10px; border-bottom: 1px solid var(--border); white-space: nowrap;  line-height: 24px; }
+.tbl td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: top;  line-height: 24px; }
+.tbl tbody tr:hover td { background: var(--bg-hover); }
+.monoCell { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }
+.naCell { color: var(--text-muted); font-size: var(--fs-xs); line-height: 1.7; }
+.chipOk, .chipWarn, .chipCrit, .chipIdle { display: inline-block; font-size: var(--fs-xs); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.chipOk { color: var(--status-ok); }
+.chipWarn { color: var(--status-warn); }
+.chipCrit { color: var(--status-crit); }
+.chipIdle { color: var(--text-muted); }
+.state { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--sp-4); color: var(--text-muted); display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.stateTitle { color: var(--text); font-size: var(--fs-lg); }
+.stateText { margin: 0; font-size: var(--fs-base); line-height: 1.6; }
+.stateMini { border: 1px dashed var(--border); border-radius: var(--radius-md); padding: 20px 12px; text-align: center; color: var(--text-muted); font-size: var(--fs-xs); }
+.btn { border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text); font-size: var(--fs-xs); padding: 4px 10px; cursor: pointer; margin-top: var(--sp-2); }
+.btn:hover { border-color: var(--primary); color: var(--primary); }
+.foot { display: flex; gap: var(--sp-1); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); margin: 0; padding-top: var(--sp-2); }
+.skelRow { display: flex; gap: var(--sp-3); padding: 10px 0; border-bottom: 1px solid var(--border); }
+.skel { height: 12px; border-radius: 6px; background: var(--bg-surface2); display: inline-block; }
+.skelW1 { width: 14%; }
+.skelW2 { width: 34%; }
+.skelW3 { width: 18%; }
+@media (max-width: 1280px) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) { .kpis { grid-template-columns: 1fr; } }

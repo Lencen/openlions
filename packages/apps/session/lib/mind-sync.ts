@@ -84,7 +84,7 @@ const AGENT_NAMES: Record<string, string> = {
   "agent-h": "UT (hermes/本机)",
   "agent-g": "UTC (claude)",
   "agent-b": "[host]",
-  "agent-c": "agent-x-host",
+  "agent-c": "agent-c-host",
 };
 
 /**

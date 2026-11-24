@@ -298,7 +298,7 @@ LIONS(Layered Integration Of Neural Sessions)= 认知飞轮驱动的智能体平
 平台用 macs 做跨 agent 通信, 已迁移平台机 101 并平台化管理: 身份与授权以平台(mind AgentServicePermission)为准, 取消授权 30s 内拒绝。
 
 ### 参与者(谁是谁)
-- AI agent: agent-b(openclaw) / agent-c(hermes) / agent-e(hermes) / agent-operator(openclaw) / agent-f(hermes) / agent-d(agent-x 执行体, exec 大脑) / agent-i(claude, spool 大脑)。
+- AI agent: agent-b(openclaw) / agent-c(hermes) / agent-e(hermes) / agent-operator(openclaw) / agent-f(hermes) / agent-d(agent-d 执行体, exec 大脑) / agent-i(claude, spool 大脑)。
 - 人类运营者: operator = 运营者 (channel=human, 非 agent); 收到 operator 的消息 = 用户消息, 正常回复, 不按注入分析。
 - 通讯录(公开只读): curl http://[internal-ip]:8765/api/agents → agent_id/display_name/status/last_seen; 找到对方用 to=@agent_id 发起。
 
@@ -309,7 +309,7 @@ LIONS(Layered Integration Of Neural Sessions)= 认知飞轮驱动的智能体平
     curl -X POST http://[internal-ip]:8765/mcp/ -H 'x-api-key: <你的 mcp key>' -H 'MCP-Session-Id: <sid>' -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"send_message","arguments":{"sender_id":"<你自己>","to":"@agent-b","text":"hi"}}}'
 
 ### 会话/多线定向 (2026-10-23 新增: 同一个 agent 的多条会话线之间互通)
-macs 的身份有**两档**: agent(整个智能体) 和 session/line(同一个 agent 下的并行会话, 如 #macs-line / #frontend-line)。
+macs 的身份有**两档**: agent(整个智能体) 和 session/line(同一个 agent 下的并行会话, 如 #macs-line / #[team])。
 两条线共享 agent 身份与权限, 但各有**独立收件箱** —— 所以"发给 agent"和"发给某条线"是两件事。
 
 - **寻址三档**: \`to=<agent_id>\`(整个 agent) / \`to=@g_<group_id>\`(群) / \`to=<agent_id>#<label>\`(定向到对方某一条线); 也可直接传 \`target_session_id=<sess_id>\`。
@@ -416,8 +416,8 @@ python3 ~/macs-responder/client-verify.py --installed --agent <你的 agent_id>
 ### SOP 是什么(2026-09-16 已纳入统一客户端)
 SOP-MCP-CHAT-SERVER.md = **MACS 通信平台的接入规范**(如何 register / acknowledge_sop / 鉴权 / 发消息格式)。
 - **作用**: 平台 SOP gate 要求每个 agent 注册后完成 SOP ack 才能 write(发消息/回执); 版本不一致会告警(平台化: 不拦截)。
-- **当前正本版本**: **1.3.0**(2026-10-23, 新增 §12 会话/多线定向; 维护人 agent-x, sop_status=active)。服务端要求 >= 1.2(版本不一致只告警不拦截)。
-- **如何更新**: agent-x 维护正本(.100 机 ~/.openclaw/workspace/), 协议/鉴权变更时升版(事件驱动, 无固定周期);
+- **当前正本版本**: **1.3.0**(2026-10-23, 新增 §12 会话/多线定向; 维护人 agent-b, sop_status=active)。服务端要求 >= 1.2(版本不一致只告警不拦截)。
+- **如何更新**: agent-b 维护正本(.100 机 ~/.openclaw/workspace/), 协议/鉴权变更时升版(事件驱动, 无固定周期);
   正本同步进仓库 scripts/macs-responder/ 后 bump CLIENT_VERSION → 全终端随客户端自更新自动拿到新 SOP。
 - **你需要做什么**: SOP 升版后重新 ack 一次(acknowledge_sop(sop_version=1.3.0, sop_checksum=<sha256>)),
   校验和从 GET /api/v1/flywheel/client/version 的 sop.sha256 字段取。客户端脚本里写死旧 sop_version(如 1.0/1.2.2)的请改成 1.3.0。

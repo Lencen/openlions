@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireFeature } from "@/lib/server/license-gate";
 import {
   asOf, attributeCall, bucketIndex, makeBuckets, modelForEntry, num, openMind, parseAgentOutput, parseCallTitle, q,
-  resolveRange, round, safeClose, scalar, tableColumns,
+  resolveRange, round, safeClose, scalar, tableColumns, tsParam,
 } from "@/lib/server/lions-db";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     mind,
     "SELECT sourceType, sourceTitle, targetStage, sourceId, createdAt" + (hasModelCol ? ", model" : "") + " FROM FlywheelEvent " +
       "WHERE stage='CALL_LLM' AND createdAt > ? ORDER BY createdAt DESC LIMIT 50000",
-    r.since
+    tsParam(r.since)
   );
 
   const buckets = makeBuckets(r, now);
@@ -253,12 +253,12 @@ export async function GET(req: Request) {
     mind,
     "SELECT agentId, COUNT(*) n, SUM(CASE WHEN qualityPassed=1 THEN 1 ELSE 0 END) passed, MAX(COALESCE(completedAt, startedAt, createdAt)) lastAt " +
       "FROM TaskExecution WHERE COALESCE(completedAt, startedAt, createdAt) > ? GROUP BY agentId ORDER BY n DESC LIMIT 20",
-    r.since
+    tsParam(r.since)
   );
   const submitRows = await q(
     mind,
     "SELECT sourceTitle, createdAt FROM FlywheelEvent WHERE stage='AGENT_OUTPUT_INGESTED' AND createdAt > ? LIMIT 500",
-    r.since
+    tsParam(r.since)
   );
   const submitAgg = new Map<string, { n: number; qSum: number; qN: number }>();
   for (const s of submitRows) {
@@ -318,8 +318,25 @@ export async function GET(req: Request) {
     ? filteredByAgent.reduce((s, a) => s + a.totalTokens, 0)
     : agentTokens;
 
+  // 2026-11-15（B1 数据侧）：口径守卫 —— 明确「实测不含估算」，并对异常均值给出告警，避免再次出现 10x 误读。
+  const avgPerMeasured = measuredCalls ? measuredTokens / measuredCalls : 0;
+  if (measuredCalls > 0 && avgPerMeasured > 100000) {
+    warnings.push("实测 tokens/调用均值 " + Math.round(avgPerMeasured) + " 超过 10 万，疑似单位错位（检查 tok= 原始值/窗口）");
+  }
+  if (measuredCalls === 0 && measuredTokens > 0) {
+    warnings.push("measuredTokens 非 0 但 measuredCalls=0，口径异常（应检查 tok= 解析）");
+  }
   safeClose(mind);
   return NextResponse.json({
+    caliber: {
+      measured: "仅 tok= 实测行；不包含估算；summary.totalTokens=measuredTokens",
+      estimated: "tok≈ / chars≈ 为估算/未计量，单列不并入 totalTokens",
+      windowKey: r.key,
+      since: r.since,
+      rows: rows.length,
+      measuredCalls,
+      avgPerMeasuredCall: Math.round(avgPerMeasured),
+    },
     asOf: asOf(),
     range: { key: r.key, label: r.label, since: r.since, points: buckets.map((b) => ({ label: b.label, ts: b.ts })) },
     warnings,

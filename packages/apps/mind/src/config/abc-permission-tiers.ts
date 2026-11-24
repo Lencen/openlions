@@ -1,10 +1,10 @@
 /**
- * abc-permission-tiers.ts — ABC 三类权限分级单一来源 (agent-x P0#11, 2026-09-23)
+ * abc-permission-tiers.ts — ABC 三类权限分级单一来源 (agent-f P0#11, 2026-09-23)
  *
  * 决策来源 (与平台记忆同源, 禁止二次定义):
- *   - operator↔agent-d 会话 conv_bb5d4f7066cf msg 31 拍板 + agent-x 反馈 #11;
+ *   - operator↔agent-d 会话 conv_bb5d4f7066cf msg 31 拍板 + agent-f 反馈 #11;
  *   - 分档规则:
- *       A 类 = 纯只读零风险 → 本周开放, 复用 agent-x #3 的 readonly-protocol-whitelist
+ *       A 类 = 纯只读零风险 → 本周开放, 复用 agent-f #3 的 readonly-protocol-whitelist
  *              (method/endpoint 前缀/入参 schema 三件套已齐), 另配**清单**与灰度观察;
  *       B 类 = 受控可写     → **必须** whitelist + audit + rate-limit 三件套齐备才可开,
  *              任一缺失即 fail-closed 不得放行 (本文件 = 闸门, 未过闸的一律 enabled:false);

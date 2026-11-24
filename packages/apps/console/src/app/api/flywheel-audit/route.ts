@@ -17,16 +17,17 @@ export async function GET(req: NextRequest) {
     const now = Date.now();
 
     // 1. 时间线: 最近 FlywheelEvent (按时间倒序)
-    let sql = "SELECT stage, sourceType, sourceTitle, createdAt FROM FlywheelEvent WHERE 1=1";
+    let sql = "SELECT stage, \"sourceType\", \"sourceTitle\", \"createdAt\" FROM \"FlywheelEvent\" WHERE 1=1";
     const params: any[] = [];
-    if (stage) { sql += " AND stage = $1"; params.push(stage); }
-    sql += " ORDER BY createdAt DESC LIMIT $2 OFFSET $3";
+    let pi = 1;
+    if (stage) { sql += " AND stage = $" + pi++; params.push(stage); }
+    sql += " ORDER BY \"createdAt\" DESC LIMIT $" + pi++ + " OFFSET $" + pi;
     params.push(limit, offset);
     const events = await q(mind, sql, ...params);
 
     // 2. 错误记录 (最近)
     const errors = await q(mind, 
-      "SELECT errorType, stage, sessionId, message, occurredAt FROM FlywheelErrorLog ORDER BY occurredAt DESC LIMIT $1",
+      "SELECT \"errorType\", stage, \"sessionId\", message, \"occurredAt\" FROM \"FlywheelErrorLog\" ORDER BY \"occurredAt\" DESC LIMIT $1",
       status === "error" ? limit : 20
     );
 
@@ -34,11 +35,11 @@ export async function GET(req: NextRequest) {
     const today = new Date(); today.setHours(0,0,0,0);
     const todayMs = today.getTime();
     const byStage = await q(mind, 
-      "SELECT stage, COUNT(*) as c FROM FlywheelEvent WHERE createdAt > $1 GROUP BY stage ORDER BY c DESC",
+      "SELECT stage, COUNT(*) as c FROM \"FlywheelEvent\" WHERE \"createdAt\" > $1 GROUP BY stage ORDER BY c DESC",
       todayMs
     );
     const errorCount = await one(mind, 
-      "SELECT COUNT(*) as c FROM FlywheelErrorLog WHERE occurredAt > $1",
+      "SELECT COUNT(*) as c FROM \"FlywheelErrorLog\" WHERE \"occurredAt\" > $1",
       todayMs
     );
 

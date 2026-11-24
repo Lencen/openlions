@@ -151,7 +151,6 @@ const UTILITY_PAGES: {
   { id: 'observability', href: '/system/observability', icon: 'activity', groupId: 'platform', keywords: '' },
   { id: 'systemPermissions', href: '/system/permissions', icon: '📄', groupId: 'platform', keywords: '' },
   { id: 'systemRotation', href: '/system/rotation', icon: '📄', groupId: 'platform', keywords: '' },
-  { id: 'versionBoard', href: '/system/version-board', icon: 'package', groupId: 'platform', keywords: '' },
   { id: 'terminalsDetail', href: '/terminals/detail', icon: '📄', groupId: 'toolbox', keywords: '' },
   { id: 'workbench', href: '/workbench', icon: '📄', groupId: 'board', keywords: '' },
 ];
@@ -178,7 +177,6 @@ export const PAGE_INDEX: SearchPage[] = [
       groupLabel: g.label,
       color: g.color,
       keywords: KEYWORDS[it.id] || '',
-      utility: it.utility,   // 2026-11-06: nav 页也可标"工具页"（如 /system/version-board）
     })),
   ),
   ...UTILITY_PAGES.map((p) => {

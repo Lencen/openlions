@@ -43,7 +43,7 @@ export const QUALITY_LABELS: Record<string, string> = {
 export const ERROR_COLORS: Record<string, string> = { RATE_LIMIT: "var(--err-rate-limit)", SCHEMA_INVALID: "var(--err-schema)", NETWORK: "var(--err-network)", AUTH_ERROR: "var(--err-auth)", TIMEOUT: "var(--err-timeout)", UNKNOWN: "var(--err-unknown)", SERVER_ERROR: "var(--err-server)" };
 
 // ── 2026-11-06 · 0.4.32-03 · 数据卡 9 指标带（/flywheel）─────────────────────────
-// 口径唯一来源：docs/design/uiux-bento-2026-11/data-cards/card-9-flywheel.md 行 15「指标（≤4）」
+// 口径唯一来源：[internal-doc] 行 15「指标（≤4）」
 //   + 行 26-73「异常判据」。服务端（/api/flywheel-health 的 card9 块）按判据算好 state；
 //   指标带按 2026-11-06 裁决**只报「值」**（阈值/判定在判据条 Card9Checks）；
 //   未知（value=null）-> 「未知」+ reason，不写 0。

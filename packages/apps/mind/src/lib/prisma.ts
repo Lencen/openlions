@@ -10,7 +10,7 @@ const IS_PG_DRIVER = true;
 //  （带 InternalArgs），会产生 50+ 处 "not assignable" 级联错误。这里显式断言回原类型，保持一行可回退。
 const PrismaClient = PgClient as unknown as typeof SqliteClient;
 type PrismaClientType = InstanceType<typeof SqliteClient>;
-// 2026-10-11 round 73-B: SQLite 临时文件目录兜底已抽到**单一实现** src/lib/sqlite-tempdir.ts。
+// 2026-10-11 round 73-B: SQLite 临时文件目录兜底已抽到**单一实现** src/lib/sqlite-tempdir.ts（该模块已于 2026-11-12 SQLite 退役时删除，本注仅存历史）。
 //   import 即执行(ES import 提升), 早于下面的 new PrismaClient(); 覆盖全 mind 应用唯一 Prisma 客户端。
 // 2026-10-08 round 58(人类批准): 标题/名字合规的**单点保证**.
 //   为什么放在这里: 平台有 28% 的新产物标题超长(Knowledge 33.9%/Practice 31.3%/Memory 17.3%/Skill 名 44.2%),
@@ -59,12 +59,12 @@ function normalizeWriteArgs(model: string, args: any): void {
   } catch { /* 归一失败绝不阻断写入 */ }
 }
 
-// 2026-10-11 round 73-B: SQLite 临时文件目录兜底已抽到**单一实现** src/lib/sqlite-tempdir.ts
+// 2026-10-11 round 73-B: SQLite 临时文件目录兜底已抽到**单一实现** src/lib/sqlite-tempdir.ts（已于 2026-11-12 退役删除）
 //   (原 73 版内联在此, 只覆盖 Prisma 路径; 73-B 实测 scripts/session-extract.ts 走 better-sqlite3
 //    直连, 同根因(SQLITE_CANTOPEN)必红, 故抽成共享模块, 两个入口都 import)。
 //   根因/修法/证据见该文件头注释; 本文件在唯一 PrismaClient 构造点之前生效。
 
-// 2026-10-27 P0（商业化线批准）：**模块 import 不再解析 DSN、不再 throw**。
+// 2026-10-27 P0（运营团队批准）：**模块 import 不再解析 DSN、不再 throw**。
 //   原因: `next build` 的 "collecting page data" 会 import 所有 route 模块 → 链式 import 到本文件 →
 //   原实现在模块顶层构造 PrismaClient 时调 mindPgUrl() → 无 DB 的机器**直接 build 失败**，
 //   连"这个页面运行期根本不需要数据"的情况也过不去。开源版 clean-room 就是死在这里。
@@ -273,7 +273,7 @@ function convertDates(obj: any): any {
 
 // 2026-10-21 Phase 2: raw SQL 在 PG 模式下做方言适配（? -> $n；未引号表列名 -> 带引号）。
 function adaptDateParam(v: any, toMs: boolean) {
-  // 2026-10-27（商业化线 P0 + 我这边 submit 500 同根因）：
+  // 2026-10-27（运营团队 P0 + 我这边 submit 500 同根因）：
   //   sql-dialect 把日期列的比较/写入重写成 `to_timestamp($n::double precision / 1000.0)`，
   //   也就是**期望 $n 是毫秒整数**。而调用方常直接传 JS `Date`，PG 就会报
   //     ERROR 42846: cannot cast type timestamp with time zone to double precision

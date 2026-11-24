@@ -45,7 +45,7 @@ export default function RegisterPage() {
   };
 
   const DownloadCard = () => (
-    <div className="panel" style={{ padding: 16, marginTop: 16, textAlign: "left" }}>
+    <div className="panel" data-slot="client-download-card" style={{ padding: 16, marginTop: 16, textAlign: "left" }}>
       <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 6 }}>① 先装客户端（每个 agent 都要装）</div>
       {latest ? (
         <>
@@ -79,7 +79,7 @@ export default function RegisterPage() {
 
   if (result?.pending) {
     return (
-      <main className="main" style={{ marginLeft: 0, padding: "48px 32px", maxWidth: 560, margin: "0 auto" }}>
+      <main className="main" data-slot="register-pending" style={{ marginLeft: 0, padding: "48px 32px", maxWidth: 560, margin: "0 auto" }}>
         <div className="panel" style={{ textAlign: "center", padding: 40 }}>
           <div style={{ fontSize: 44, marginBottom: 12 }}>🛂</div>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>注册已提交, 等待管理员审批</h1>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="main" style={{ marginLeft: 0, padding: "32px", maxWidth: 560, margin: "0 auto" }}>
+    <main className="main" data-slot="register-page" style={{ marginLeft: 0, padding: "32px", maxWidth: 560, margin: "0 auto" }}>
       <div className="breadcrumb">
         <span style={{ color: "var(--text-dim)" }}>AI 接入层</span>
         <span className="sep">/</span>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
 
       <DownloadCard />
 
-      <div className="panel">
+      <div className="panel" data-slot="register-form">
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
             <label style={{ fontSize: 12, color: "var(--text-dim)", display: "block", marginBottom: 5 }}>Agent ID (kebab-case) <span style={{ color: "var(--primary)" }}>*</span></label>
@@ -144,7 +144,7 @@ export default function RegisterPage() {
               <select style={input} value={form.framework} onChange={(e) => setForm({ ...form, framework: e.target.value, channel: e.target.value === "hermes" ? "hermes" : "custom" })}>
                 <option value="openclaw">OpenClaw</option>
                 <option value="hermes">Hermes</option>
-                <option value="dsh">DSH (agent-x Harness)</option>
+                <option value="dsh">DSH (agent-d Harness)</option>
                 <option value="custom">其他</option>
               </select>
             </div>

@@ -58,15 +58,15 @@ export default function DocsPage() {
   }, []);
 
   return (
-    <main className="main" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
-      <div style={{ marginBottom: 20 }}>
+    <main className="main" data-slot="docs-page" style={{ marginLeft: 0, padding: "28px 32px", maxWidth: 1080 }}>
+      <div style={{ marginBottom: 20 }} data-slot="docs-header">
         <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 6 }}>接入文档</h1>
         <p style={{ color: "var(--text-dim)", fontSize: 13 }}>
           AI 接入即获得全部能力 — 注册 / 认证 / 统一知识查询三步接入
         </p>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <div data-slot="api-endpoint-list" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {DOCS.map((d) => (
           <div key={d.path} className="panel" style={{ padding: "16px 20px", marginBottom: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
@@ -86,7 +86,7 @@ export default function DocsPage() {
       </div>
 
       {/* MCP 工具 */}
-      <div className="panel" style={{ marginTop: 12 }}>
+      <div className="panel" data-slot="mcp-tools" style={{ marginTop: 12 }}>
         <div className="panel-header" style={{ borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", margin: "calc(var(--sp-5) * -1) calc(var(--sp-5) * -1) var(--sp-4)" }}>
           <span className="panel-title" style={{ "--tab-color": "var(--module-builtin)" } as React.CSSProperties}>MCP 工具 (跨 Agent 通信)</span>
         </div>

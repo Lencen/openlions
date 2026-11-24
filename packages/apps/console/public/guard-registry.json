@@ -1,17 +1,17 @@
 {
   "schema": 1,
   "generator": "scripts/guard-registry.cjs",
-  "generatedAt": "2026-11-03T07:27:19.319Z",
+  "generatedAt": "2026-11-24T02:06:36.358Z",
   "description": "平台守门机制总表 — 从源码自动抽取, 单一事实来源。任何守门增删都会改变 fingerprint。",
-  "fingerprint": "e1c569b0816fe86b1cef1edbae8d799e89514daa78690bb877a771cc66081b4a",
+  "fingerprint": "45f4d4f3c43ee4323b4a5467460ffffc3bf4bbcbdc4ab00990cdfc1a5d78a442",
   "totals": {
-    "all": 478,
+    "all": 488,
     "byLayer": {
       "L1": 24,
       "L2": 120,
-      "L3": 85,
+      "L3": 86,
       "L4": 17,
-      "L5": 131,
+      "L5": 140,
       "L6": 101
     }
   },
@@ -35,7 +35,7 @@
       "name": "验收判据 (acceptance specs)",
       "desc": "按任务类型匹配判据, 决定 DONE 待办能否升级为已完成",
       "trigger": "任务结论判定时",
-      "count": 85
+      "count": 86
     },
     {
       "id": "L4",
@@ -49,7 +49,7 @@
       "name": "单点规范文档 (guard docs)",
       "desc": "docs/platform-logic 内含守门/闸门说明的单点文档(此前各写各的、无索引)",
       "trigger": "人工阅读/机制依据",
-      "count": 131
+      "count": 140
     },
     {
       "id": "L6",
@@ -132,7 +132,7 @@
       "recompute": "node scripts/check-asset-scope.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 513
+        "line": 532
       }
     },
     {
@@ -147,7 +147,7 @@
       "recompute": "node scripts/check-changelog-gate.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 477
+        "line": 496
       }
     },
     {
@@ -162,7 +162,7 @@
       "recompute": "node scripts/check-guard-registry-fresh.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 495
+        "line": 514
       }
     },
     {
@@ -177,7 +177,7 @@
       "recompute": "node scripts/check-import-tracked.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 535
+        "line": 554
       }
     },
     {
@@ -192,7 +192,7 @@
       "recompute": "node scripts/check-nav-ia.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 441
+        "line": 460
       }
     },
     {
@@ -207,7 +207,7 @@
       "recompute": "node scripts/check-status-key-coverage.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 557
+        "line": 576
       }
     },
     {
@@ -222,7 +222,7 @@
       "recompute": "node scripts/guide-version-guard.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 420
+        "line": 439
       }
     },
     {
@@ -267,7 +267,7 @@
       "recompute": "node scripts/pl-trust-guard.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 361
+        "line": 366
       }
     },
     {
@@ -387,7 +387,7 @@
       "recompute": "node scripts/test-ui-copy-business-terms.cjs",
       "ref": {
         "file": "scripts/precommit-ts-check.sh",
-        "line": 399
+        "line": 418
       }
     },
     {
@@ -2836,6 +2836,21 @@
       }
     },
     {
+      "id": "L3:leftover-verify:no-undelivered-selfclaim",
+      "layer": "L3",
+      "name": "LEFTOVER_VERIFY / no-undelivered-selfclaim",
+      "file": "scripts/acceptance/specs/leftover-verify.json",
+      "line": 90,
+      "trigger": "任务类型=LEFTOVER_VERIFY (must)",
+      "action": "script",
+      "note": "完成度：产出出现'尚未交付/尚未完成/均未全部落地'自述（排除否定句与引用句）-> FAIL。收窄版见 scripts/check-undelivered-selfclaim.cjs",
+      "recompute": "node scripts/acceptance/runner.cjs <taskId>",
+      "ref": {
+        "file": "scripts/acceptance/specs/leftover-verify.json",
+        "line": 90
+      }
+    },
+    {
       "id": "L3:qa:has-answer",
       "layer": "L3",
       "name": "QA / has-answer",
@@ -3725,14 +3740,14 @@
       "layer": "L4",
       "name": "claimGateMissing()",
       "file": "packages/apps/mind/src/server/pipeline/task-revive-core.ts",
-      "line": 88,
+      "line": 102,
       "trigger": "运行期(调用点决定)",
       "action": "门禁函数",
       "note": "导出函数; 名字含 Gate/Guard/Reject/Assert/Check",
       "recompute": "cd packages/apps/mind && npx tsc --noEmit",
       "ref": {
         "file": "packages/apps/mind/src/server/pipeline/task-revive-core.ts",
-        "line": 88
+        "line": 102
       }
     },
     {
@@ -3740,14 +3755,14 @@
       "layer": "L4",
       "name": "shouldRejectAssignment()",
       "file": "packages/apps/mind/src/server/pipeline/todo-consumer.ts",
-      "line": 133,
+      "line": 126,
       "trigger": "运行期(调用点决定)",
       "action": "门禁函数",
       "note": "导出函数; 名字含 Gate/Guard/Reject/Assert/Check",
       "recompute": "cd packages/apps/mind && npx tsc --noEmit",
       "ref": {
         "file": "packages/apps/mind/src/server/pipeline/todo-consumer.ts",
-        "line": 133
+        "line": 126
       }
     },
     {
@@ -3763,6 +3778,21 @@
       "ref": {
         "file": "docs/platform-logic/2026-09-17-db-corrupt-handoff.md",
         "line": 11
+      }
+    },
+    {
+      "id": "L5:2026-10-21-bplan-claim-compat-layered-verdict",
+      "layer": "L5",
+      "name": "2026-10-21-bplan-claim-compat-layered-verdict.md",
+      "file": "docs/platform-logic/2026-10-21-bplan-claim-compat-layered-verdict.md",
+      "line": 5,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "闸门口径 COMPATIBLE, 生产口径(完整认领路由) INCOMPATIBLE。遗留项未解决, 179f02d5 的\"兼容\"结论只在半个口径上成立。**",
+      "recompute": "sed -n '5p' docs/platform-logic/2026-10-21-bplan-claim-compat-layered-verdict.md",
+      "ref": {
+        "file": "docs/platform-logic/2026-10-21-bplan-claim-compat-layered-verdict.md",
+        "line": 5
       }
     },
     {
@@ -3811,6 +3841,51 @@
       }
     },
     {
+      "id": "L5:2026-10-22-no-new-mind-db-direct-writers-verdict",
+      "layer": "L5",
+      "name": "2026-10-22-no-new-mind-db-direct-writers-verdict.md",
+      "file": "docs/platform-logic/2026-10-22-no-new-mind-db-direct-writers-verdict.md",
+      "line": 15,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "闸门被移除(不再有 requireWriteWindow(...)/mind-db-write-window.cjs)",
+      "recompute": "sed -n '15p' docs/platform-logic/2026-10-22-no-new-mind-db-direct-writers-verdict.md",
+      "ref": {
+        "file": "docs/platform-logic/2026-10-22-no-new-mind-db-direct-writers-verdict.md",
+        "line": 15
+      }
+    },
+    {
+      "id": "L5:2026-10-22-todo_fa60ad378e884faa93a4-registry-heartbeat-frozen-gate",
+      "layer": "L5",
+      "name": "2026-10-22-todo_fa60ad378e884faa93a4-registry-heartbeat-frozen-gate.md",
+      "file": "docs/platform-logic/2026-10-22-todo_fa60ad378e884faa93a4-registry-heartbeat-frozen-gate.md",
+      "line": 24,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "守门成对**: 既有 `check-orphan-service-keys.cjs`(守门)缺一个能发现",
+      "recompute": "sed -n '24p' docs/platform-logic/2026-10-22-todo_fa60ad378e884faa93a4-registry-heartbeat-frozen-gate.md",
+      "ref": {
+        "file": "docs/platform-logic/2026-10-22-todo_fa60ad378e884faa93a4-registry-heartbeat-frozen-gate.md",
+        "line": 24
+      }
+    },
+    {
+      "id": "L5:2026-10-23-cmv2fda8p-dangling-commits-3sha-verdict-agent-e",
+      "layer": "L5",
+      "name": "2026-10-23-cmv2fda8p-dangling-commits-3sha-verdict-agent-e.md",
+      "file": "docs/platform-logic/2026-10-23-cmv2fda8p-dangling-commits-3sha-verdict-agent-e.md",
+      "line": 57,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "闸门阻塞(附根因)",
+      "recompute": "sed -n '57p' docs/platform-logic/2026-10-23-cmv2fda8p-dangling-commits-3sha-verdict-agent-e.md",
+      "ref": {
+        "file": "docs/platform-logic/2026-10-23-cmv2fda8p-dangling-commits-3sha-verdict-agent-e.md",
+        "line": 57
+      }
+    },
+    {
       "id": "L5:2026-10-23-f0b171d-c7-write-side-guard-attribution-verdict",
       "layer": "L5",
       "name": "2026-10-23-f0b171d-c7-write-side-guard-attribution-verdict.md",
@@ -3838,6 +3913,36 @@
       "ref": {
         "file": "docs/platform-logic/2026-10-23-heartbeat-at-migration-verdict-agent-d.md",
         "line": 72
+      }
+    },
+    {
+      "id": "L5:FLYWHEEL-BUSINESS-DASHBOARD-DESIGN-2026-10-26",
+      "layer": "L5",
+      "name": "FLYWHEEL-BUSINESS-DASHBOARD-DESIGN-2026-10-26.md",
+      "file": "docs/platform-logic/FLYWHEEL-BUSINESS-DASHBOARD-DESIGN-2026-10-26.md",
+      "line": 61,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "闸门/改模型，指标要能按\"变更前后\"切分，禁止混着比。",
+      "recompute": "sed -n '61p' docs/platform-logic/FLYWHEEL-BUSINESS-DASHBOARD-DESIGN-2026-10-26.md",
+      "ref": {
+        "file": "docs/platform-logic/FLYWHEEL-BUSINESS-DASHBOARD-DESIGN-2026-10-26.md",
+        "line": 61
+      }
+    },
+    {
+      "id": "L5:FLYWHEEL-BUSINESS-RESEARCH-2026-10-26",
+      "layer": "L5",
+      "name": "FLYWHEEL-BUSINESS-RESEARCH-2026-10-26.md",
+      "file": "docs/platform-logic/FLYWHEEL-BUSINESS-RESEARCH-2026-10-26.md",
+      "line": 83,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "守门/决策 | DROPPED 4,151 / DONE 1,518 / DOING 104 |",
+      "recompute": "sed -n '83p' docs/platform-logic/FLYWHEEL-BUSINESS-RESEARCH-2026-10-26.md",
+      "ref": {
+        "file": "docs/platform-logic/FLYWHEEL-BUSINESS-RESEARCH-2026-10-26.md",
+        "line": 83
       }
     },
     {
@@ -3871,6 +3976,21 @@
       }
     },
     {
+      "id": "L5:FULL-DUPLEX-LINE-SPEC-2026-11-13",
+      "layer": "L5",
+      "name": "FULL-DUPLEX-LINE-SPEC-2026-11-13.md",
+      "file": "docs/platform-logic/FULL-DUPLEX-LINE-SPEC-2026-11-13.md",
+      "line": 434,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "守门拒绝，<code>audit_violations=1</code>，但「漂移明细」为空。定位为仓库级 MAP-MISSING 债务：<code>docs/platform-logic/probe.md</code>（8 字节「# probe」、untracked、2026-11-11 06:14 创建、仓库内无脚",
+      "recompute": "sed -n '434p' docs/platform-logic/FULL-DUPLEX-LINE-SPEC-2026-11-13.md",
+      "ref": {
+        "file": "docs/platform-logic/FULL-DUPLEX-LINE-SPEC-2026-11-13.md",
+        "line": 434
+      }
+    },
+    {
       "id": "L5:HANDOFF-2026-10-16-mind-db-P0",
       "layer": "L5",
       "name": "HANDOFF-2026-10-16-mind-db-P0.md",
@@ -3886,17 +4006,17 @@
       }
     },
     {
-      "id": "L5:HANDOFF-asset-line-2026-10-30",
+      "id": "L5:HANDOFF-[team]-10-30",
       "layer": "L5",
-      "name": "HANDOFF-asset-line-2026-10-30.md",
-      "file": "docs/platform-logic/HANDOFF-asset-line-2026-10-30.md",
+      "name": "HANDOFF-[team]-10-30.md",
+      "file": "docs/platform-logic/HANDOFF-[team]-10-30.md",
       "line": 75,
       "trigger": "人工阅读/机制依据",
       "action": "文档",
       "note": "守门与巡检（已上 cron，接上先看日志）",
-      "recompute": "sed -n '75p' docs/platform-logic/HANDOFF-asset-line-2026-10-30.md",
+      "recompute": "sed -n '75p' docs/platform-logic/HANDOFF-[team]-10-30.md",
       "ref": {
-        "file": "docs/platform-logic/HANDOFF-asset-line-2026-10-30.md",
+        "file": "docs/platform-logic/HANDOFF-[team]-10-30.md",
         "line": 75
       }
     },
@@ -4703,7 +4823,7 @@
       "line": 20,
       "trigger": "人工阅读/机制依据",
       "action": "文档",
-      "note": "闸门永久静默(operator/agent-x 拦截, agent-x/agent-x 发出后同会话死寂)。修法: 保留 10 轮防死循环 + 新增 CONV_RESET_QUIET_S=7200 静默期衰减(末次回复时间持久化 v2 格式, 旧计数惰性自动清零)。",
+      "note": "闸门永久静默(operator/agent-b 拦截, agent-e/agent-c 发出后同会话死寂)。修法: 保留 10 轮防死循环 + 新增 CONV_RESET_QUIET_S=7200 静默期衰减(末次回复时间持久化 v2 格式, 旧计数惰性自动清零)。",
       "recompute": "sed -n '20p' docs/platform-logic/handoff-2026-09-16.md",
       "ref": {
         "file": "docs/platform-logic/handoff-2026-09-16.md",
@@ -5026,6 +5146,21 @@
       }
     },
     {
+      "id": "L5:practice-leftover-cmv2x8pfg00m63wj01-duplicate-by-hash-reuse-s87-verdict-2026-10-17",
+      "layer": "L5",
+      "name": "practice-leftover-cmv2x8pfg00m63wj01-duplicate-by-hash-reuse-s87-verdict-2026-10-17.md",
+      "file": "docs/platform-logic/practice-leftover-cmv2x8pfg00m63wj01-duplicate-by-hash-reuse-s87-verdict-2026-10-17.md",
+      "line": 236,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "守门 — 已在主库根目录下)",
+      "recompute": "sed -n '236p' docs/platform-logic/practice-leftover-cmv2x8pfg00m63wj01-duplicate-by-hash-reuse-s87-verdict-2026-10-17.md",
+      "ref": {
+        "file": "docs/platform-logic/practice-leftover-cmv2x8pfg00m63wj01-duplicate-by-hash-reuse-s87-verdict-2026-10-17.md",
+        "line": 236
+      }
+    },
+    {
       "id": "L5:practice-leftover-cmv2xw7ix-merge-deploy-already-resolved-2026-10-17",
       "layer": "L5",
       "name": "practice-leftover-cmv2xw7ix-merge-deploy-already-resolved-2026-10-17.md",
@@ -5068,6 +5203,21 @@
       "ref": {
         "file": "docs/platform-logic/practice-leftover-cmv4b7bcg00f1lnx4o4-dedup-guard-entry-wiring-2026-10-20.md",
         "line": 57
+      }
+    },
+    {
+      "id": "L5:practice-leftover-cmv4nbee-cgroup-recall-baseline-2026-10-21",
+      "layer": "L5",
+      "name": "practice-leftover-cmv4nbee-cgroup-recall-baseline-2026-10-21.md",
+      "file": "docs/platform-logic/practice-leftover-cmv4nbee-cgroup-recall-baseline-2026-10-21.md",
+      "line": 138,
+      "trigger": "人工阅读/机制依据",
+      "action": "文档",
+      "note": "守门判定零变化**: `check-retrieval-reach.cjs` 仍 PASS/exit=0 —— 新文件是**纯记录**, 它不读该文件, 也不被任何守门读。",
+      "recompute": "sed -n '138p' docs/platform-logic/practice-leftover-cmv4nbee-cgroup-recall-baseline-2026-10-21.md",
+      "ref": {
+        "file": "docs/platform-logic/practice-leftover-cmv4nbee-cgroup-recall-baseline-2026-10-21.md",
+        "line": 138
       }
     },
     {
@@ -5228,7 +5378,7 @@
       "line": 14,
       "trigger": "人工阅读/机制依据",
       "action": "文档",
-      "note": "闸门 (close-proposal-loop)、提案闭环 D 段; 影响 5 个 agent (agent-x/agent-x/agent-x/agent-x/operator) 跨终端共识。需**架构级**改动而非局部脚本。 |",
+      "note": "闸门 (close-proposal-loop)、提案闭环 D 段; 影响 5 个 agent (agent-e/agent-c/agent-b/agent-d/operator) 跨终端共识。需**架构级**改动而非局部脚本。 |",
       "recompute": "sed -n '14p' docs/platform-logic/proposal-stuck-z9lyfsjt-decision-2026-09-15.md",
       "ref": {
         "file": "docs/platform-logic/proposal-stuck-z9lyfsjt-decision-2026-09-15.md",

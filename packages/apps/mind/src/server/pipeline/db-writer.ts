@@ -22,7 +22,7 @@ import { triggerVersionLinkage } from "@lions/modules-pipeline";
 import { composeKnowledgeContent as composeKnowledgeContentShared } from "./knowledge-compose";
 // 2026-09-18 机制修复(人类决策「重复内容需要清理」): 标题逐字相同 + 正文近重复 -> 强化既有行而非新建
 import { findNearDuplicateActiveId } from "./structured-dedup";
-// 2026-09-23 agent-x #8: Skills 成功率 (生成即成功 + 候选分母), 与 db-writer 写入计数共用口径
+// 2026-09-23 agent-f #8: Skills 成功率 (生成即成功 + 候选分母), 与 db-writer 写入计数共用口径
 import { computeSkillSuccessRate } from "./skill-success-rate";
 // 2026-10-07 P4: LLM 直出枚举字段写入侧投影(受控枚举外的值不再原样落库, 见 enum-projection.ts 头注)
 import { projectPracticeOutcome, normalizeEnumToken, projectDomain, projectCategory } from "./enum-projection";
@@ -135,7 +135,7 @@ export async function writeToDatabase(
     memoryTypesNormalized: 0,
     knowledgeDowngraded: 0,
     knowledgeDropped: 0,
-    // 2026-09-23 agent-x #8: 降级数与成功率 (末尾 computeSkillSuccessRate 回填)
+    // 2026-09-23 agent-f #8: 降级数与成功率 (末尾 computeSkillSuccessRate 回填)
     skillsDowngraded: 0,
     resolverBreakdown: {
       memory:     { create: 0, update: 0, merge: 0, discard: 0 },
@@ -858,7 +858,7 @@ export async function writeToDatabase(
           },
         });
         stats.knowledgeCreated++;
-        stats.skillsDowngraded++; // agent-x #8: 无 steps 技能 -> knowledge, 计入降级数(分母不减)
+        stats.skillsDowngraded++; // agent-f #8: 无 steps 技能 -> knowledge, 计入降级数(分母不减)
         continue;
       }
       // 2026-10-10 round 74 (agent-d, todo_47f179370e66425dbc8f): 技能名硬上限写侧收口。
@@ -968,10 +968,10 @@ export async function writeToDatabase(
         },
       });
       stats.knowledgeCreated++;
-      stats.skillsDowngraded++; // agent-x #8: extractor 判定的无步骤技能候选
+      stats.skillsDowngraded++; // agent-f #8: extractor 判定的无步骤技能候选
     }
 
-    // ===== 2026-09-23 agent-x #8 Skills 成功率 (轻量版) =====
+    // ===== 2026-09-23 agent-f #8 Skills 成功率 (轻量版) =====
     // 口径: 生成即成功 = 过 SKILL-SPEC 落 Skill 表 / (落表 + 降级进 knowledge),
     //       两位小数 + 原始分子分母 (skillsCreated / skillsDowngraded / skillCandidatesTotal)。
     //       独立于 totalRecordsCreated, 避免 skill=0 被聚合掩盖 (反思 cmuc5i8y600481hqrpge36ihb)。
@@ -1037,7 +1037,7 @@ export async function writeToDatabase(
   // writeToDatabase 跑在 Next.js 服务进程 (tRPC processPipeline / API 路由) 内,
   // disconnect 全局共享 PrismaClient 会让后续所有 prisma 调用报 "Engine is not yet connected"。
   // 进程退出时连接自动清理, 无需手动断开。
-  // 2026-08-21 agent-x: 写 SyncLog (让后续 getAlreadyProcessedConversations 能正确识别)
+  // 2026-08-21 agent-e: 写 SyncLog (让后续 getAlreadyProcessedConversations 能正确识别)
   //   之前: pipeline 写完 5 表但完全不写 SyncLog, 导致 next tick 又把同一 session 当 new
   //   之前 SyncLog 只在 hermes-session-scanner.ts 写, key 是 UUID; 这里统一用 filePath
   try {

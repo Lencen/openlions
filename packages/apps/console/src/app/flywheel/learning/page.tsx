@@ -45,22 +45,25 @@ export default function LearningPage() {
   const items = ORDER.map((k) => ({ key: k, label: PRETTY[k] ?? k, stat: byName.get(k) }));
   const totalH24 = items.reduce((n, x) => n + (x.stat?.h24 ?? 0), 0);
   const anyData = !!data;
+  const noTableStats = !(data?.tableStats && data.tableStats.length > 0);
+  const noThemes = !(data?.themes && data.themes.length > 0);
 
   if (error) {
     return (
-      <main className="page">
+      <main className={"page " + styles.b2main}>
         <div className="breadcrumb"><span className={styles.dim}>飞轮</span><span className="sep">/</span><span className="current">学习闭环</span></div>
         <PageHeader>
           <PageTitle>学习闭环</PageTitle>
           <div className="page-subtitle">反馈如何回流成规则与改进任务</div>
         </PageHeader>
-        <ErrorAlert title="学习数据加载失败" message={String((error as Error)?.message || error)} onRetry={() => { mutate(); mutateStats(); }} />
+      <div className={styles.chips} aria-label="页面层级"><span>#</span><span>飞轮</span><span>看板</span><span className={styles.crumbOn}>只读</span></div>
+        <ErrorAlert title="学习数据加载失败" message="学习数据数据接口请求失败（网络错误或响应状态码异常），请重试；状态码见控制台。" onRetry={() => { mutate(); mutateStats(); }} />
       </main>
     );
   }
 
   return (
-    <main className="page">
+    <main className={"page " + styles.b2main} data-slot="flywheel-learning-page">
       <div className="breadcrumb"><span className={styles.dim}>飞轮</span><span className="sep">/</span><span className="current">学习闭环</span></div>
       <PageHeader>
         <PageTitle>学习闭环</PageTitle>
@@ -75,9 +78,11 @@ export default function LearningPage() {
           <DataMoment items={[{ label: "看板", at: data?.timestamp }, { label: "指标", at: raw?.asOf }]} />
         </div>
       </PageHeader>
+      <div className={styles.chips} aria-label="页面层级"><span>#</span><span>飞轮</span><span>看板</span><span className={styles.crumbOn}>只读</span></div>
+      <div className={styles.b2grid} data-slot="flywheel-learning-grid">
 
       {/* ① 结论（铁律 1：先给一句话结论） */}
-      <div className={"panel " + styles.mb4}>
+      <div className={"panel " + styles.mb4 + " " + styles.slotS12}>
         <div className="panel-header"><span className="panel-title">一句话结论</span></div>
         <div className={styles.proseBox}>
           {!anyData ? (
@@ -91,15 +96,15 @@ export default function LearningPage() {
       </div>
 
       {/* ② 四张卡（带单位与数据时刻） */}
-      <div className="metric-row">
+      <div className={"metric-row " + styles.slotS12}>
         {items.map((x) => (
           <KpiCard
             key={x.key}
             label={x.label}
-            value={fmtState(x.stat?.h24, flags)}
+            value={noTableStats ? "n/a" : fmtState(x.stat?.h24, flags)}
             unit="条"
             asOf={asOf}
-            hint={x.stat ? `累计 ${fmtCompact(x.stat.active)} 条` : undefined}
+            hint={x.stat ? `累计 ${fmtCompact(x.stat.active)} 条（activeOnly）` : "n/a（本实例未返回 tableStats）"}
             tone={x.key === "Memory" ? "info" : x.key === "Knowledge" ? "ok" : x.key === "Reflection" ? "warn" : "mute"}
           />
         ))}
@@ -107,20 +112,20 @@ export default function LearningPage() {
 
       {/* ③ 明细：沉淀质量 + 最近学到的东西 */}
       <div className={"card-grid cols-2 " + styles.mt4}>
-        <div className="panel">
+        <div className={"panel " + styles.slotS8}>
           <div className="panel-header"><span className="panel-title">沉淀质量</span><span className="tiny">结构化发现覆盖率</span></div>
           <div className={styles.proseBoxWide}>
             <div>反思总数 <b>{fmtState(stats?.reflections?.total, { loading, error: !!statsErr })}</b> 条（其中成功 {fmtState(stats?.reflections?.ok, { loading, error: !!statsErr })} 条）</div>
             <div>结构化发现覆盖 <b>{stats?.structuredFindings ? fmtPctOf(stats.structuredFindings.covered, stats.structuredFindings.total) : fmtState(undefined, { loading, error: !!statsErr })}</b></div>
           </div>
         </div>
-        <div className="panel">
+        <div className={"panel " + styles.slotS4}>
           <div className="panel-header"><span className="panel-title">最近在关注的主题</span><span className="tiny">按飞轮统计</span></div>
           <div className={styles.proseBoxWide}>
-            {(data?.themes ?? []).length === 0 ? (
-              <span className={styles.dim}>{fmtState(undefined, flags)}</span>
+            {noThemes ? (
+              <span className={styles.dim}>n/a（本实例未返回 themes）</span>
             ) : (
-              (data?.themes ?? []).slice(0, 6).map((t, i) => (
+              (data?.themes ?? []).slice(0, 15).map((t, i) => (
                 <div key={i} className={styles.themeRow}>
                   <span className={styles.themeName}>{t.theme}</span>
                   <span className={"mono " + styles.themeCount}>{t.count != null ? `覆盖 ${fmtNum(t.count)}` : ""}</span>
@@ -136,6 +141,6 @@ export default function LearningPage() {
         <Link href="/cognitive/knowledge">沉淀的知识 →</Link>
         <Link href="/flywheel/reflections">飞轮反思 →</Link>
       </div>
-    </main>
+    </div></main>
   );
 }

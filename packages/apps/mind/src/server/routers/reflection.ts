@@ -7,6 +7,23 @@ import { yesterdayBeijingStr, parseBeijingDate } from "../lib/timezone";
 import { isQuickFilter, reflectionQuickSql } from "../lib/cognitive-quick-filter";
 import { rangeSince } from "@/lib/range";
 
+/**
+ * 2026-11-13 P0：Reflection.total 的 raw SQL 方言分支。
+ * 原实现用 SQLite typeof(createdAt) 分流（历史混合存整数毫秒/ISO 文本）；
+ * PG 下 createdAt 是 timestamp、没有 typeof()，且未加引号的 Reflection 会被折成小写 -> 报错。
+ * 口径：PG 只按 timestamp 比较（标识符加引号），SQLite 旧分支保留。纯函数便于单测。
+ */
+export function buildReflectionTotalSql(isPg: boolean, sinceMs: number): string {
+  if (isPg) {
+    return "SELECT COUNT(*) as cnt FROM \"Reflection\" WHERE \"id\" NOT LIKE 'cma%' " +
+      "AND \"createdAt\" >= (to_timestamp(" + sinceMs + " / 1000.0) at time zone 'UTC')";
+  }
+  const sinceIso = new Date(sinceMs).toISOString();
+  return "SELECT COUNT(*) as cnt FROM Reflection WHERE id NOT LIKE 'cma%' AND (" +
+    "(typeof(createdAt) = 'integer' AND createdAt >= " + sinceMs + ") " +
+    "OR (typeof(createdAt) = 'text' AND createdAt >= '" + sinceIso + "'))";
+}
+
 export const reflectionRouter = createRouter({
   list: publicProcedure.input(z.object({
     status: z.string().optional(),
@@ -195,10 +212,8 @@ export const reflectionRouter = createRouter({
       .filter(r => parseTs(r.createdAt) >= sinceMs)
       .slice(0, input.pageSize);
     // total = 全部 >= sinceMs 的真数据行数 (raw query 算,不依赖 sample)
-    const totalQuery = `SELECT COUNT(*) as cnt FROM Reflection WHERE id NOT LIKE 'cma%' AND (
-      (typeof(createdAt) = 'integer' AND createdAt >= ${sinceMs})
-      OR (typeof(createdAt) = 'text' AND createdAt >= '${new Date(sinceMs).toISOString()}')
-    )`;
+    const isPg = String(process.env.MIND_DB_DRIVER || "").toLowerCase() === "pg";
+    const totalQuery = buildReflectionTotalSql(isPg, sinceMs);
     const totalResult = await prisma.$queryRawUnsafe<Array<{ cnt: number }>>(totalQuery);
     const total = Number(totalResult[0]?.cnt || 0);
     return { items, total, since: new Date(sinceMs).toISOString() };

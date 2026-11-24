@@ -1,0 +1,25 @@
+/* 0.6.2 U-51 设置页「智能体团队 / 全双工」分组 */
+.wrap { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--sp-4); }
+.note { font-size: var(--fs-sm); color: var(--text-muted); margin: 6px 0 var(--sp-4); line-height: 1.6; }
+.note b { color: var(--text); font-weight: 600; }
+.state { padding: var(--sp-5); text-align: center; color: var(--text-muted); }
+.state b { color: var(--status-crit); display: block; margin-bottom: 6px; }
+.row { margin-bottom: var(--sp-3); }
+.sw { display: flex; align-items: center; gap: 8px; font-size: var(--fs-base); cursor: pointer; }
+.sw input { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+.label { font-size: var(--fs-xs); font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 8px; }
+.modes { display: flex; flex-wrap: wrap; gap: 8px; }
+.radio { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: var(--fs-base); cursor: pointer; min-height: 32px; }
+.radioOn { border-color: var(--primary); background: var(--primary-dim); }
+.radio input { accent-color: var(--primary); cursor: pointer; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--sp-3); margin: var(--sp-4) 0; }
+.num { display: flex; flex-direction: column; gap: 4px; }
+.numLabel { font-size: var(--fs-sm); color: var(--text); }
+.numLabel em { color: var(--text-muted); font-style: normal; }
+.num input { min-height: 32px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface2); color: var(--text); font-size: var(--fs-base); }
+.hint { font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.5; }
+.overrides { margin-top: var(--sp-4); padding-top: var(--sp-3); border-top: 1px solid var(--border); }
+.ovRow { display: flex; align-items: center; gap: 12px; font-size: var(--fs-sm); padding: 4px 0; }
+.ovRow code { font-family: var(--font-mono); color: var(--primary); }
+.flash { margin-top: var(--sp-3); font-size: var(--fs-sm); color: var(--status-crit); }
+.flashOk { color: var(--status-ok); }

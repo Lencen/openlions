@@ -9,6 +9,11 @@ if (!(globalThis as Record<string, unknown>)._autoRotationInit) {
   );
 }
 
+if (!(globalThis as Record<string, unknown>)._todoNudgeInit) {
+  (globalThis as Record<string, unknown>)._todoNudgeInit = true;
+  import("@/server/pipeline/todo-nudge").then((m) => m.initTodoNudgeScheduler()).catch(console.error);
+}
+
 const handler = (req: Request) =>
   fetchRequestHandler({
     endpoint: "/api/trpc",

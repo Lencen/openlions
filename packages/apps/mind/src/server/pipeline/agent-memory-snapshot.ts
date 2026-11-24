@@ -1,9 +1,9 @@
 /**
  * agent-memory-snapshot.ts — cronjob 执行期上下文: 主 agent 核心 memory 快照捕获+注入
- * (2026-09-23, agent-x #5 机制修复, 待办 todo_uos20fb_1790047372341_5)
+ * (2026-09-23, agent-f #5 机制修复, 待办 todo_uos20fb_1790047372341_5)
  *
  * 背景(由待办升级任务驱动, operator 拍板"你继续处理吧"):
- *   agent-x P1 #5: cronjob 执行时没有主 agent 的上下文, 平台改进任务由 system executor
+ *   agent-f P1 #5: cronjob 执行时没有主 agent 的上下文, 平台改进任务由 system executor
  *   (cron:v16:improving-tasks) 跑, 看不到主 agent 沉淀的核心 memory —— 执行期上下文断层。
  *   方案(平台记忆已拍板的设计决策):
  *     - 双段机制: 快照捕获段(capture) + 执行期注入段(注入 TaskExecution.metadata.agentMemorySnapshot)

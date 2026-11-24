@@ -19,8 +19,21 @@ function connectionString(): string {
   return "postgresql://lions:" + encodeURIComponent(pw) + "@127.0.0.1:5432/lions_session";
 }
 
+function ensurePool(): Pool {
+  if (!pool) {
+    pool = new Pool({ connectionString: connectionString(), max: 4, idleTimeoutMillis: 30000 });
+    // PG 重启/被 kill 时 pg 会对空闲连接 emit("error")；EventEmitter 的 error 事件**无监听**会被抛成
+    // unhandled error -> 整个 mind 进程退出（是崩溃，不是优雅重连）。
+    // 这里**只记录不退出**：坏连接由 Pool 自己丢弃，下次 query 自动新建；
+    // 在途查询仍会失败，由调用方降级（本模块契约就是「失败抛出，调用方决定是否非致命」）。
+    pool.on("error", (e: Error) => {
+      console.error("[session-pg] idle client error（池丢弃该连接，下次 query 重建）:", e.message);
+    });
+  }
+  return pool;
+}
+
 export async function sessionQuery<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  if (!pool) pool = new Pool({ connectionString: connectionString(), max: 4, idleTimeoutMillis: 30000 });
-  const r = await pool.query(sql, params);
+  const r = await ensurePool().query(sql, params);
   return r.rows as T[];
 }

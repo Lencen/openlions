@@ -3,7 +3,7 @@ import { skillViewByName } from "@/server/pipeline/context-seed";
 
 export const dynamic = "force-dynamic";
 
-// ===== agent-x #2 Skills 按需加载 (方案 A) =====
+// ===== agent-f #2 Skills 按需加载 (方案 A) =====
 // GET /api/v1/flywheel/skill/view?name=<技能名> — 按需取回技能全文(steps=content / trigger /
 // verification / pitfalls 等)。加载层(platform 上下文注入)只给 {name,description} 轻量列表,
 // agent 判定某技能可用时再以此端点按 name 精确取回全文, 不再 100+ 全文注入浪费 token。

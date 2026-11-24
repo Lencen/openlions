@@ -16,7 +16,7 @@ import { autoTriggerReflection } from "./reflect-cron";
 import { extractCognitiveData, extractCognitiveDataBatch } from "./cognitive-extractor";
 import type { BatchSessionInput, BatchExtractResult } from "./cognitive-extractor";
 import { writeToDatabase } from "./db-writer";
-// 2026-09-23 agent-x #8: Skills 成功率汇总 (与 db-writer 共用同一口径纯函数)
+// 2026-09-23 agent-f #8: Skills 成功率汇总 (与 db-writer 共用同一口径纯函数)
 import { computeSkillSuccessRate, type SkillSuccessRate } from "./skill-success-rate";
 import { runWithTrace, withStage, makeLogger, getTraceId, setTraceId, createTraceId, estimateTokens } from "./logger";
 import { recordError, recordErrorAsync, classifyErrorFromMessage } from "./error-sink";
@@ -40,7 +40,7 @@ export interface PipelineReport {
   totalRecordsCreated: number;
   errors: Array<{ sessionId: string; error: string }>;
   skipped: number;
-  // 2026-09-23 agent-x #8: 本次 run 的 Skills 成功率汇总 (两位小数 + 原始分子分母)。
+  // 2026-09-23 agent-f #8: 本次 run 的 Skills 成功率汇总 (两位小数 + 原始分子分母)。
   //   独立于 totalRecordsCreated, 避免 skill=0 被聚合掩盖; 无候选时 rate=null。
   skillSuccess: SkillSuccessRate;
 }
@@ -105,7 +105,7 @@ export async function runPipeline(
   //   根因: 2026-08-31 上午 24 trace 全量处理 1679 session, 4845 次无效 LLM 调用烧光 Token Plan 额度
   const { dryRun = false, projectFilter, maxConversations = 5, sourceType, sessionIds, onProgress } = options;
 
-  // 2026-08-21 agent-x: 确保每次 runPipeline 都有 traceId (支持 nested runPipeline 调用)
+  // 2026-08-21 agent-e: 确保每次 runPipeline 都有 traceId (支持 nested runPipeline 调用)
   if (!getTraceId()) {
     setTraceId(createTraceId());
   }
@@ -162,7 +162,7 @@ export async function runPipeline(
     skillSuccess: computeSkillSuccessRate(0, 0),
   };
 
-  // Step 5: Enrich + 增量截断 (按 token 预算分块, 2026-08-21 agent-x)
+  // Step 5: Enrich + 增量截断 (按 token 预算分块, 2026-08-21 agent-e)
   //   之前: 硬截 MAX_NEW_MSGS=10, 切断上下文
   //   现在: 按 token 预算分块, 单 session 可拆 N 块, LLM 多次返回
   //   预算: 每块 ≤ 8000 tokens (中文 1.5 字符/token, 英文 4 字符/token)
@@ -179,7 +179,7 @@ export async function runPipeline(
     const conv = candidates[i];
     try {
       const enrichedConv = await enrichWithMessages(conv);
-      // 2026-08-21 agent-x: 双 key 匹配 (filePath + sessionId 后缀), 解决 SyncLog 匹配错位
+      // 2026-08-21 agent-e: 双 key 匹配 (filePath + sessionId 后缀), 解决 SyncLog 匹配错位
       // f-005 (2026-09-14): 收敛为 lookupProcessedCount 单一实现, 与过滤阶段共用口径
       const lastProcessedCount =
         lookupProcessedCount(processedMap, enrichedConv) ?? 0;
@@ -322,7 +322,7 @@ export async function runPipeline(
       const subTokens = estimateTokens(JSON.stringify(subBatch.map(b => b.newMessages)));
 
       // 用 stage 包裹单 sub-batch (单 stage 一次只发一个 batch)
-      // 2026-08-21 agent-x: P1 修复 -- sessionIndex 在每个 sub-batch 内从 1 重新编号
+      // 2026-08-21 agent-e: P1 修复 -- sessionIndex 在每个 sub-batch 内从 1 重新编号
       //   之前用 101/102/... 全局编号, LLM 按 S1/S2 返回 1/2, 永远不匹配
       const renumberedSubBatch = subBatch.map((input, idx) => ({
         ...input,
@@ -354,7 +354,7 @@ export async function runPipeline(
             sessionId: input.conversation.sessionId,
             error: errMsg,
           });
-          // 2026-08-21 agent-x: 错误落库 (按错误类型分类, 便于趋势分析)
+          // 2026-08-21 agent-e: 错误落库 (按错误类型分类, 便于趋势分析)
           recordErrorAsync({
             errorType: errType,
             stage: "extract",
@@ -394,7 +394,7 @@ export async function runPipeline(
             reflectionsCreated: result.extracted.reflections.length,
             practicesCreated: result.extracted.practices.length,
             flywheelEventsCreated: 0,
-            // agent-x #8: dry-run 也按同一口径暴露 (skills 已过 SKILL-SPEC, knowledgeFromSkills 即降级)
+            // agent-f #8: dry-run 也按同一口径暴露 (skills 已过 SKILL-SPEC, knowledgeFromSkills 即降级)
             ...computeSkillSuccessRate(
               result.extracted.skills.length,
               (result.extracted.knowledgeFromSkills || []).length,
@@ -483,7 +483,7 @@ export async function runPipeline(
 
   report.skipped = scanned.totalConversations - candidates.length;
 
-  // ===== 2026-09-23 agent-x #8 Skills 成功率汇总 =====
+  // ===== 2026-09-23 agent-f #8 Skills 成功率汇总 =====
   //   跨 session 累加原始分子分母后再算率 (不平均各 session 的率, 避免小样本加权失真),
   //   两位小数 + 原始分子分母一并暴露, 可由 processed[].stats 逐步复算。
   {
